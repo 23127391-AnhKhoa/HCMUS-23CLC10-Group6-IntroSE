@@ -15,7 +15,7 @@ const PORT = process.env.PORT || 3000;
 app.use(express.static(staticFilesPath));
 
 app.get('*', (req, res) => {
-  res.sendFile(path.join(staticFilesPath, 'index.html'));
+  res.sendFile(path.join(staticFilesPath, 'comingsoon.html'));
 });
 
 // Khởi động server và lắng nghe trên PORT đã định nghĩa
