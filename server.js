@@ -27,7 +27,7 @@ app.use(express.static(staticFilesPath));
 // Route để phục vụ file index.html cho tất cả các đường dẫn không khớp
 app.get('*', (req, res) => {
   // Khi sử dụng lại staticFilesPath ở đây, nó cũng phải đã được khai báo ở trên
-  res.sendFile(path.join(staticFilesPath, 'index.html'));
+  res.sendFile(path.join(staticFilesPath, 'comingsoon.html'));
 });
 
 // Khởi động server
