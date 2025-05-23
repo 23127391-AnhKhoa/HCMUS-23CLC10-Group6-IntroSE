@@ -17,7 +17,7 @@ const PORT = process.env.PORT || 3000;
 // __dirname là đường dẫn đến thư mục chứa file server.js hiện tại.
 // path.join sẽ tạo ra một đường dẫn đúng cách, bất kể hệ điều hành.
 // Thay 'public' bằng tên thư mục thực tế chứa các file tĩnh của bạn nếu nó khác.
-const staticFilesPath = path.join(__dirname, 'public');
+const staticFilesPath = path.join(__dirname, 'src');
 // =================================================================
 
 // Sử dụng middleware express.static để phục vụ các file từ thư mục đã chỉ định
