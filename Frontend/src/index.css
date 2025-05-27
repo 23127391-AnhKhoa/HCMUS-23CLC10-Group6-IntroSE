@@ -1,3 +1,79 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Animation for fade-in effect */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fadeIn 1s ease-out;
+}
+
+/* Hover effect for buttons and cards */
+.hover-scale {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.hover-scale:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15);
+}
+
+/* Smooth transition for buttons and links */
+.transition-smooth {
+  transition: all 0.3s ease;
+}
+
+/* Animated gradient background */
+/* Animated gradient background */
+@keyframes gradientAnimation {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.animated-gradient {
+  background: linear-gradient(45deg, #1E3A8A, #1C2526, #134E4A);
+  background-size: 200% 200%;
+  animation: gradientAnimation 8s ease infinite;
+}
+
+/* Dropdown menu styles */
+.navbar-dropdown .ant-dropdown-menu {
+  border-radius: 15px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e5e7eb;
+  padding: 8px 0;
+  margin-top: 8px;
+  backdrop-filter: blur(10px);
+}
+
+.navbar-dropdown .ant-dropdown-menu-item {
+  padding: 0;
+  border-radius: 8px;
+  margin: 2px 8px;
+}
+
+.navbar-dropdown .ant-dropdown-menu-item:hover {
+  background-color: transparent;
+}
+
+/* Reusable rounded background for icons */
+.icon-bg {
+  width: 5rem;
+  height: 5rem;
+  border-radius: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 1.5rem;
+}
