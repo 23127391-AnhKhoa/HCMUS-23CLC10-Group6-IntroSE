@@ -16,18 +16,7 @@ function App() {
           {/* Route for login page */}
           <Route path="/login" element={<LoginPage />} />
           
-          {/* Route for news page */}
-          <Route path="/news" element={<NewsPage />} />
           
-          {/* Route for signup page */}
-          <Route path="/signup" element={<SignupPage />} />
-          
-          {/* 404 Route for unmatched paths */}
-          <Route path="*" element={
-            <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100">
-              <h1 className="text-2xl font-semibold text-gray-600">404 - Page Not Found</h1>
-            </div>
-          } />
         </Routes>
       </div>
     </Router>
