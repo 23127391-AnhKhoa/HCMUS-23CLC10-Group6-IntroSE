@@ -90,6 +90,10 @@ const Navbar = () => {
     navigate('/signup');
   };
 
+    const handleCreateGigsClick = () => {
+    navigate('/create-gig'); //  url of create_gig
+  };
+  
   return (
     <nav className="fixed top-0 left-0 right-0 bg-white shadow-sm z-50 border-b border-gray-100">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -157,6 +161,13 @@ const Navbar = () => {
             >
               What's new
             </div>
+            {/*CREATE GIGS*/}
+            <button
+                onClick={handleCreateGigsClick}
+                className="px-6 py-2 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 transition-smooth shadow-sm hover:shadow-md hover-scale"
+              >
+                Create Gigs
+              </button>
           </div>
 
           {/* Auth Buttons */}

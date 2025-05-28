@@ -4,10 +4,13 @@ import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/LoginPage';
 import NewsPage from './pages/NewsPage';
 import SignupPage from './pages/SignupPage'; // New placeholder for signup
+import CreateGigsPage from './pages/Create_Gigs';
+
 
 function App() {
   return (
     <Router>
+      
       <div className="App">
         <Routes>
           {/* Route for the homepage */}
@@ -21,6 +24,9 @@ function App() {
           
           {/* Route for signup page */}
           <Route path="/signup" element={<SignupPage />} />
+
+          {/*ROUTE FOR CREATE GIGS*/}
+          <Route path="/create-gig" element={<CreateGigsPage />} />
           
           {/* 404 Route for unmatched paths */}
           <Route path="*" element={
@@ -29,6 +35,7 @@ function App() {
             </div>
           } />
         </Routes>
+        
       </div>
     </Router>
   );
