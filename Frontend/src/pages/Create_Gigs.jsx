@@ -1,6 +1,7 @@
 // src/pages/Create_Gigs.jsx
 import React, { useState, useEffect } from 'react';
 import OverviewCreGigs from '../components/CreateGigButton/Overview_CreGigs';
+<<<<<<< Updated upstream
 import PricingCreGigs from '../components/CreateGigButton/Pricing_CreGigs';
 import DescriptionCreGigs from '../components/CreateGigButton/Description_CreGigs'; // ++ IMPORT Description component
 import NavbarLD from '../components/LandingPage/Navbar_LD';
@@ -44,6 +45,36 @@ const CreateGigsPage = () => {
   const totalSteps = GIG_CREATION_STEPS.length;
   const [isLoading, setIsLoading] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState("Processing...");
+=======
+import PricingCreGigs from '../components/CreateGigButton/Pricing_CreGigs'; // ++ IMPORT Pricing component
+import NavbarLD from '../components/LandingPage/Navbar_LD';
+
+// ++ ĐỊNH NGHĨA CÁC BƯỚC TẠO GIG
+const GIG_CREATION_STEPS = [
+  { 
+    id: 1, 
+    name: 'Overview', 
+    component: OverviewCreGigs,
+    title: "Create Your Gig",
+    description: "Let's start with the basics. This information helps buyers find and understand your service."
+  },
+  { 
+    id: 2, 
+    name: 'Pricing', 
+    component: PricingCreGigs,
+    title: "Scope & Pricing",
+    description: "Define the scope of your service, pricing tiers, and any valuable add-ons you offer."
+  },
+  // { id: 3, name: 'Description & FAQ', component: DescriptionFaqSection, title: "...", description: "..." },
+  // { id: 4, name: 'Requirements', component: RequirementsSection, title: "...", description: "..." },
+  // { id: 5, name: 'Gallery', component: GallerySection, title: "...", description: "..." },
+  // { id: 6, name: 'Publish', component: PublishSection, title: "...", description: "..." },
+];
+
+const CreateGigsPage = () => {
+  const [currentStepId, setCurrentStepId] = useState(GIG_CREATION_STEPS[0].id); // ++ Quản lý bước hiện tại bằng ID
+  const totalSteps = GIG_CREATION_STEPS.length;
+>>>>>>> Stashed changes
 
   const [gigData, setGigData] = useState({
     // Overview fields
@@ -52,11 +83,19 @@ const CreateGigsPage = () => {
     subcategory: '',
     searchTags: [],
     positiveKeywords: '',
+<<<<<<< Updated upstream
     // Pricing fields (sẽ được thêm khi bạn phát triển Pricing_CreGigs)
     // basicPackagePrice: '',
     // Description fields (sẽ được thêm khi bạn phát triển Description_CreGigs)
     // gigFullDescription: '',
     // faqs: [],
+=======
+    // Pricing fields (sẽ được thêm sau)
+    // basicPackagePrice: '', 
+    // standardPackagePrice: '',
+    // premiumPackagePrice: '',
+    // ... các trường dữ liệu khác cho các bước sau
+>>>>>>> Stashed changes
   });
 
   const handleInputChange = (fieldName, value) => {
@@ -78,6 +117,7 @@ const CreateGigsPage = () => {
   };
 
   useEffect(() => {
+<<<<<<< Updated upstream
     window.scrollTo(0, 0);
     if (isLoading) {
       const timer = setTimeout(() => {
@@ -130,6 +170,33 @@ const CreateGigsPage = () => {
       setTimeout(() => {
         goBackOneStep();
       }, 50);
+=======
+    // console.log("Gig Data Updated:", gigData);
+    // Scroll lên đầu trang khi component được render hoặc bước thay đổi
+    window.scrollTo(0, 0);
+  }, [currentStepId]); // Chạy khi currentStepId thay đổi
+
+  const handleSubmitGig = (event) => {
+    event.preventDefault();
+    const currentStepDetails = GIG_CREATION_STEPS.find(step => step.id === currentStepId);
+    console.log(`Data for Step: ${currentStepDetails.name}`, gigData);
+
+    if (currentStepId < totalSteps) {
+      // Chuyển sang bước tiếp theo
+      setCurrentStepId(prevId => prevId + 1);
+      alert(`Proceeding to ${GIG_CREATION_STEPS.find(step => step.id === currentStepId + 1)?.name || 'next step'}.`);
+    } else {
+      // Bước cuối cùng, thực hiện publish/submit cuối cùng
+      alert('All steps completed! Publishing Gig (Simulated). Check console for final data.');
+      console.log('Final Gig Data for Submission:', gigData);
+      // TODO: Logic gửi dữ liệu lên server
+    }
+  };
+
+  const handleBack = () => {
+    if (currentStepId > GIG_CREATION_STEPS[0].id) {
+      setCurrentStepId(prevId => prevId - 1);
+>>>>>>> Stashed changes
     }
   };
 
@@ -137,6 +204,7 @@ const CreateGigsPage = () => {
     setIsLoading(true);
     setLoadingMessage("Saving and Preparing Preview...");
     console.log('Save & Preview Clicked. Current Data:', gigData);
+<<<<<<< Updated upstream
     setTimeout(() => {
       alert('Gig data saved, redirecting to preview (Simulated)!');
       setIsLoading(false);
@@ -166,6 +234,82 @@ const CreateGigsPage = () => {
               <p className="mt-3 text-lg text-slate-600 dark:text-slate-300 sm:mt-4 max-w-2xl mx-auto">
                 {currentStepDetails.description}
               </p>
+=======
+    alert('Gig data saved, redirecting to preview (Simulated)!');
+    // TODO: Logic lưu dữ liệu và chuyển sang trang preview
+  };
+
+  // ++ Lấy thông tin và component của bước hiện tại
+  const currentStepDetails = GIG_CREATION_STEPS.find(step => step.id === currentStepId);
+  const CurrentStepComponent = currentStepDetails.component;
+
+  return (
+    <div className="min-h-screen bg-slate-100 font-sans pt-16">
+      <NavbarLD />
+      
+      <div className="py-12 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-4xl mx-auto">
+          <div className="text-center mb-12 md:mb-16">
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 via-purple-500 to-pink-500 pb-2">
+              {currentStepDetails.title} {/* ++ Tiêu đề động */}
+            </h1>
+            <p className="mt-3 text-lg text-slate-600 sm:mt-4 max-w-2xl mx-auto">
+              {currentStepDetails.description} {/* ++ Mô tả động */}
+            </p>
+            {/* Optional: Progress bar or step indicator */}
+            <div className="mt-6">
+              <p className="text-sm font-medium text-slate-500">
+                Step {currentStepId} of {totalSteps}: {currentStepDetails.name}
+              </p>
+              {/* You can add a visual progress bar here */}
+            </div>
+          </div>
+
+          <form onSubmit={handleSubmitGig}>
+            {/* ++ Render component của bước hiện tại */}
+            {CurrentStepComponent && (
+              <CurrentStepComponent
+                gigData={gigData}
+                onInputChange={handleInputChange}
+                // Các props này chủ yếu cho Overview, Pricing_CreGigs sẽ không dùng đến
+                // nhưng truyền vào không gây hại
+                onCategoryChange={handleCategoryChange} 
+                onUpdateTagsArray={handleUpdateTagsArray}
+                // Bạn có thể thêm các props khác cần thiết cho các bước cụ thể ở đây
+              />
+            )}
+            
+            <div className="mt-12 flex flex-col sm:flex-row justify-between items-center gap-4 pt-8 border-t border-slate-300">
+              {/* ++ Nút Back */}
+              <div>
+                {currentStepId > GIG_CREATION_STEPS[0].id && (
+                  <button 
+                    type="button" 
+                    onClick={handleBack}
+                    className="w-full sm:w-auto px-6 py-3 border border-slate-400 rounded-lg text-sm font-semibold text-slate-700 hover:bg-slate-200 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                  >
+                    Back
+                  </button>
+                )}
+              </div>
+              
+              <div className="flex flex-col sm:flex-row items-center gap-4">
+                <button 
+                  type="button" 
+                  onClick={handleSaveAndPreview}
+                  className="w-full sm:w-auto px-6 py-3 border border-slate-400 rounded-lg text-sm font-semibold text-slate-700 hover:bg-slate-200 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                >
+                  Save & Preview
+                </button>
+                <button
+                  type="submit"
+                  className="w-full sm:w-auto bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-8 rounded-lg shadow-md hover:shadow-lg transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                >
+                  {/* ++ Text nút thay đổi tùy theo bước */}
+                  {currentStepId < totalSteps ? 'Save & Continue' : 'Save & Publish'} 
+                </button>
+              </div>
+>>>>>>> Stashed changes
             </div>
             <div className="mb-10 sm:mb-12 px-2 sm:px-0">
               <Stepper
