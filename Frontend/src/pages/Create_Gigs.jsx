@@ -8,6 +8,7 @@ import NavbarLD from '../components/LandingPage/Navbar_LD';
 import LoadingOverlay from '../Common/LoadingOverlay';
 import Stepper from '../components/CreateGigButton/Stepper/Stepper';
 
+
 // ĐỊNH NGHĨA CÁC BƯỚC TẠO GIG
 const GIG_CREATION_STEPS = [
   {
