@@ -5,6 +5,7 @@ import LoginPage from './pages/LoginPage';
 import NewsPage from './pages/NewsPage';
 import SignupPage from './pages/SignupPage'; // New placeholder for signup
 import CreateGigsPage from './pages/Create_Gigs';
+import ProfilePage from './pages/ProfilePage';
 
 
 function App() {
@@ -15,7 +16,8 @@ function App() {
         <Routes>
           {/* Route for the homepage */}
           <Route path="/" element={<LandingPage />} />
-          
+          {/* Route for the profile */}
+          <Route path="/profile" element={<ProfilePage/>} />
           {/* Route for login page */}
           <Route path="/login" element={<LoginPage />} />
           
