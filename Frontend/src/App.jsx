@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import ExplorePage from './pages/ExplorePage';
+import Footer from './Common/Footer';
 
 
 
@@ -11,7 +12,9 @@ function App() {
       <div className="App">
         <ExplorePage />
       </div>
+      <Footer />
     </Router>
+    
   );
 }
 

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import ServCard from '../components/ExplorePage/ServCard';
+import ServCard from '../Common/ServCard';
+import Footer from '../Common/Footer';
 
 const ExplorePage = () => {
     return (

@@ -2,13 +2,13 @@ import React from "react";
 
 const ServCard = () => {
     return (
-        <div className="flex flex-col h-[420px] w-[300px] m-1 bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm hover:shadow-lg transition-shadow duration-300">
+        <div className="flex flex-col h-[420px] w-[300px] m-1 bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm hover-scale transition-shadow duration-300">
             {/* Image Section */}
             <div className="h-[40%] relative overflow-hidden">
                 <img 
                     src="https://placehold.co/600x400" 
                     alt="Service preview" 
-                    className="w-full h-full object-cover hover:scale-105 transition-transform duration-300" 
+                    className="w-full h-full object-cover hover-scale transition-transform duration-300" 
                 />
             </div>
             
@@ -55,7 +55,7 @@ const ServCard = () => {
                     <img 
                         src="https://placehold.co/20x20" 
                         alt="Heart icon" 
-                        className="w-full h-full object-cover cursor-pointer hover:opacity-75 transition-opacity" 
+                        className="w-full h-full object-cover cursor-pointer hover-scale transition-opacity" 
                     />
                 </div>
                 <div className="text-right">
