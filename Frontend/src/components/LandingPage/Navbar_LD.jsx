@@ -78,8 +78,8 @@ const Navbar = () => {
     },
   ];
 
-  const handleNewsClick = () => {
-    navigate('/news');
+  const handleIntroductionClick = () => {
+    navigate('/Introduction');
   };
 
   const handleLoginClick = () => {
@@ -157,9 +157,9 @@ const Navbar = () => {
             {/* What's new */}
             <div 
               className="cursor-pointer text-gray-700 hover:text-blue-600 transition-smooth py-2 font-medium"
-              onClick={handleNewsClick}
+              onClick={handleIntroductionClick}
             >
-              What's new
+              Introduction
             </div>
             {/*CREATE GIGS*/}
             <button

@@ -2,7 +2,7 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/LoginPage';
-import NewsPage from './pages/NewsPage';
+import Introduction from './pages/Introduction';
 import SignupPage from './pages/SignupPage'; // New placeholder for signup
 import CreateGigsPage from './pages/Create_Gigs';
 
@@ -20,7 +20,7 @@ function App() {
           <Route path="/login" element={<LoginPage />} />
           
           {/* Route for news page */}
-          <Route path="/news" element={<NewsPage />} />
+          <Route path="/Introduction" element={<Introduction />} />
           
           {/* Route for signup page */}
           <Route path="/signup" element={<SignupPage />} />

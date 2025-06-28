@@ -4,12 +4,13 @@ import CustomerReviewSection from '../components/NewPage/CustomerReviewSection';
 import Navbar from '../components/LandingPage/Navbar_LD';
 import FeaturesSection from '../components/NewPage/FeatureSection';
 import FeaturedServicesSection from '../components/NewPage/FeatureServicesSection';
+import Footer from '../components/NewPage/Footer';
 /**
  * WhatNew component serves as the main page for "What's New" content,
  * integrating the HeroSection and CustomerReviewSection to present
  * a professional introduction and customer testimonials.
  */
-const NewsPage = () => {
+const Introduction = () => {
   return (
     <div className="min-h-screen bg-purple-50 font-sans">
       {/*
@@ -34,7 +35,7 @@ const NewsPage = () => {
           This section enhances credibility and builds trust with visitors.
         */}
         <CustomerReviewSection />
-        
+        <Footer/>
 
         {/*
           You can add more sections here as needed for your "What's New" page.
@@ -67,4 +68,4 @@ const NewsPage = () => {
   );
 };
 
-export default NewsPage;
+export default Introduction;
