@@ -1,6 +1,10 @@
+@import "slick-carousel/slick/slick.css";
+@import "slick-carousel/slick/slick-theme.css";
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
 
 /* Animation for fade-in effect */
 @keyframes fadeIn {
@@ -76,4 +80,57 @@
   align-items: center;
   justify-content: center;
   margin: 0 auto 1.5rem;
+}
+
+/* Thêm một số style để làm nút điều hướng của slick đẹp hơn (tùy chỉnh) */
+.slick-prev:before,
+.slick-next:before {
+  color: #1a202c !important; /* Ví dụ: màu đen hoặc màu bạn muốn */
+  font-size: 30px !important;
+}
+
+.slick-prev {
+  left: -40px !important; /* Điều chỉnh vị trí nút */
+}
+
+.slick-next {
+  right: -40px !important; /* Điều chỉnh vị trí nút */
+}
+
+/* Ẩn các chấm điều hướng nếu không muốn */
+.slick-dots {
+  display: none !important;
+}
+
+
+/* Base state for elements before animation */
+.reveal-hidden {
+  opacity: 0;
+}
+
+/* New: Slide in from left */
+@keyframes slideInFromLeft {
+  from { opacity: 0; transform: translateX(-100px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+.animate-slide-left-on-scroll {
+  animation: slideInFromLeft 1s ease-out forwards;
+}
+
+/* New: Slide in from top */
+@keyframes slideInFromTop {
+  from { opacity: 0; transform: translateY(-100px); } /* Bắt đầu từ trên xuống */
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-slide-top-on-scroll {
+  animation: slideInFromTop 1s ease-out forwards;
+}
+
+/* New: Slide in from right */
+@keyframes slideInFromRight {
+  from { opacity: 0; transform: translateX(100px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+.animate-slide-right-on-scroll {
+  animation: slideInFromRight 1s ease-out forwards;
 }

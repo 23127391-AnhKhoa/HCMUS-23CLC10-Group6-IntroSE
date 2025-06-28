@@ -28,6 +28,7 @@ function App() {
           {/*ROUTE FOR CREATE GIGS*/}
           <Route path="/create-gig" element={<CreateGigsPage />} />
           
+
           {/* 404 Route for unmatched paths */}
           <Route path="*" element={
             <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100">
