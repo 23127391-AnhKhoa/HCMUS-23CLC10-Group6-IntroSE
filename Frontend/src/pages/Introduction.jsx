@@ -4,7 +4,7 @@ import CustomerReviewSection from '../components/NewPage/CustomerReviewSection';
 import Navbar from '../components/LandingPage/Navbar_LD';
 import FeaturesSection from '../components/NewPage/FeatureSection';
 import FeaturedServicesSection from '../components/NewPage/FeatureServicesSection';
-import Footer from '../components/NewPage/Footer';
+import Footer from '../Common/Footer';
 /**
  * WhatNew component serves as the main page for "What's New" content,
  * integrating the HeroSection and CustomerReviewSection to present

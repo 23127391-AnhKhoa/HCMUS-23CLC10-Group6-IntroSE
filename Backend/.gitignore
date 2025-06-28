@@ -1,0 +1,5 @@
+# Thư mục chứa các thư viện đã cài đặt
+/node_modules
+
+# File chứa các biến môi trường và key bí mật
+.env

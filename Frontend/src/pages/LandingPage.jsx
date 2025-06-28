@@ -2,7 +2,7 @@ import React from 'react';
 import Navbar from '../components/LandingPage/Navbar_LD';
 import HeroSection from '../components/LandingPage//HeroSection';
 import FeaturesSection from '../components/LandingPage/FeaturesSection';
-import Footer from '../components/NewPage/Footer';
+import Footer from '../Common/Footer';
 import '../index.css';
 
 const LandingPage = () => {
