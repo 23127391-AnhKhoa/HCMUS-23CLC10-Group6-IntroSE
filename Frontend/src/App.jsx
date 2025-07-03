@@ -6,6 +6,9 @@ import Introduction from './pages/Introduction';
 import SignupPage from './pages/SignupPage'; // New placeholder for signup
 import CreateGigsPage from './pages/Create_Gigs';
 import AdminPage from './pages/AdminPage';
+import ExplorePage from './pages/ExplorePage';
+import Footer from './Common/Footer';
+
 
 
 function App() {
@@ -40,8 +43,11 @@ function App() {
           } />
         </Routes>
         
+        <ExplorePage />
       </div>
+      <Footer />
     </Router>
+    
   );
 }
 
