@@ -28,7 +28,7 @@ const adminRoutes = require('./routes/admin.routes');
 // --- USE ROUTES ---
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
-//app.use('/api/gigs', gigRoutes);
+app.use('/api/gigs', gigRoutes);
 //app.use('/api/orders', orderRoutes);
 //app.use('/api/transactions', transactionRoutes);
 //app.use('/api/admin', adminRoutes);

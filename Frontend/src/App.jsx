@@ -7,6 +7,7 @@ import SignupPage from './pages/SignupPage'; // New placeholder for signup
 import CreateGigsPage from './pages/Create_Gigs';
 import AdminDashboard from './pages/AdminDashboard';
 import ExplorePage from './pages/ExplorePage';
+import GigDetail from './pages/GigDetail';
 import ProfileBuyer from './pages/Profile_Buyer';
 import ProfileSeller from './pages/Profile_Seller';
 import Footer from './Common/Footer';
@@ -34,6 +35,8 @@ function App() {
             <Route path="/create-gig" element={<CreateGigsPage />} />
             
             <Route path="/explore" element={<ExplorePage />} />
+
+            <Route path="/gig/:id" element={<GigDetail />} />
 
             <Route path="/profile_buyer" element={<ProfileBuyer />} />
 

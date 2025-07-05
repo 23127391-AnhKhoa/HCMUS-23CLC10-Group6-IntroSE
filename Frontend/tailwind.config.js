@@ -24,5 +24,6 @@ export default {
   },
   plugins: [
     require('@tailwindcss/forms'), // ADD plugin @tailwindcss/forms
+    require('@tailwindcss/typography'), // ADD plugin for prose styling
   ],
 }
