@@ -1,6 +1,9 @@
 import React from "react";
+import { useNavigate } from "react-router-dom";
 
 const ServCard = ({ gig }) => {
+    const navigate = useNavigate();
+    
     // Default values in case gig data is not provided
     const defaultGig = {
         id: '',
@@ -19,6 +22,13 @@ const ServCard = ({ gig }) => {
     // Use provided gig data or fallback to defaults
     const gigData = gig ? { ...defaultGig, ...gig } : defaultGig;
 
+    // Handle card click
+    const handleCardClick = () => {
+        if (gigData.id) {
+            navigate(`/gig/${gigData.id}`);
+        }
+    };
+
     // Format price display
     const formatPrice = (price) => {
         return typeof price === 'number' ? `$${price.toFixed(0)}` : '$0';
@@ -31,13 +41,16 @@ const ServCard = ({ gig }) => {
     };
 
     return (
-        <div className="flex flex-col h-[420px] w-[300px] m-1 bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm hover-scale transition-shadow duration-300">
+        <div 
+            className="flex flex-col h-[420px] w-[300px] m-1 bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm hover:shadow-lg hover:scale-105 transition-all duration-300 cursor-pointer"
+            onClick={handleCardClick}
+        >
             {/* Image Section */}
             <div className="h-[40%] relative overflow-hidden">
                 <img 
                     src={gigData.cover_image || 'https://placehold.co/600x400'} 
                     alt={gigData.title || 'Service preview'}
-                    className="w-full h-full object-cover hover-scale transition-transform duration-300" 
+                    className="w-full h-full object-cover transition-transform duration-300" 
                     onError={(e) => {
                         e.target.src = 'https://placehold.co/600x400';
                     }}
@@ -103,7 +116,11 @@ const ServCard = ({ gig }) => {
                     <img 
                         src="https://placehold.co/20x20" 
                         alt="Heart icon" 
-                        className="w-full h-full object-cover cursor-pointer hover-scale transition-opacity" 
+                        className="w-full h-full object-cover cursor-pointer transition-opacity" 
+                        onClick={(e) => {
+                            e.stopPropagation(); // Prevent card click when clicking heart
+                            // Add heart functionality here
+                        }}
                     />
                 </div>
                 <div className="text-right">

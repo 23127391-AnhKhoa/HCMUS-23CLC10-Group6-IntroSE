@@ -1,6 +1,10 @@
 // Xử lý các API liên quan đến Gig
 const router = require('express').Router();
 const gigController = require('../controllers/gig.controller');
+const gigMediaRoutes = require('./gigMedia.routes');
+
+// Include gigMedia routes
+router.use('/', gigMediaRoutes);
 
 // GET /api/gigs - Get all gigs with pagination and filtering
 router.get('/', gigController.getAllGigs);

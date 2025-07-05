@@ -19,14 +19,14 @@ const ExplorePage = () => {
             console.log('🚀 Starting to fetch gigs...');
             
             // Fetch popular gigs (sorted by price desc, could be by rating in future)
-            const popularUrl = 'http://localhost:8000/api/gigs?limit=10&sort_by=price&sort_order=desc';
+            const popularUrl = 'http://localhost:8000/api/gigs?limit=10&sort_by=price&sort_order=desc&filter_by_status=active';
             console.log('📡 Fetching popular gigs from:', popularUrl);
             const popularResponse = await fetch(popularUrl);
             console.log('📊 Popular response status:', popularResponse.status, popularResponse.statusText);
             console.log('📊 Popular response headers:', Object.fromEntries(popularResponse.headers.entries()));
             
             // Fetch recommended gigs (recent ones)
-            const recommendedUrl = 'http://localhost:8000/api/gigs?limit=5&sort_by=created_at&sort_order=desc';
+            const recommendedUrl = 'http://localhost:8000/api/gigs?limit=5&sort_by=created_at&sort_order=desc&filter_by_status=active';
             console.log('📡 Fetching recommended gigs from:', recommendedUrl);
             const recommendedResponse = await fetch(recommendedUrl);
             console.log('📊 Recommended response status:', recommendedResponse.status, recommendedResponse.statusText);
