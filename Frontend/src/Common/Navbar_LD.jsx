@@ -91,7 +91,7 @@ const Navbar = () => {
   };
 
     const handleCreateGigsClick = () => {
-    navigate('/create-gig'); //  url of create_gig
+    navigate('/signup'); //  
   };
   
   return (

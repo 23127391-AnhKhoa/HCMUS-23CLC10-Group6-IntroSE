@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import OverviewCreGigs from '../components/CreateGigButton/Overview_CreGigs';
 import PricingCreGigs from '../components/CreateGigButton/Pricing_CreGigs';
 import DescriptionCreGigs from '../components/CreateGigButton/Description_CreGigs'; // ++ IMPORT Description component
-import NavbarLD from '../components/LandingPage/Navbar_LD';
+import NavbarLD from '../Common/Navbar_LD';
 import LoadingOverlay from '../Common/LoadingOverlay';
 import Stepper from '../components/CreateGigButton/Stepper/Stepper';
 

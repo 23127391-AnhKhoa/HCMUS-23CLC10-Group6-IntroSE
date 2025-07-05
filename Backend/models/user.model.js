@@ -1,19 +1,32 @@
 // models/user.model.js
-const supabase = require('../config/supabaseClient');
+const supabase = require('../config/supabaseClient'); // Giả định
 
 const User = {
-  findByUsername: async (username) => {
+  // Tìm user bằng ID
+  findById: async (uuid) => {
+    const { data, error } = await supabase.from('User').select('*').eq('uuid', uuid).single();
+    if (error && error.code !== 'PGRST116') throw error;
+    return data;
+  },
+
+  // Tạo profile mới cho user
+  createProfile: async (profileData) => {
+    const { data, error } = await supabase.from('User').insert([profileData]).select();
+    if (error) throw error;
+    return data[0];
+  },
+
+  updateByUuid: async (uuid, updateData) => {
     const { data, error } = await supabase
       .from('users')
-      .select('*')
-      .eq('username', username)
-      .single(); // .single() để chỉ lấy 1 dòng kết quả
+      .update(updateData)
+      .eq('uuid', uuid)
+      .select(); // .select() để trả về bản ghi đã được cập nhật
 
-    if (error && error.code !== 'PGRST116') { // PGRST116: Lỗi khi không tìm thấy dòng nào, ta bỏ qua lỗi này
-      throw error;
-    }
+    if (error) throw error;
+    if (!data || data.length === 0) throw new Error('User not found or no update was made.');
     
-    return data;
+    return data[0];
   }
 };
 

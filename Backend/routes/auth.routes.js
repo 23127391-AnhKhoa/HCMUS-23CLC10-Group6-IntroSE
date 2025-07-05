@@ -1,10 +1,11 @@
-// routes/auth.routes.js
-const express = require('express');
-const router = express.Router();
+// Xử lý đăng nhập, đăng ký
+const router = require('express').Router();
 const authController = require('../controllers/auth.controller');
 
-// Định nghĩa route cho việc đăng nhập
-// POST /api/auth/login
+router.post('/register', authController.register);
+
+router.post('/verify-otp', authController.verifyOTP);
+
 router.post('/login', authController.login);
 
 module.exports = router;

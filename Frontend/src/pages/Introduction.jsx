@@ -1,9 +1,9 @@
 import React from 'react';
-import HeroSection from '../components/NewPage/HeroSection';
-import CustomerReviewSection from '../components/NewPage/CustomerReviewSection';
-import Navbar from '../components/LandingPage/Navbar_LD';
-import FeaturesSection from '../components/NewPage/FeatureSection';
-import FeaturedServicesSection from '../components/NewPage/FeatureServicesSection';
+import HeroSection from '../components/Introduction/HeroSection';
+import CustomerReviewSection from '../components/Introduction/CustomerReviewSection';
+import Navbar from '../Common/Navbar_LD';
+import FeaturesSection from '../components/Introduction/FeatureSection';
+import FeaturedServicesSection from '../components/Introduction/FeatureServicesSection';
 import Footer from '../Common/Footer';
 /**
  * WhatNew component serves as the main page for "What's New" content,

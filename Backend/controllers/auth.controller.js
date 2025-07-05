@@ -1,40 +1,34 @@
 // controllers/auth.controller.js
-const User = require('../models/user.model');
+const AuthService = require('../services/auth.service');
 
-const login = async (req, res) => {
+const register = async (req, res) => {
   try {
-    const { username, password } = req.body;
-
-    // 1. Kiểm tra xem username và password có được gửi lên không
-    if (!username || !password) {
-      return res.status(400).json({ message: 'Vui lòng nhập Username và Password.' });
-    }
-
-    // 2. Tìm user trong database bằng model
-    const user = await User.findByUsername(username);
-
-    // 3. Kiểm tra user có tồn tại không
-    if (!user) {
-      return res.status(404).json({ message: 'Username không tồn tại.' });
-    }
-
-    // 4. Kiểm tra mật khẩu (demo đơn giản, không an toàn)
-    if (user.password !== password) {
-      return res.status(401).json({ message: 'Sai mật khẩu.' });
-    }
-    
-    // 5. Nếu thành công, trả về thông tin user (trừ mật khẩu)
-    const { password: _, ...userInfo } = user; // Loại bỏ mật khẩu khỏi object trả về
-    res.status(200).json({ 
-      message: 'Đăng nhập thành công!',
-      data: userInfo 
-    });
-
+    const result = await AuthService.handleRegister(req.body);
+    res.status(200).json(result);
   } catch (error) {
-    res.status(500).json({ message: 'Lỗi server: ' + error.message });
+    res.status(400).json({ message: error.message });
   }
 };
 
-module.exports = {
-  login,
+const verifyOTP = async (req, res) => {
+  try {
+    const { email, otp } = req.body;
+    const result = await AuthService.handleVerifyOTP(email, otp);
+    res.status(201).json(result);
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
 };
+
+const login = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    const result = await AuthService.handleLogin(email, password);
+    // Frontend sẽ dựa vào result.user.role để quyết định chuyển hướng
+    res.status(200).json(result);
+  } catch (error) {
+    res.status(401).json({ message: error.message });
+  }
+};
+
+module.exports = { register, verifyOTP, login };

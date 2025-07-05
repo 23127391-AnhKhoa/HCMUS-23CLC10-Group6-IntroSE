@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import ServCard from '../Common/ServCard';
 import Footer from '../Common/Footer';
+import NavBar from '../Common/NavBar_Buyer';
 
 const ExplorePage = () => {
     return (
         <div id="explore-page" className = "min-h-screen bg-white flex flex-col items-center justify-center">
+            <NavBar />
             <div id="most-popular" className='flex flex-col items-center rounded-lg shadow-lg p-6 mb-8 w-full max-w-fit'>
                 <div className="text-2xl font-bold mb-8 w-full text-left p-2">
                     <span>Most popular Service in <span className='text-blue-500'>ABC </span> </span>
