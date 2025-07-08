@@ -1,6 +1,25 @@
 // controllers/gig.controller.js
 const GigService = require('../services/gig.service');
 
+const healthCheck = async (req, res) => {
+  try {
+    const health = await GigService.healthCheck();
+    
+    res.status(200).json({
+      status: 'success',
+      message: 'Gig API is healthy',
+      data: health
+    });
+  } catch (error) {
+    console.error('Gig Controller health check failed:', error);
+    res.status(500).json({
+      status: 'error',
+      message: 'Health check failed',
+      error: error.message
+    });
+  }
+};
+
 const getAllGigs = async (req, res) => {
   try {
     const {
@@ -36,6 +55,7 @@ const getAllGigs = async (req, res) => {
       }
     });
   } catch (error) {
+    console.error('Error in getAllGigs:', error);
     res.status(400).json({ 
       status: 'error',
       message: error.message 
@@ -143,6 +163,7 @@ const deleteGig = async (req, res) => {
 };
 
 module.exports = {
+  healthCheck,
   getAllGigs,
   getGigById,
   createGig,
