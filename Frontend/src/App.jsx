@@ -10,6 +10,7 @@ import ExplorePage from './pages/ExplorePage';
 import GigDetail from './pages/GigDetail';
 import ProfileBuyer from './pages/Profile_Buyer';
 import ProfileSeller from './pages/Profile_Seller';
+import Orders from './pages/Orders';
 import Footer from './Common/Footer';
 import BecomeSellerPage from './pages/BecomeSeller';
 
@@ -41,6 +42,9 @@ function App() {
             <Route path="/profile_buyer" element={<ProfileBuyer />} />
 
             <Route path="/profile_seller" element={<ProfileSeller />} />
+
+            <Route path="/orders" element={<Orders />} />
+            <Route path="/seller/orders" element={<Orders />} />
 
             <Route path="/become-a-seller" element={<BecomeSellerPage />} />
             {/* 404 Route for unmatched paths */}
