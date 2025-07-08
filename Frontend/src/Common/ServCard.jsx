@@ -1,8 +1,17 @@
-import React from "react";
+import { HeartFilled } from '@ant-design/icons';
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 const ServCard = ({ gig }) => {
     const navigate = useNavigate();
+    const [isFavorited, setIsFavorited] = useState(false);
+
+    const handleFavoriteClick = (e) => {
+        e.stopPropagation(); // Prevent card click event from firing
+        setIsFavorited(!isFavorited);
+        console.log(`Gig ${gigData.id} favorite status: ${!isFavorited}`);
+        // Here you would typically call an API to update the favorite status
+    };
     
     // Default values in case gig data is not provided
     const defaultGig = {
@@ -50,21 +59,36 @@ const ServCard = ({ gig }) => {
                 <img 
                     src={gigData.cover_image || 'https://placehold.co/600x400'} 
                     alt={gigData.title || 'Service preview'}
-                    className="w-full h-full object-cover transition-transform duration-300" 
+                    className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
                     onError={(e) => {
                         e.target.src = 'https://placehold.co/600x400';
                     }}
                 />
-                {/* Status badge */}
-                {gigData.status === 'active' && (
+                <button 
+                    onClick={handleFavoriteClick}
+                    className="absolute top-2 right-2 p-2 bg-transparent border-none cursor-pointer"
+                    aria-label="Favorite this gig"
+                    style={{ transition: 'transform 0.2s' }}
+                >
+                    <HeartFilled 
+                        style={{ 
+                            fontSize: '22px', 
+                            color: isFavorited ? '#1dbf73' : 'white',
+                            stroke: 'black', 
+                            strokeWidth: 40
+                        }} 
+                    />
+                </button>
+                {/* Status badge - Hidden for now to avoid overlap with favorite button */}
+                {/* {gigData.status === 'active' && (
                     <div className="absolute top-2 right-2 px-2 py-1 bg-green-500 text-white text-xs font-medium rounded-full">
                         Active
                     </div>
-                )}
+                )} */}
             </div>
             
             {/* Content Section */}
-            <div className="h-[45%] flex flex-col p-4">
+            <div className="h-[45%] p-4 flex flex-col justify-between">
                 {/* Seller Info */}
                 <div className="flex items-center mb-3">
                     <div className="w-8 h-8 rounded-full overflow-hidden border-2 border-gray-100">

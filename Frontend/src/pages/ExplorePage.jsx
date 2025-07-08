@@ -16,21 +16,21 @@ const ExplorePage = () => {
     const fetchGigs = async () => {
         try {
             setLoading(true);
-            console.log('🚀 Starting to fetch gigs...');
+            console.log('[ExplorePage] Starting to fetch gigs...');
             
             // Fetch popular gigs (sorted by price desc, could be by rating in future)
             const popularUrl = 'http://localhost:8000/api/gigs?limit=10&sort_by=price&sort_order=desc&filter_by_status=active';
-            console.log('📡 Fetching popular gigs from:', popularUrl);
+            console.log('[ExplorePage] Fetching popular gigs from:', popularUrl);
             const popularResponse = await fetch(popularUrl);
-            console.log('📊 Popular response status:', popularResponse.status, popularResponse.statusText);
-            console.log('📊 Popular response headers:', Object.fromEntries(popularResponse.headers.entries()));
+            console.log('[ExplorePage] Popular response status:', popularResponse.status, popularResponse.statusText);
+            console.log('[ExplorePage] Popular response headers:', Object.fromEntries(popularResponse.headers.entries()));
             
             // Fetch recommended gigs (recent ones)
             const recommendedUrl = 'http://localhost:8000/api/gigs?limit=5&sort_by=created_at&sort_order=desc&filter_by_status=active';
-            console.log('📡 Fetching recommended gigs from:', recommendedUrl);
+            console.log('[ExplorePage] Fetching recommended gigs from:', recommendedUrl);
             const recommendedResponse = await fetch(recommendedUrl);
-            console.log('📊 Recommended response status:', recommendedResponse.status, recommendedResponse.statusText);
-            console.log('📊 Recommended response headers:', Object.fromEntries(recommendedResponse.headers.entries()));
+            console.log('[ExplorePage] Recommended response status:', recommendedResponse.status, recommendedResponse.statusText);
+            console.log('[ExplorePage] Recommended response headers:', Object.fromEntries(recommendedResponse.headers.entries()));
             
             if (!popularResponse.ok || !recommendedResponse.ok) {
                 // Get detailed error information
@@ -40,36 +40,36 @@ const ExplorePage = () => {
                 try {
                     const popularErrorText = await popularResponse.text();
                     popularError = `Popular API Error (${popularResponse.status}): ${popularErrorText}`;
-                    console.error('❌ Popular API Error:', popularError);
+                    console.error('[ExplorePage] Popular API Error:', popularError);
                 } catch (e) {
                     popularError = `Popular API Error (${popularResponse.status}): Unable to read error response`;
-                    console.error('❌ Popular API Error:', popularError);
+                    console.error('[ExplorePage] Popular API Error:', popularError);
                 }
                 
                 try {
                     const recommendedErrorText = await recommendedResponse.text();
                     recommendedError = `Recommended API Error (${recommendedResponse.status}): ${recommendedErrorText}`;
-                    console.error('❌ Recommended API Error:', recommendedError);
+                    console.error('[ExplorePage] Recommended API Error:', recommendedError);
                 } catch (e) {
                     recommendedError = `Recommended API Error (${recommendedResponse.status}): Unable to read error response`;
-                    console.error('❌ Recommended API Error:', recommendedError);
+                    console.error('[ExplorePage] Recommended API Error:', recommendedError);
                 }
                 
                 throw new Error(`API Request Failed:\n${popularError}\n${recommendedError}`);
             }
             
-            console.log('✅ Both responses OK, parsing JSON...');
+            console.log('[ExplorePage] Both responses OK, parsing JSON...');
             const popularData = await popularResponse.json();
             const recommendedData = await recommendedResponse.json();
             
-            console.log('📦 Popular data received:', {
+            console.log('[ExplorePage] Popular data received:', {
                 status: popularData.status,
                 dataLength: popularData.data?.length || 0,
                 pagination: popularData.pagination,
                 firstItem: popularData.data?.[0] || null
             });
             
-            console.log('📦 Recommended data received:', {
+            console.log('[ExplorePage] Recommended data received:', {
                 status: recommendedData.status,
                 dataLength: recommendedData.data?.length || 0,
                 pagination: recommendedData.pagination,
@@ -79,9 +79,9 @@ const ExplorePage = () => {
             setPopularGigs(popularData.data || []);
             setRecommendedGigs(recommendedData.data || []);
             
-            console.log('✅ Gigs data successfully set in state');
+            console.log('[ExplorePage] Gigs data successfully set in state');
         } catch (err) {
-            console.error('💥 Fetch error details:', {
+            console.error('[ExplorePage] Fetch error details:', {
                 message: err.message,
                 stack: err.stack,
                 name: err.name,
@@ -90,17 +90,17 @@ const ExplorePage = () => {
             
             // Check if it's a network error
             if (err.name === 'TypeError' && err.message.includes('fetch')) {
-                console.error('🌐 Network Error: Cannot connect to the server. Check if:');
-                console.error('   1. Backend server is running on http://localhost:8000');
-                console.error('   2. CORS is properly configured');
-                console.error('   3. No firewall/proxy blocking the request');
+                console.error('[ExplorePage] Network Error: Cannot connect to the server. Check if:');
+                console.error('[ExplorePage]   1. Backend server is running on http://localhost:8000');
+                console.error('[ExplorePage]   2. CORS is properly configured');
+                console.error('[ExplorePage]   3. No firewall/proxy blocking the request');
                 setError('Network Error: Cannot connect to server. Is the backend running?');
             } else {
                 setError(err.message);
             }
         } finally {
             setLoading(false);
-            console.log('🏁 Fetch operation completed');
+            console.log('[ExplorePage] Fetch operation completed');
         }
     };
 
@@ -137,7 +137,7 @@ const ExplorePage = () => {
                     </div>
                     <button 
                         onClick={() => {
-                            console.log('🔄 Manual retry triggered');
+                            console.log('[ExplorePage] Manual retry triggered');
                             setError(null);
                             fetchGigs();
                         }}
@@ -171,14 +171,14 @@ const ExplorePage = () => {
             {/* Debug Panel - Remove in production */}
             <div className="w-full max-w-6xl px-4 py-2 bg-gray-100 border-b border-gray-200">
                 <div className="text-xs text-gray-600 flex flex-wrap gap-4">
-                    <span>🔧 Debug Info:</span>
+                    <span>Debug Info:</span>
                     <span>Loading: {loading ? 'Yes' : 'No'}</span>
                     <span>Error: {error ? 'Yes' : 'No'}</span>
                     <span>Popular Gigs: {popularGigs.length}</span>
                     <span>Recommended Gigs: {recommendedGigs.length}</span>
                     <button 
                         onClick={() => {
-                            console.log('🔄 Manual API test triggered');
+                            console.log('[ExplorePage] Manual API test triggered');
                             fetchGigs();
                         }}
                         className="px-2 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600"
@@ -187,13 +187,13 @@ const ExplorePage = () => {
                     </button>
                     <button 
                         onClick={async () => {
-                            console.log('🏥 Health check started');
+                            console.log('[ExplorePage] Health check started');
                             try {
                                 const response = await fetch('http://localhost:8000/api/gigs');
-                                console.log('🏥 Health check result:', response.status, response.statusText);
+                                console.log('[ExplorePage] Health check result:', response.status, response.statusText);
                                 alert(`Server status: ${response.status} ${response.statusText}`);
                             } catch (err) {
-                                console.error('🏥 Health check failed:', err);
+                                console.error('[ExplorePage] Health check failed:', err);
                                 alert(`Server unreachable: ${err.message}`);
                             }
                         }}
