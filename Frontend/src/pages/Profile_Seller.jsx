@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { Avatar, Button, Card, Statistic, Progress } from 'antd';
 import { UserOutlined, ArrowUpOutlined, ArrowDownOutlined } from '@ant-design/icons';
 import SellerNavbar from '../Common/NavBar_Seller';
-import { useAuth } from '../contexts/authContext';
+import { useAuth } from '../contexts/AuthContext';
 
 const ProfileSeller = () => {
     const { authUser } = useAuth();
@@ -109,6 +109,26 @@ const ProfileSeller = () => {
                                 onClick={() => navigate('/create-gig')}
                             >
                                 Create a New Gig
+                            </Button>
+                        </div>
+                        <div>
+                            <Button 
+                                type="default" 
+                                size="large" 
+                                block 
+                                onClick={() => navigate('/deposit')}
+                            >
+                                Deposit
+                            </Button>
+                        </div>
+                        <div>
+                            <Button 
+                                type="default" 
+                                size="large" 
+                                block 
+                                onClick={() => navigate('/withdraw')}
+                            >
+                                Withdraw
                             </Button>
                         </div>
                     </div>

@@ -18,7 +18,7 @@ const User = {
 
   updateByUuid: async (uuid, updateData) => {
     const { data, error } = await supabase
-      .from('users')
+      .from('User') // Sử dụng table name đúng
       .update(updateData)
       .eq('uuid', uuid)
       .select(); // .select() để trả về bản ghi đã được cập nhật
