@@ -5,7 +5,7 @@ import { HeartFilled } from '@ant-design/icons';
 import NavBar from '../Common/NavBar_Buyer';
 import Footer from '../Common/Footer';
 import CreateOrderModal from '../components/CreateOrderModal/CreateOrderModal';
-import { useAuth } from '../contexts/authContext';
+import { useAuth } from '../contexts/AuthContext';
 
 const GigDetail = () => {
     const { id } = useParams();

@@ -6,6 +6,9 @@ const gigMediaRoutes = require('./gigMedia.routes');
 // Include gigMedia routes
 router.use('/', gigMediaRoutes);
 
+// GET /api/gigs/health - Health check endpoint
+router.get('/health', gigController.healthCheck);
+
 // GET /api/gigs - Get all gigs with pagination and filtering
 router.get('/', gigController.getAllGigs);
 

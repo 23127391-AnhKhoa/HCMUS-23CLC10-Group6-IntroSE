@@ -3,6 +3,43 @@ const Gig = require('../models/gig.model');
 const supabase = require('../config/supabaseClient');
 
 const GigService = {
+  // Health check for the service
+  healthCheck: async () => {
+    try {
+      const startTime = Date.now();
+      
+      // Test basic connection
+      const { data: testData, error: testError } = await supabase
+        .from('Gigs')
+        .select('id')
+        .limit(1);
+      
+      const connectionTime = Date.now() - startTime;
+      
+      if (testError) {
+        console.error('Gig Service health check failed:', testError);
+        throw testError;
+      }
+      
+      // Test count query
+      const countStartTime = Date.now();
+      const count = await Gig.getCount({ status: 'active' });
+      const countTime = Date.now() - countStartTime;
+      
+      return {
+        status: 'healthy',
+        connectionTime: connectionTime,
+        countTime: countTime,
+        totalGigs: count,
+        timestamp: new Date().toISOString()
+      };
+      
+    } catch (error) {
+      console.error('Gig Service health check error:', error);
+      throw error;
+    }
+  },
+
   // Get all gigs with pagination and filtering
   getAllGigs: async (options) => {
     const {
@@ -73,6 +110,7 @@ const GigService = {
         total: total || 0
       };
     } catch (error) {
+      console.error('Error in getAllGigs:', error);
       throw new Error(`Error fetching gigs: ${error.message}`);
     }
   },
