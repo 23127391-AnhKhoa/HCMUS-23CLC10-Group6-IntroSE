@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import DOMPurify from 'dompurify';
+import { HeartFilled } from '@ant-design/icons';
 import NavBar from '../Common/NavBar_Buyer';
 import Footer from '../Common/Footer';
 
@@ -13,6 +14,12 @@ const GigDetail = () => {
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [isFavorited, setIsFavorited] = useState(false);
+
+    const handleFavoriteToggle = () => {
+        setIsFavorited(!isFavorited);
+        console.log('Favorite toggled for gig ID:', id);
+    };
 
     useEffect(() => {
         fetchGigDetail();
@@ -226,10 +233,24 @@ const GigDetail = () => {
                             </span>
                         </div>
 
-                        {/* Title */}
-                        <h2 className="text-[#111518] tracking-light text-[28px] font-bold leading-tight px-4 text-left pb-3 pt-5">
-                            {gig.title}
-                        </h2>
+                        {/* Title & Favorite Button */}
+                        <div className="flex justify-between items-start px-4 pt-5 pb-3">
+                            <h2 className="text-[#111518] tracking-light text-[28px] font-bold leading-tight text-left flex-1 pr-4">
+                                {gig.title}
+                            </h2>
+                            <button
+                                onClick={handleFavoriteToggle}
+                                className="p-2 rounded-full hover:bg-gray-200 transition-colors duration-200"
+                                aria-label="Toggle Favorite"
+                            >
+                                <HeartFilled
+                                    style={{
+                                        fontSize: '28px',
+                                        color: isFavorited ? '#1dbf73' : '#a9a9a9', // Gray when not favorited
+                                    }}
+                                />
+                            </button>
+                        </div>
 
                         {/* Image Slider */}
                         <div className="flex w-full grow bg-gray-50 p-4">
