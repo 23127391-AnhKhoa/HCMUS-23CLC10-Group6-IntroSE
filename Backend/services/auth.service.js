@@ -56,7 +56,7 @@ const AuthService = {
         uuid: authUser.user.id,
         fullname: storedData.fullname,
         username: storedData.username,
-        role: 'user',       // Mọi tài khoản mới đều là 'user'
+        role: 'buyer',       // Mọi tài khoản mới đều là 'buyer'
         status: 'active'
     };
     const newProfile = await User.createProfile(profileData);

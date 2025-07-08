@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Input, Avatar, Badge, Tooltip, Dropdown, Menu } from 'antd';
 import { SearchOutlined, MessageOutlined, BellOutlined, HeartOutlined, UserOutlined } from '@ant-design/icons';
-import { useAuth } from '../contexts/authContext'; // Đảm bảo đường dẫn đúng
+import { useAuth } from '../contexts/AuthContext'; // Đảm bảo đường dẫn đúng
 
 import FreelandLogo from '../assets/logo.svg'; // Import logo của bạn
 
@@ -69,7 +69,7 @@ const Navbar = () => {
         <div className="flex items-center justify-between h-16">
           {/* Phần bên trái: Logo và Search */}
           <div className="flex items-center flex-grow">
-            <Link to="/" className="flex items-center mr-6">
+            <Link to="/explore" className="flex items-center mr-6">
               <img src={FreelandLogo} alt="FREELAND Logo" className="h-8 w-auto" />
             </Link>
             <div className="w-full max-w-lg">

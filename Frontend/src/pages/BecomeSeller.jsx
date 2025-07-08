@@ -34,7 +34,6 @@ const BecomeSellerPage = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Navbar />
       <div className="container mx-auto px-4 py-16 flex justify-center">
         <div className="w-full max-w-2xl bg-white p-8 rounded-lg shadow-md">
           <h1 className="text-3xl font-bold mb-2 text-center">Become a Seller</h1>
