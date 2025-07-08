@@ -34,6 +34,18 @@ export const AuthProvider = ({ children }) => {
     localStorage.setItem('user', JSON.stringify(updatedUserData));
   };
 
+  // Hàm để update user data và token (nếu có token mới)
+  const updateUserWithToken = (updatedUserData, newToken = null) => {
+    setAuthUser(updatedUserData);
+    localStorage.setItem('user', JSON.stringify(updatedUserData));
+    
+    // Chỉ update token nếu có token mới được trả về
+    if (newToken) {
+      setToken(newToken);
+      localStorage.setItem('token', newToken);
+    }
+  };
+
   // Hàm để gọi khi đăng xuất
   const logout = () => {
     setAuthUser(null);
@@ -49,6 +61,7 @@ export const AuthProvider = ({ children }) => {
     login,
     logout,
     updateUser,
+    updateUserWithToken,
   };
 
   // Chỉ render children khi đã kiểm tra xong localStorage

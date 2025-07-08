@@ -98,6 +98,9 @@ const AuthService = {
 
         // Lấy role từ userProfile trong CSDL của bạn
         role: userProfile.role,
+        
+        // Tính toán is_seller dựa trên role
+        is_seller: userProfile.role === 'seller',
         };
         
         // Tạo token với secret key của bạn
@@ -105,7 +108,16 @@ const AuthService = {
 
         return { 
             token, 
-            user: payload // Trả về thông tin user đã được kết hợp
+            user: {
+                ...payload,
+                fullname: userProfile.fullname,
+                username: userProfile.username,
+                balance: userProfile.balance || 0,
+                avatar_url: userProfile.avt_url, // Sửa tên field cho đúng với schema
+                seller_headline: userProfile.seller_headline,
+                seller_description: userProfile.seller_description,
+                seller_since: userProfile.seller_since
+            } // Trả về thông tin user đầy đủ hơn
         };
     },
     regenerateToken: (payload) => {

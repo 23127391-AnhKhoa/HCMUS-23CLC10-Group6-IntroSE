@@ -3,14 +3,14 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Input, Button, Form, message } from 'antd';
 import Navbar from '../Common/Navbar_LD'; // Đảm bảo đường dẫn đúng
-// import { useAuth } from '../contexts/authContext'; // Tạm thời không cần dùng
+import { useAuth } from '../contexts/AuthContext'; // Sử dụng context để cập nhật user
 
 const { TextArea } = Input;
 
 const BecomeSellerPage = () => {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
-  // const { token, updateUser } = useAuth(); // Tạm thời không cần dùng
+  const { updateUser } = useAuth(); // Sử dụng context để cập nhật user
 
   // --- SỬA LẠI HÀM onFinish ---
   const onFinish = async (values) => {
@@ -20,8 +20,48 @@ const BecomeSellerPage = () => {
     // 2. Hiển thị trạng thái loading (tùy chọn, để trải nghiệm người dùng tốt hơn)
     setLoading(true);
 
-    // 3. Giả lập một khoảng chờ như đang gọi API (tùy chọn)
-    await new Promise(resolve => setTimeout(resolve, 500)); // Chờ 0.5 giây
+    // 3. Call API to update user as seller
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+      message.error('You must be logged in to become a seller');
+      navigate('/login');
+      return;
+      }
+      
+      const response = await fetch('http://localhost:8000/api/users/become-seller', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          seller_headline: values.seller_headline,
+          seller_description: values.seller_description
+        })
+      });
+      
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to become a seller');
+      }
+      
+      // Cập nhật user info trong context và localStorage
+      const { user: updatedUser, token: newToken } = data;
+      
+      // Cập nhật localStorage với token mới
+      localStorage.setItem('token', newToken);
+      localStorage.setItem('user', JSON.stringify(updatedUser));
+      
+      // Cập nhật context với user mới
+      updateUser(updatedUser);
+    } catch (error) {
+      console.error('Error becoming a seller:', error);
+      message.error(error.message || 'Something went wrong. Please try again.');
+      setLoading(false);
+      return; // Stop execution if there's an error
+    }
 
     // 4. Hiển thị thông báo thành công (tùy chọn)
     message.success('Profile completed! Redirecting...');
