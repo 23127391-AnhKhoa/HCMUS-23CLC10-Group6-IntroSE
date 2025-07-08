@@ -1,6 +1,6 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import { AuthProvider } from './contexts/authContext';
+import { AuthProvider } from './contexts/AuthContext';
 import LoginPage from './pages/LoginPage';
 import Introduction from './pages/Introduction';
 import SignupPage from './pages/SignupPage'; // New placeholder for signup
@@ -13,6 +13,8 @@ import ProfileSeller from './pages/Profile_Seller';
 import Orders from './pages/Orders';
 import Footer from './Common/Footer';
 import BecomeSellerPage from './pages/BecomeSeller';
+import DepositPage from './pages/DepositPage';
+import WithdrawPage from './pages/WithdrawPage';
 
 function App() {
   return (
@@ -22,6 +24,9 @@ function App() {
         <div className="App">
           <Routes>
             {/* Route for news page */}
+            
+
+            {/* Route for the introduction page */}
             <Route path="/" element={<Introduction />} />
 
             {/* Route for login page */}
@@ -47,6 +52,12 @@ function App() {
             <Route path="/seller/orders" element={<Orders />} />
 
             <Route path="/become-a-seller" element={<BecomeSellerPage />} />
+            <Route path="/become-seller" element={<BecomeSellerPage />} />
+
+            <Route path="/deposit" element={<DepositPage />} />
+
+            <Route path="/withdraw" element={<WithdrawPage />} />
+
             {/* 404 Route for unmatched paths */}
             <Route path="*" element={
               <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100">

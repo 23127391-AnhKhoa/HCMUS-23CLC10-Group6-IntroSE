@@ -9,6 +9,13 @@ const User = {
     return data;
   },
 
+  // Tìm user bằng username
+  findByUsername: async (username) => {
+    const { data, error } = await supabase.from('User').select('*').eq('username', username).single();
+    if (error && error.code !== 'PGRST116') throw error;
+    return data;
+  },
+
   // Tạo profile mới cho user
   createProfile: async (profileData) => {
     const { data, error } = await supabase.from('User').insert([profileData]).select();
@@ -18,7 +25,7 @@ const User = {
 
   updateByUuid: async (uuid, updateData) => {
     const { data, error } = await supabase
-      .from('users')
+      .from('User') // Sử dụng table name đúng
       .update(updateData)
       .eq('uuid', uuid)
       .select(); // .select() để trả về bản ghi đã được cập nhật

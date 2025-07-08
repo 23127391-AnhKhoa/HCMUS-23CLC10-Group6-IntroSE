@@ -104,7 +104,7 @@ const Navbar = () => {
               src="../logo.svg" 
               alt="Logo" 
               className="h-8 w-auto cursor-pointer hover:opacity-80 transition-smooth"
-              onClick={() => navigate('/')}
+              onClick={() => navigate('/explore')}
             />
           </div>
 

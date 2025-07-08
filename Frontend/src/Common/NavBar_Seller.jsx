@@ -1,18 +1,67 @@
 // src/components/SellerNavbar.jsx
-import React from 'react';
+import React, { useState } from 'react';
 import { Link, NavLink, useNavigate  } from 'react-router-dom';
-import { Avatar, Badge, Dropdown, Menu } from 'antd';
+import { Avatar, Badge, Dropdown, Menu, message } from 'antd';
 import { BellOutlined, UserOutlined } from '@ant-design/icons';
-import { useAuth } from '../contexts/authContext';
+import { useAuth } from '../contexts/AuthContext';
 import FreelandLogo from '../assets/logo.svg';
 
 const SellerNavbar = () => {
-    const { authUser, logout } = useAuth();
+    const { authUser, logout, updateUser } = useAuth();
     const navigate = useNavigate();
+    const [loading, setLoading] = useState(false);
 
     const handleLogout = () => {
         logout();
         navigate('/login');
+    };
+
+    const handleSwitchToBuying = async () => {
+        try {
+            setLoading(true);
+            const token = localStorage.getItem('token');
+            
+            if (!token) {
+                message.error('You must be logged in');
+                navigate('/login');
+                return;
+            }
+
+            const response = await fetch('http://localhost:8000/api/users/switch-to-buying', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.message || 'Failed to switch to buying');
+            }
+
+            // Cập nhật user info trong context và localStorage
+            const { user: updatedUser, token: newToken } = data;
+            
+            // Cập nhật localStorage với token mới
+            localStorage.setItem('token', newToken);
+            localStorage.setItem('user', JSON.stringify(updatedUser));
+            
+            // Cập nhật context với user mới
+            updateUser(updatedUser);
+
+            message.success('Successfully switched to buying!');
+            
+            // Chuyển hướng về trang chính hoặc profile buyer
+            navigate('/explore');
+            
+        } catch (error) {
+            console.error('Error switching to buying:', error);
+            message.error(error.message || 'Something went wrong. Please try again.');
+        } finally {
+            setLoading(false);
+        }
     };
 
     // Định nghĩa menu theo cách mới, dùng mảng items
@@ -24,6 +73,17 @@ const SellerNavbar = () => {
         {
             key: 'dashboard',
             label: <Link to="/dashboard">Dashboard</Link>,
+        },
+        {
+            type: 'divider',
+        },
+        {
+            key: 'deposit',
+            label: <Link to="/deposit">💰 Deposit</Link>,
+        },
+        {
+            key: 'withdraw',
+            label: <Link to="/withdraw">💸 Withdraw</Link>,
         },
         {
             type: 'divider',
@@ -43,7 +103,7 @@ const SellerNavbar = () => {
         <div className="flex items-center justify-between h-16">
           {/* Phần bên trái: Logo và Menu Seller */}
           <div className="flex items-center space-x-8">
-            <Link to="/" className="flex items-center">
+            <Link to="/profile_seller" className="flex items-center">
               <img src={FreelandLogo} alt="FREELAND Logo" className="h-8 w-auto" />
             </Link>
             <nav className="flex items-center space-x-6 font-medium text-gray-600">
@@ -64,6 +124,15 @@ const SellerNavbar = () => {
 
           {/* Phần bên phải: Thông báo, Avatar, Ví tiền */}
           <div className="flex items-center space-x-6">
+            {/* Nút Switch to Buying */}
+            <button 
+              onClick={handleSwitchToBuying}
+              disabled={loading}
+              className="px-4 py-2 border border-green-600 text-green-600 rounded-md font-medium hover:bg-green-600 hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {loading ? 'Switching...' : 'Switch to Buying'}
+            </button>
+            
             <Badge count={3} size="small">
                 <BellOutlined className="text-xl text-gray-600 hover:text-blue-600 cursor-pointer" />
             </Badge>
