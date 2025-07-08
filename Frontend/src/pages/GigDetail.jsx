@@ -4,10 +4,13 @@ import DOMPurify from 'dompurify';
 import { HeartFilled } from '@ant-design/icons';
 import NavBar from '../Common/NavBar_Buyer';
 import Footer from '../Common/Footer';
+import CreateOrderModal from '../components/CreateOrderModal/CreateOrderModal';
+import { useAuth } from '../contexts/authContext';
 
 const GigDetail = () => {
     const { id } = useParams();
     const navigate = useNavigate();
+    const { token, authUser, isLoading: authLoading } = useAuth();
     const [gig, setGig] = useState(null);
     const [sellerDetails, setSellerDetails] = useState(null);
     const [gigMedia, setGigMedia] = useState([]);
@@ -15,10 +18,105 @@ const GigDetail = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [isFavorited, setIsFavorited] = useState(false);
+    const [showCreateOrderModal, setShowCreateOrderModal] = useState(false);
 
     const handleFavoriteToggle = () => {
         setIsFavorited(!isFavorited);
         console.log('Favorite toggled for gig ID:', id);
+    };
+
+    const handleCreateOrder = () => {
+        if (!authUser) {
+            alert('Please log in to create an order');
+            navigate('/login');
+            return;
+        }
+        
+        // Check if user is trying to order their own gig
+        if (gig && gig.owner_id === authUser.uuid) {
+            alert('You cannot order your own gig');
+            return;
+        }
+        
+        setShowCreateOrderModal(true);
+    };
+
+    const handleOrderSubmit = async (orderData) => {
+        if (!authUser || !token) {
+            alert('Please log in to create an order');
+            navigate('/login');
+            return;
+        }
+
+        try {
+            console.log('📝 Creating order from gig detail:', orderData);
+            
+            // Create order with pre-filled gig information
+            const orderPayload = {
+                client_id: authUser.uuid,
+                gig_id: gig.id,
+                price_at_purchase: Number(gig.price),
+                requirement: orderData.requirements || `Order for: ${gig.title}`,
+                status: 'pending'
+                // Note: delivery_deadline will be calculated when seller confirms the order
+            };
+            
+            console.log('📦 Order payload:', orderPayload);
+            console.log('👤 Auth user:', authUser);
+            console.log('🎫 Token:', token ? 'Present' : 'Missing');
+            console.log('🔍 Payload validation:', {
+                client_id: !!orderPayload.client_id,
+                gig_id: !!orderPayload.gig_id,
+                price_at_purchase: typeof orderPayload.price_at_purchase === 'number' && orderPayload.price_at_purchase > 0,
+                requirement: !!orderPayload.requirement,
+                status: !!orderPayload.status
+            });
+            
+            const response = await fetch('http://localhost:8000/api/orders', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(orderPayload)
+            });
+
+            console.log('📡 Response status:', response.status);
+            console.log('📡 Response headers:', Object.fromEntries(response.headers.entries()));
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error('❌ Response error details:', {
+                    status: response.status,
+                    statusText: response.statusText,
+                    body: errorText
+                });
+                
+                let errorMessage = `Failed to create order: ${response.status}`;
+                try {
+                    const errorData = JSON.parse(errorText);
+                    errorMessage = errorData.message || errorMessage;
+                } catch (parseError) {
+                    errorMessage = errorText || errorMessage;
+                }
+                
+                throw new Error(errorMessage);
+            }
+
+            const data = await response.json();
+            
+            if (data.status === 'success') {
+                setShowCreateOrderModal(false);
+                alert('Order created successfully!');
+                // Navigate to orders page to see the new order
+                navigate('/orders');
+            } else {
+                throw new Error(data.message || 'Failed to create order');
+            }
+        } catch (err) {
+            console.error('❌ Error creating order:', err);
+            alert(`Error creating order: ${err.message}`);
+        }
     };
 
     useEffect(() => {
@@ -150,7 +248,7 @@ const GigDetail = () => {
         setCurrentImageIndex(index);
     };
 
-    if (loading) {
+    if (loading || authLoading) {
         return (
             <div className="relative flex size-full min-h-screen flex-col bg-gray-50" style={{fontFamily: 'Inter, "Noto Sans", sans-serif'}}>
                 <NavBar />
@@ -362,9 +460,26 @@ const GigDetail = () => {
                                         <span className="text-[#111518] text-base font-bold leading-tight">one-time</span>
                                     </p>
                                 </div>
-                                <button className="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-10 px-4 bg-[#336088] text-gray-50 text-sm font-bold leading-normal tracking-[0.015em]">
-                                    <span className="truncate">Continue (${gig.price})</span>
-                                </button>
+                                {/* Only show order button if user is not the owner */}
+                                {authUser && gig.owner_id !== authUser.uuid ? (
+                                    <button 
+                                        onClick={handleCreateOrder}
+                                        className="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-10 px-4 bg-[#1dbf73] text-gray-50 text-sm font-bold leading-normal tracking-[0.015em] hover:bg-[#19a463]"
+                                    >
+                                        <span className="truncate">Continue (${gig.price})</span>
+                                    </button>
+                                ) : authUser && gig.owner_id === authUser.uuid ? (
+                                    <div className="flex min-w-[84px] max-w-[480px] items-center justify-center overflow-hidden rounded-full h-10 px-4 bg-gray-400 text-gray-700 text-sm font-bold leading-normal tracking-[0.015em] cursor-not-allowed">
+                                        <span className="truncate">This is your gig</span>
+                                    </div>
+                                ) : (
+                                    <button 
+                                        onClick={() => navigate('/login')}
+                                        className="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-10 px-4 bg-[#1dbf73] text-gray-50 text-sm font-bold leading-normal tracking-[0.015em] hover:bg-[#19a463]"
+                                    >
+                                        <span className="truncate">Login to Order</span>
+                                    </button>
+                                )}
                             </div>
                         </div>
 
@@ -417,9 +532,6 @@ const GigDetail = () => {
                                 <button className="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-10 px-4 bg-[#336088] text-gray-50 text-sm font-bold leading-normal tracking-[0.015em]">
                                     <span className="truncate">Contact Seller</span>
                                 </button>
-                                <button className="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-10 px-4 bg-[#eaedf0] text-[#111518] text-sm font-bold leading-normal tracking-[0.015em]">
-                                    <span className="truncate">Order Now</span>
-                                </button>
                                 <button className="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-10 px-4 bg-[#ff4444] text-gray-50 text-sm font-bold leading-normal tracking-[0.015em] hover:bg-[#cc3333]">
                                     <span className="truncate">Report Gig</span>
                                 </button>
@@ -430,6 +542,15 @@ const GigDetail = () => {
                 
                 <Footer />
             </div>
+
+            {/* Create Order Modal */}
+            {showCreateOrderModal && (
+                <CreateOrderModal
+                    gig={gig}
+                    onClose={() => setShowCreateOrderModal(false)}
+                    onSubmit={handleOrderSubmit}
+                />
+            )}
         </div>
     );
 };

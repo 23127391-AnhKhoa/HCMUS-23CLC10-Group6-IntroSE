@@ -31,7 +31,9 @@ app.use('/api/users', userRoutes);
 app.use('/api/transactions', transactionRoutes);
 //app.use('/api/gigs', gigRoutes);
 app.use('/api/gigs', gigRoutes);
-//app.use('/api/orders', orderRoutes);
+app.use('/api/orders', orderRoutes);
+app.use('/api/transactions', transactionRoutes);
+
 //app.use('/api/admin', adminRoutes);
 // Xài cái api thì nhớ bỏ // ở đầu, ví dụ xài gigs thì bỏ //, tại bây giờ chưa định nghĩa mà để dô thì nó không được hiểu là function, nó sẽ bị lỗi
 
