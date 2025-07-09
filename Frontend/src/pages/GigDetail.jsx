@@ -52,13 +52,13 @@ const GigDetail = () => {
         try {
             console.log('📝 Creating order from gig detail:', orderData);
             
-            // Create order with client info and modal data
+            // Create order with pre-filled gig information
             const orderPayload = {
                 client_id: authUser.uuid,
-                gig_id: orderData.gig_id || gig.id, // Use the gig_id from form or fallback to current gig
-                price_at_purchase: orderData.price_at_purchase || Number(gig.price),
+                gig_id: gig.id,
+                price_at_purchase: Number(gig.price),
                 requirement: orderData.requirements || `Order for: ${gig.title}`,
-                status: orderData.status || 'pending'
+                status: 'pending'
                 // Note: delivery_deadline will be calculated when seller confirms the order
             };
             
@@ -107,8 +107,9 @@ const GigDetail = () => {
             const data = await response.json();
             
             if (data.status === 'success') {
-                // Indicate success
+                // Don't close modal immediately - let the modal show success state first
                 setOrderCreated(true);
+                // The modal will handle closing itself after showing success
             } else {
                 throw new Error(data.message || 'Failed to create order');
             }

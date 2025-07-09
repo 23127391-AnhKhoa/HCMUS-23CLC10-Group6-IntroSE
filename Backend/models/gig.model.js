@@ -57,28 +57,14 @@ const executeQueryWithRetry = async (queryFunction, queryName = 'unknown') => {
 const Gig = {
   // Find gig by ID
   findById: async (id) => {
-    try {
-      const queryFunction = async (client) => {
-        const result = await client
-          .from('Gigs')
-          .select('*')
-          .eq('id', id)
-          .single();
-        
-        if (result.error && result.error.code !== 'PGRST116') {
-          throw result.error;
-        }
-        
-        return result;
-      };
-
-      const result = await executeQueryWithRetry(queryFunction, 'findById');
-      return result.data;
-      
-    } catch (error) {
-      console.error('Gig Model Error in findById:', error);
-      throw error;
-    }
+    const { data, error } = await supabase
+      .from('Gigs')
+      .select('*')
+      .eq('id', id)
+      .single();
+    
+    if (error && error.code !== 'PGRST116') throw error;
+    return data;
   },
 
   // Create a new gig

@@ -16,7 +16,7 @@ import { EyeOutlined, ClockCircleOutlined, CheckCircleOutlined, CloseCircleOutli
 import NavBar from '../Common/NavBar_Buyer';
 import Footer from '../Common/Footer';
 import OrderCard from '../components/OrderCard/OrderCard';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../contexts/authContext';
 
 /**
  * Orders component for managing user orders

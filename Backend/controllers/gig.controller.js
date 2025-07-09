@@ -80,7 +80,6 @@ const getGigById = async (req, res) => {
       data: gig
     });
   } catch (error) {
-    console.error('Error in getGigById controller:', error);
     res.status(400).json({
       status: 'error',
       message: error.message
