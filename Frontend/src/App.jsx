@@ -9,6 +9,7 @@ import AdminDashboard from './pages/AdminDashboard';
 import ExplorePage from './pages/ExplorePage';
 import ProfileBuyer from './pages/Profile_Buyer';
 import ProfileSeller from './pages/Profile_Seller';
+import EarningPage from './pages/EarningPage';
 import Footer from './Common/Footer';
 import BecomeSellerPage from './pages/BecomeSeller';
 
@@ -38,6 +39,8 @@ function App() {
             <Route path="/profile_buyer" element={<ProfileBuyer />} />
 
             <Route path="/profile_seller" element={<ProfileSeller />} />
+
+            <Route path="/earnings" element={<EarningPage />} />
 
             <Route path="/become-a-seller" element={<BecomeSellerPage />} />
             {/* 404 Route for unmatched paths */}
