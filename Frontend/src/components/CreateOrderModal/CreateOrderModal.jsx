@@ -40,6 +40,7 @@ const CreateOrderModal = ({ onClose, onSubmit, gig = null }) => {
     const [errors, setErrors] = useState({});
     const [showSuccess, setShowSuccess] = useState(false);
     const [successMessage, setSuccessMessage] = useState('');
+    const [gigsError, setGigsError] = useState('');
 
     // Fetch available gigs when modal opens (only if no gig pre-selected)
     useEffect(() => {
@@ -54,6 +55,7 @@ const CreateOrderModal = ({ onClose, onSubmit, gig = null }) => {
     const fetchAvailableGigs = async () => {
         try {
             setLoadingGigs(true);
+            setGigsError('');
             
             const response = await fetch('http://localhost:8000/api/gigs?status=active&limit=50');
             
@@ -68,7 +70,7 @@ const CreateOrderModal = ({ onClose, onSubmit, gig = null }) => {
             }
         } catch (error) {
             console.error('Error fetching gigs:', error);
-            alert('Failed to load available gigs');
+            setGigsError('Failed to load available gigs. Please try again.');
         } finally {
             setLoadingGigs(false);
         }
@@ -296,7 +298,17 @@ const CreateOrderModal = ({ onClose, onSubmit, gig = null }) => {
                                     {/* Gig List */}
                                     {!selectedGig && (
                                         <div className="border border-gray-300 rounded-lg max-h-60 overflow-y-auto">
-                                            {loadingGigs ? (
+                                            {gigsError ? (
+                                                <div className="p-8 text-center">
+                                                    <div className="text-red-500 mb-2">{gigsError}</div>
+                                                    <button
+                                                        onClick={fetchAvailableGigs}
+                                                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                                                    >
+                                                        Try Again
+                                                    </button>
+                                                </div>
+                                            ) : loadingGigs ? (
                                                 <div className="flex items-center justify-center p-8">
                                                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
                                                 </div>
