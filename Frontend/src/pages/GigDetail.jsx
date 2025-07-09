@@ -19,6 +19,7 @@ const GigDetail = () => {
     const [error, setError] = useState(null);
     const [isFavorited, setIsFavorited] = useState(false);
     const [showCreateOrderModal, setShowCreateOrderModal] = useState(false);
+    const [orderCreated, setOrderCreated] = useState(false);
 
     const handleFavoriteToggle = () => {
         setIsFavorited(!isFavorited);
@@ -106,10 +107,9 @@ const GigDetail = () => {
             const data = await response.json();
             
             if (data.status === 'success') {
-                setShowCreateOrderModal(false);
-                alert('Order created successfully!');
-                // Navigate to orders page to see the new order
-                navigate('/orders');
+                // Don't close modal immediately - let the modal show success state first
+                setOrderCreated(true);
+                // The modal will handle closing itself after showing success
             } else {
                 throw new Error(data.message || 'Failed to create order');
             }
@@ -547,7 +547,14 @@ const GigDetail = () => {
             {showCreateOrderModal && (
                 <CreateOrderModal
                     gig={gig}
-                    onClose={() => setShowCreateOrderModal(false)}
+                    onClose={() => {
+                        setShowCreateOrderModal(false);
+                        setOrderCreated(false);
+                        // Navigate to orders page if an order was created
+                        if (orderCreated) {
+                            navigate('/orders');
+                        }
+                    }}
                     onSubmit={handleOrderSubmit}
                 />
             )}

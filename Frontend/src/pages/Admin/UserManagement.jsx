@@ -1,5 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react'; 
 import { FiHome, FiList, FiTrendingUp, FiUsers, FiSettings, FiHelpCircle, FiBell, FiSearch, FiChevronLeft, FiChevronRight, FiEye, FiEdit, FiTrash2 } from 'react-icons/fi';
+import { Link, useNavigate } from 'react-router-dom';
+import { Dropdown, Menu, Avatar } from 'antd';
+import { UserOutlined } from '@ant-design/icons';
+import { useAuth } from '../../contexts/AuthContext';
 
 // --- Components ---
 
@@ -42,28 +46,68 @@ const Sidebar = () => (
   </div>
 );
 
-const Header = ({ searchTerm, onSearchChange }) => ( // Thêm props để quản lý search
-  <header className="flex justify-between items-center mb-6">
-    <h1 className="text-3xl font-bold text-gray-800">User Management</h1>
-    <div className="flex items-center space-x-4">
-      <div className="relative w-72">
-        <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
-        <input 
-          type="text" 
-          placeholder="Search by name or email..." 
-          value={searchTerm}
-          onChange={onSearchChange}
-          className="w-full bg-gray-100 rounded-lg py-3 pl-12 pr-4 focus:outline-none focus:ring-2 focus:ring-blue-500" 
-        />
+const Header = ({ searchTerm, onSearchChange }) => {
+  const { authUser, logout } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
+
+  const userMenu = (
+    <Menu>
+      <Menu.Item key="profile">
+        <Link to="/adminDashboard">Admin Dashboard</Link>
+      </Menu.Item>
+      <Menu.Item key="userManagement">
+        <Link to="/admin/Usermanagement">User Management</Link>
+      </Menu.Item>
+      <Menu.Divider />
+      <Menu.Item key="settings">
+        <Link to="/admin/settings">⚙️ Settings</Link>
+      </Menu.Item>
+      <Menu.Item key="reports">
+        <Link to="/admin/reports">📊 Reports</Link>
+      </Menu.Item>
+      <Menu.Divider />
+      <Menu.Item key="logout" onClick={handleLogout}>
+        🚪 Log Out
+      </Menu.Item>
+    </Menu>
+  );
+
+  return (
+    <header className="flex justify-between items-center mb-6">
+      <h1 className="text-3xl font-bold text-gray-800">User Management</h1>
+      <div className="flex items-center space-x-4">
+        <div className="relative w-72">
+          <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
+          <input 
+            type="text" 
+            placeholder="Search by name or email..." 
+            value={searchTerm}
+            onChange={onSearchChange}
+            className="w-full bg-gray-100 rounded-lg py-3 pl-12 pr-4 focus:outline-none focus:ring-2 focus:ring-blue-500" 
+          />
+        </div>
+        <button className="bg-blue-600 text-white font-semibold px-5 py-3 rounded-lg hover:bg-blue-700 transition-colors">
+          Add User
+        </button>
+        <FiBell className="text-gray-500 w-6 h-6 cursor-pointer hover:text-blue-500 transition-colors"/>
+        <Dropdown overlay={userMenu} trigger={['click']}>
+          <div className="flex items-center cursor-pointer space-x-2">
+            <Avatar 
+              src={authUser?.avatar_url} 
+              icon={!authUser?.avatar_url && <UserOutlined />}
+              className="bg-gray-300"
+            />
+          </div>
+        </Dropdown>
       </div>
-      <button className="bg-blue-600 text-white font-semibold px-5 py-3 rounded-lg hover-scale transition-smooth">
-        Add User
-      </button>
-      <FiBell className="text-gray-500 w-6 h-6 cursor-pointer"/>
-      <img src="https://i.pravatar.cc/150?u=admin" alt="Admin" className="w-10 h-10 rounded-full cursor-pointer" />
-    </div>
-  </header>
-);
+    </header>
+  );
+};
 
 
 const StatCard = ({ title, value }) => (
