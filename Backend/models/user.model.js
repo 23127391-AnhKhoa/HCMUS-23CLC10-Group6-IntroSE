@@ -9,7 +9,14 @@ const User = {
     return data;
   },
 
-  // HÀM CŨ CỦA BẠN (giữ nguyên)
+  // Tìm user bằng username
+  findByUsername: async (username) => {
+    const { data, error } = await supabase.from('User').select('*').eq('username', username).single();
+    if (error && error.code !== 'PGRST116') throw error;
+    return data;
+  },
+
+  // Tạo profile mới cho user
   createProfile: async (profileData) => {
     const { data, error } = await supabase.from('User').insert([profileData]).select();
     if (error) throw error;
