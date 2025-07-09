@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '../Common/Navbar_LD'; // Đảm bảo đường dẫn đúng
-import { useAuth } from '../contexts/authContext'; // 1. Import hook useAuth
+import { useAuth } from '../contexts/AuthContext'; // 1. Import hook useAuth
 import '../index.css';
 
 const LoginPage = () => {

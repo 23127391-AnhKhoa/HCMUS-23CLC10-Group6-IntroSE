@@ -11,7 +11,7 @@
 
 import React, { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
-import { CloseOutlined, SearchOutlined, ShoppingCartOutlined } from '@ant-design/icons';
+import { CloseOutlined, SearchOutlined, ShoppingCartOutlined, CheckCircleOutlined } from '@ant-design/icons';
 
 /**
  * CreateOrderModal component for creating new orders
@@ -38,6 +38,9 @@ const CreateOrderModal = ({ onClose, onSubmit, gig = null }) => {
     const [selectedGig, setSelectedGig] = useState(gig || null);
     const [submitting, setSubmitting] = useState(false);
     const [errors, setErrors] = useState({});
+    const [showSuccess, setShowSuccess] = useState(false);
+    const [successMessage, setSuccessMessage] = useState('');
+    const [gigsError, setGigsError] = useState('');
 
     // Fetch available gigs when modal opens (only if no gig pre-selected)
     useEffect(() => {
@@ -52,6 +55,7 @@ const CreateOrderModal = ({ onClose, onSubmit, gig = null }) => {
     const fetchAvailableGigs = async () => {
         try {
             setLoadingGigs(true);
+            setGigsError('');
             
             const response = await fetch('http://localhost:8000/api/gigs?status=active&limit=50');
             
@@ -66,7 +70,7 @@ const CreateOrderModal = ({ onClose, onSubmit, gig = null }) => {
             }
         } catch (error) {
             console.error('Error fetching gigs:', error);
-            alert('Failed to load available gigs');
+            setGigsError('Failed to load available gigs. Please try again.');
         } finally {
             setLoadingGigs(false);
         }
@@ -149,8 +153,13 @@ const CreateOrderModal = ({ onClose, onSubmit, gig = null }) => {
                 requirements: formData.requirement
             };
             await onSubmit(submissionData);
+            
+            // Show success state
+            setSuccessMessage('Order created successfully!');
+            setShowSuccess(true);
         } catch (error) {
             console.error('Error submitting order:', error);
+            // You can add error handling here if needed
         } finally {
             setSubmitting(false);
         }
@@ -171,23 +180,48 @@ const CreateOrderModal = ({ onClose, onSubmit, gig = null }) => {
             onClick={handleBackdropClick}
         >
             <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
-                {/* Header */}
-                <div className="flex items-center justify-between p-6 border-b border-gray-200">
-                    <h2 className="text-xl font-semibold text-gray-900">
-                        <ShoppingCartOutlined className="mr-2" />
-                        Create New Order
-                    </h2>
-                    <button
-                        onClick={onClose}
-                        className="text-gray-400 hover:text-gray-600 transition-colors"
-                    >
-                        <CloseOutlined size={24} />
-                    </button>
-                </div>
+                {showSuccess ? (
+                    // Success State
+                    <div className="flex flex-col items-center justify-center p-12 text-center">
+                        <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mb-6">
+                            <CheckCircleOutlined className="text-green-600 text-4xl" />
+                        </div>
+                        <h2 className="text-2xl font-semibold text-gray-900 mb-4">
+                            Order Created Successfully!
+                        </h2>
+                        <p className="text-gray-600 mb-2">
+                            Your order has been submitted and is waiting for the seller's confirmation.
+                        </p>
+                        <p className="text-gray-600 mb-8">
+                            You'll receive notifications about the order status updates.
+                        </p>
+                        <button
+                            onClick={onClose}
+                            className="px-6 py-3 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors"
+                        >
+                            Close
+                        </button>
+                    </div>
+                ) : (
+                    // Normal Form State
+                    <>
+                        {/* Header */}
+                        <div className="flex items-center justify-between p-6 border-b border-gray-200">
+                            <h2 className="text-xl font-semibold text-gray-900">
+                                <ShoppingCartOutlined className="mr-2" />
+                                Create New Order
+                            </h2>
+                            <button
+                                onClick={onClose}
+                                className="text-gray-400 hover:text-gray-600 transition-colors"
+                            >
+                                <CloseOutlined size={24} />
+                            </button>
+                        </div>
 
-                {/* Content */}
-                <div className="p-6 overflow-y-auto max-h-[calc(90vh-180px)]">
-                    <form onSubmit={handleSubmit} className="space-y-6">
+                        {/* Content */}
+                        <div className="p-6 overflow-y-auto max-h-[calc(90vh-180px)]">
+                            <form onSubmit={handleSubmit} className="space-y-6">
                         {/* Gig Selection */}
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -264,7 +298,17 @@ const CreateOrderModal = ({ onClose, onSubmit, gig = null }) => {
                                     {/* Gig List */}
                                     {!selectedGig && (
                                         <div className="border border-gray-300 rounded-lg max-h-60 overflow-y-auto">
-                                            {loadingGigs ? (
+                                            {gigsError ? (
+                                                <div className="p-8 text-center">
+                                                    <div className="text-red-500 mb-2">{gigsError}</div>
+                                                    <button
+                                                        onClick={fetchAvailableGigs}
+                                                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                                                    >
+                                                        Try Again
+                                                    </button>
+                                                </div>
+                                            ) : loadingGigs ? (
                                                 <div className="flex items-center justify-center p-8">
                                                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
                                                 </div>
@@ -407,6 +451,8 @@ const CreateOrderModal = ({ onClose, onSubmit, gig = null }) => {
                         )}
                     </button>
                 </div>
+                </>
+                )}
             </div>
         </div>
     );
