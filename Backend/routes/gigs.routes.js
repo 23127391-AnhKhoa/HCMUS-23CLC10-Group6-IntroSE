@@ -3,14 +3,14 @@ const router = require('express').Router();
 const gigController = require('../controllers/gig.controller');
 const gigMediaRoutes = require('./gigMedia.routes');
 
-// Include gigMedia routes
-router.use('/', gigMediaRoutes);
-
 // GET /api/gigs/health - Health check endpoint
 router.get('/health', gigController.healthCheck);
 
 // GET /api/gigs - Get all gigs with pagination and filtering
 router.get('/', gigController.getAllGigs);
+
+// Include gigMedia routes (these are more specific like /:gigId/media)
+router.use('/', gigMediaRoutes);
 
 // GET /api/gigs/:id - Get a single gig by ID
 router.get('/:id', gigController.getGigById);
