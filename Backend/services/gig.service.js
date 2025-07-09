@@ -118,24 +118,48 @@ const GigService = {
   // Get a single gig by ID
   getGigById: async (gigId) => {
     try {
-      const { data: gig, error } = await supabase
-        .from('Gigs')
-        .select(`
-          *,
-          User!Gigs_owner_id_fkey (
-            uuid,
-            username,
-            fullname,
-            avt_url
-          ),
-          Categories!Gigs_category_id_fkey (
-            id,
-            name,
-            description
-          )
-        `)
-        .eq('id', gigId)
-        .single();
+      const queryFunction = async (client) => {
+        const result = await client
+          .from('Gigs')
+          .select(`
+            *,
+            User!Gigs_owner_id_fkey (
+              uuid,
+              username,
+              fullname,
+              avt_url
+            ),
+            Categories!Gigs_category_id_fkey (
+              id,
+              name,
+              description
+            )
+          `)
+          .eq('id', gigId)
+          .single();
+
+        return result;
+      };
+
+      // Use retry mechanism for single queries too
+      const { refreshConnection } = require('../config/supabaseClient');
+      let result;
+      
+      try {
+        result = await queryFunction(supabase);
+        
+        // If we get null/undefined data, try with fresh connection
+        if (!result.data && !result.error) {
+          const freshClient = refreshConnection();
+          result = await queryFunction(freshClient);
+        }
+      } catch (error) {
+        // If query fails, try with fresh connection
+        const freshClient = refreshConnection();
+        result = await queryFunction(freshClient);
+      }
+      
+      const { data: gig, error } = result;
 
       if (error && error.code !== 'PGRST116') throw error;
       
@@ -167,6 +191,7 @@ const GigService = {
 
       return flattenedGig;
     } catch (error) {
+      console.error('Error in getGigById:', error);
       throw new Error(`Error fetching gig: ${error.message}`);
     }
   },
