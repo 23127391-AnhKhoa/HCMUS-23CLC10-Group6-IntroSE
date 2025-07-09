@@ -299,14 +299,6 @@ const InboxPage = () => {
                 </svg>
               </button>
               <button
-                onClick={refreshSupabaseConnection}
-                disabled={isRefreshingConnection}
-                className="p-2 bg-gray-100 text-gray-600 rounded-full hover:bg-gray-200 transition-colors disabled:opacity-50"
-                title="Refresh connection"
-              >
-                <ArrowPathIcon className={`h-5 w-5 ${isRefreshingConnection ? 'animate-spin' : ''}`} />
-              </button>
-              <button
                 onClick={() => setShowNewConversationModal(true)}
                 className="p-2 bg-blue-500 text-white rounded-full hover:bg-blue-600 transition-colors"
                 title="Start new conversation"
@@ -406,12 +398,6 @@ const InboxPage = () => {
               
               {/* Action Buttons */}
               <div className="flex items-center space-x-2">
-                <button className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full">
-                  <PhoneIcon className="h-5 w-5" />
-                </button>
-                <button className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full">
-                  <VideoCameraIcon className="h-5 w-5" />
-                </button>
                 <button className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full">
                   <EllipsisVerticalIcon className="h-5 w-5" />
                 </button>
