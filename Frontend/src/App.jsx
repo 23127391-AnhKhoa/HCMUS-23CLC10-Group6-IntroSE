@@ -5,13 +5,13 @@ import LoginPage from './pages/LoginPage';
 import Introduction from './pages/Introduction';
 import SignupPage from './pages/SignupPage'; // New placeholder for signup
 import CreateGigsPage from './pages/Create_Gigs';
-import AdminDashboard from './pages/AdminDashboard';
+import AdminDashboard from './pages/Admin/AdminDashboard';
 import ExplorePage from './pages/ExplorePage';
 import ProfileBuyer from './pages/Profile_Buyer';
 import ProfileSeller from './pages/Profile_Seller';
 import Footer from './Common/Footer';
 import BecomeSellerPage from './pages/BecomeSeller';
-
+import UserManagement from './pages/Admin/UserManagement';
 function App() {
   return (
     <AuthProvider>
@@ -34,6 +34,8 @@ function App() {
             <Route path="/create-gig" element={<CreateGigsPage />} />
             
             <Route path="/explore" element={<ExplorePage />} />
+
+            <Route path="/admin/Usermanagement" element={<UserManagement />} />
 
             <Route path="/profile_buyer" element={<ProfileBuyer />} />
 

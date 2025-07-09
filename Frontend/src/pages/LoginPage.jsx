@@ -41,7 +41,7 @@ const LoginPage = () => {
 
       // 6. Điều hướng dựa trên role
       if (data.user.role === 'admin') {
-        navigate('/adminDashboard'); // Chuyển đến trang dashboard của admin
+        navigate('/admin/Usermanagement'); 
       } else {
         navigate('/explore'); // Chuyển đến trang chính cho user
       }
