@@ -99,7 +99,6 @@ const GigService = {
         owner_username: gig.User?.username,
         owner_fullname: gig.User?.fullname,
         owner_avatar: gig.User?.avt_url || 'https://placehold.co/300x300', // Use actual avt_url with fallback
-        owner_bio: gig.User?.bio || null, // Bio might not exist in schema
         // Category information
         category_name: gig.Categories?.name,
         category_description: gig.Categories?.description
@@ -115,58 +114,89 @@ const GigService = {
     }
   },
 
-  // Get a single gig by ID
+  // Get a single gig by ID with retry logic
   getGigById: async (gigId) => {
     try {
-      const { data: gig, error } = await supabase
-        .from('Gigs')
-        .select(`
-          *,
-          User!Gigs_owner_id_fkey (
-            uuid,
-            username,
-            fullname,
-            avt_url
-          ),
-          Categories!Gigs_category_id_fkey (
-            id,
-            name,
-            description
-          )
-        `)
-        .eq('id', gigId)
-        .single();
+      // Enhanced query with related data using retry logic
+      const queryFunction = async (client) => {
+        const result = await client
+          .from('Gigs')
+          .select(`
+            *,
+            User!Gigs_owner_id_fkey (
+              uuid,
+              username,
+              fullname,
+              avt_url
+            ),
+            Categories!Gigs_category_id_fkey (
+              id,
+              name,
+              description
+            )
+          `)
+          .eq('id', gigId)
+          .single();
 
-      if (error && error.code !== 'PGRST116') throw error;
+        if (result.error && result.error.code !== 'PGRST116') {
+          throw result.error;
+        }
+        
+        return result;
+      };
+
+      // Execute query with retry logic
+      let result;
+      try {
+        result = await queryFunction(supabase);
+        
+        // If we get null/empty result, try with fresh connection
+        if (!result.data) {
+          const { refreshConnection } = require('../config/supabaseClient');
+          const freshClient = refreshConnection();
+          result = await queryFunction(freshClient);
+        }
+        
+      } catch (error) {
+        console.error('Error in getGigById query, retrying with fresh connection:', error);
+        // Retry with fresh connection
+        const { refreshConnection } = require('../config/supabaseClient');
+        const freshClient = refreshConnection();
+        result = await queryFunction(freshClient);
+      }
+
+      const gigWithDetails = result.data;
       
-      if (!gig) return null;
+      if (!gigWithDetails) {
+        return null;
+      }
 
       // Flatten the data
       const flattenedGig = {
-        id: gig.id,
-        owner_id: gig.owner_id,
-        status: gig.status,
-        title: gig.title,
-        cover_image: gig.cover_image,
-        description: gig.description,
-        price: gig.price,
-        delivery_days: gig.delivery_days,
-        num_of_edits: gig.num_of_edits,
-        created_at: gig.created_at,
-        updated_at: gig.updated_at,
-        category_id: gig.category_id,
+        id: gigWithDetails.id,
+        owner_id: gigWithDetails.owner_id,
+        status: gigWithDetails.status,
+        title: gigWithDetails.title,
+        cover_image: gigWithDetails.cover_image,
+        description: gigWithDetails.description,
+        price: gigWithDetails.price,
+        delivery_days: gigWithDetails.delivery_days,
+        num_of_edits: gigWithDetails.num_of_edits,
+        created_at: gigWithDetails.created_at,
+        updated_at: gigWithDetails.updated_at,
+        category_id: gigWithDetails.category_id,
         // Owner information
-        owner_username: gig.User?.username,
-        owner_fullname: gig.User?.fullname,
-        owner_avatar: gig.User?.avt_url || 'https://placehold.co/300x300', // Use actual avt_url with fallback
-        owner_bio: gig.User?.bio || null, // Bio might not exist in schema
+        owner_username: gigWithDetails.User?.username,
+        owner_fullname: gigWithDetails.User?.fullname,
+        owner_avatar: gigWithDetails.User?.avt_url || 'https://placehold.co/300x300',
         // Category information
-        category_name: gig.Categories?.name,
-        category_description: gig.Categories?.description
+        category_name: gigWithDetails.Categories?.name,
+        category_description: gigWithDetails.Categories?.description
       };
 
       return flattenedGig;
     } catch (error) {
+      console.error('Error in getGigById:', error);
       throw new Error(`Error fetching gig: ${error.message}`);
     }
   },
