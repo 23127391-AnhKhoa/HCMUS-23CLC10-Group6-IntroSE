@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Input, Avatar, Badge, Tooltip, Dropdown, Menu } from 'antd';
 import { SearchOutlined, MessageOutlined, BellOutlined, HeartOutlined, UserOutlined } from '@ant-design/icons';
-import { useAuth } from '../contexts/authContext'; // Đảm bảo đường dẫn đúng
+import { useAuth } from '../contexts/AuthContext'; // Đảm bảo đường dẫn đúng
 
 import FreelandLogo from '../assets/logo.svg'; // Import logo của bạn
 
@@ -38,8 +38,57 @@ const CategoryMenu = ({ category }) => {
 };
 
 const Navbar = () => {
-  const { authUser, logout } = useAuth(); // Lấy thông tin user và hàm logout từ context
+  const { authUser, logout, updateUser } = useAuth();
   const navigate = useNavigate();
+
+  // Tính toán is_seller dựa trên role để đảm bảo luôn chính xác
+  const isSeller = authUser?.is_seller || authUser?.role === 'seller';
+  
+  // Kiểm tra user đã từng là seller hay chưa (để hiển thị đúng button)
+  const hasBeenSeller = authUser?.seller_since || authUser?.role === 'seller';
+
+  const handleReactivateSeller = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      
+      if (!token) {
+        navigate('/login');
+        return;
+      }
+
+      const response = await fetch('http://localhost:8000/api/users/reactivate-seller', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to reactivate seller');
+      }
+
+      // Cập nhật user info
+      const { user: updatedUser, token: newToken } = data;
+      
+      if (!updatedUser || !newToken) {
+        throw new Error('Invalid response format');
+      }
+      
+      localStorage.setItem('token', newToken);
+      localStorage.setItem('user', JSON.stringify(updatedUser));
+      updateUser(updatedUser);
+
+      // Chuyển đến trang seller
+      navigate('/Profile_Seller');
+    } catch (error) {
+      console.error('Error reactivating seller:', error);
+      // Fallback về trang become-seller nếu có lỗi
+      navigate('/become-seller');
+    }
+  };
 
   const handleLogout = () => {
     logout();
@@ -56,6 +105,13 @@ const Navbar = () => {
         <Link to="/dashboard">Dashboard</Link>
       </Menu.Item>
       <Menu.Divider />
+      <Menu.Item key="deposit">
+        <Link to="/deposit">💰 Deposit</Link>
+      </Menu.Item>
+      <Menu.Item key="withdraw">
+        <Link to="/withdraw">💸 Withdraw</Link>
+      </Menu.Item>
+      <Menu.Divider />
       <Menu.Item key="logout" onClick={handleLogout}>
         Log Out
       </Menu.Item>
@@ -69,7 +125,7 @@ const Navbar = () => {
         <div className="flex items-center justify-between h-16">
           {/* Phần bên trái: Logo và Search */}
           <div className="flex items-center flex-grow">
-            <Link to="/" className="flex items-center mr-6">
+            <Link to="/explore" className="flex items-center mr-6">
               <img src={FreelandLogo} alt="FREELAND Logo" className="h-8 w-auto" />
             </Link>
             <div className="w-full max-w-lg">
@@ -102,16 +158,24 @@ const Navbar = () => {
                   Orders
                 </Link>
 
-                {authUser.is_seller ? (
+                {isSeller ? (
                     <button 
                     onClick={() => navigate('/Profile_Seller')}
                     className="px-4 py-2 border border-blue-600 text-blue-600 rounded-md font-medium hover:bg-blue-600 hover:text-white transition-colors"
                         >
                             Switch to Selling
                     </button>
+                    ) : hasBeenSeller ? (
+                    // Nếu đã từng là seller nhưng hiện tại role là buyer
+                    <button 
+                    onClick={handleReactivateSeller}
+                    className="px-4 py-2 border border-blue-600 text-blue-600 rounded-md font-medium hover:bg-blue-600 hover:text-white transition-colors"
+                      >
+                        Switch to Selling
+                    </button>
                     ) : (
-                    // Nếu chưa là seller, nút này sẽ dẫn đến trang đăng ký
-                    <Link to="/become-a-seller">
+                    // Nếu chưa từng là seller, nút này sẽ dẫn đến trang đăng ký
+                    <Link to="/become-seller">
                         <button className="px-4 py-2 font-medium hover:text-blue-600 transition-colors">
                         Become a Seller
                         </button>

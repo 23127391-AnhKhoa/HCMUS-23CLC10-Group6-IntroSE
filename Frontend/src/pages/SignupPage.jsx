@@ -15,7 +15,17 @@ const SignupForm = ({ onRegister }) => {
   const [error, setError] = useState('');
 
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.id]: e.target.value });
+    const { id, value } = e.target;
+    
+    // Username validation: only allow letters, numbers, and dots
+    if (id === 'username') {
+      const usernameRegex = /^[a-zA-Z0-9.]*$/;
+      if (!usernameRegex.test(value)) {
+        return; // Don't update state if invalid characters
+      }
+    }
+    
+    setFormData({ ...formData, [id]: value });
   };
 
   const handleSubmit = async (e) => {
@@ -24,6 +34,18 @@ const SignupForm = ({ onRegister }) => {
 
     if (formData.password !== formData.confirmPassword) {
       setError('Passwords do not match.');
+      return;
+    }
+
+    // Additional username validation
+    const usernameRegex = /^[a-zA-Z0-9.]+$/;
+    if (!usernameRegex.test(formData.username)) {
+      setError('Username can only contain letters, numbers, and dots.');
+      return;
+    }
+
+    if (formData.username.length < 3) {
+      setError('Username must be at least 3 characters long.');
       return;
     }
 
@@ -44,7 +66,19 @@ const SignupForm = ({ onRegister }) => {
       </div>
       <div>
         <label htmlFor="username" className="block text-sm font-medium text-gray-700">Username</label>
-        <input id="username" type="text" value={formData.username} onChange={handleChange} required className="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" placeholder="Enter a unique username" />
+        <input 
+          id="username" 
+          type="text" 
+          value={formData.username} 
+          onChange={handleChange} 
+          required 
+          className="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" 
+          placeholder="Enter a unique username" 
+          pattern="[a-zA-Z0-9.]+"
+          title="Username can only contain letters, numbers, and dots"
+          minLength="3"
+        />
+        <p className="mt-1 text-xs text-gray-500">Only letters, numbers, and dots allowed. Minimum 3 characters.</p>
       </div>
       <div>
         <label htmlFor="email" className="block text-sm font-medium text-gray-700">Email</label>
