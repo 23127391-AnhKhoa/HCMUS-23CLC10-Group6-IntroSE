@@ -186,7 +186,7 @@ const CreateOrderModal = ({ onClose, onSubmit, gig = null }) => {
                 </div>
 
                 {/* Content */}
-                <div className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
+                <div className="p-6 overflow-y-auto max-h-[calc(90vh-180px)]">
                     <form onSubmit={handleSubmit} className="space-y-6">
                         {/* Gig Selection */}
                         <div>
