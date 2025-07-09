@@ -16,6 +16,7 @@ import BecomeSellerPage from './pages/BecomeSeller';
 import UserManagement from './pages/Admin/UserManagement';
 import DepositPage from './pages/DepositPage';
 import WithdrawPage from './pages/WithdrawPage';
+import InboxPage from './pages/InboxPage';
 
 function App() {
   return (
@@ -59,6 +60,10 @@ function App() {
             <Route path="/deposit" element={<DepositPage />} />
 
             <Route path="/withdraw" element={<WithdrawPage />} />
+
+            <Route path="/inbox" element={<InboxPage />} />
+
+            <Route path="/messages" element={<InboxPage />} />
 
             {/* 404 Route for unmatched paths */}
             <Route path="*" element={

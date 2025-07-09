@@ -144,7 +144,9 @@ const Navbar = () => {
               <>
                 <Tooltip title="Inbox">
                   <Badge count={5} size="small">
-                    <MessageOutlined className="text-xl hover:text-blue-600 cursor-pointer" />
+                    <Link to="/inbox">
+                      <MessageOutlined className="text-xl hover:text-blue-600 cursor-pointer" />
+                    </Link>
                   </Badge>
                 </Tooltip>
                 <Tooltip title="Notifications">
