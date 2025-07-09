@@ -137,7 +137,6 @@ const GigService = {
           `)
           .eq('id', gigId)
           .single();
-
         if (result.error && result.error.code !== 'PGRST116') {
           throw result.error;
         }
@@ -166,7 +165,6 @@ const GigService = {
       }
 
       const gigWithDetails = result.data;
-      
       if (!gigWithDetails) {
         return null;
       }
