@@ -1,6 +1,9 @@
 // src/pages/InboxPage.jsx
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { useRealtimeChat } from '../hooks/useRealtimeChat';
+import { useRealtimeConversations } from '../hooks/useRealtimeConversations';
+import { supabase } from '../lib/supabase';
 import { 
   PaperClipIcon, 
   PaperAirplaneIcon,
@@ -9,24 +12,28 @@ import {
   PhoneIcon,
   VideoCameraIcon,
   PlusIcon,
-  XMarkIcon
+  XMarkIcon,
+  ArrowPathIcon
 } from '@heroicons/react/24/outline';
 import { Avatar, Modal, Input, Button, message as antdMessage } from 'antd';
 import { UserOutlined } from '@ant-design/icons';
 
 const InboxPage = () => {
-  const { authUser, token } = useAuth();
-  const [conversations, setConversations] = useState([]);
+  const { authUser, token, refreshSupabaseConnection: authRefreshConnection } = useAuth();
   const [selectedConversation, setSelectedConversation] = useState(null);
-  const [messages, setMessages] = useState([]);
   const [messageInput, setMessageInput] = useState('');
-  const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [showNewConversationModal, setShowNewConversationModal] = useState(false);
   const [userSearchTerm, setUserSearchTerm] = useState('');
   const [availableUsers, setAvailableUsers] = useState([]);
   const [searchingUsers, setSearchingUsers] = useState(false);
+  const [isRefreshingConnection, setIsRefreshingConnection] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0); // Used to trigger re-renders for hooks
   const messagesEndRef = useRef(null);
+
+  // Use realtime hooks with refresh key
+  const { conversations, loading: conversationsLoading, createConversation } = useRealtimeConversations(authUser, refreshKey);
+  const { messages, loading: messagesLoading, sendMessage: sendRealtimeMessage } = useRealtimeChat(selectedConversation?.id, authUser, refreshKey);
 
   // Scroll to bottom when new messages arrive
   const scrollToBottom = () => {
@@ -37,94 +44,29 @@ const InboxPage = () => {
     scrollToBottom();
   }, [messages]);
 
-  // Fetch conversations
+  // Auto-select first conversation when conversations load
   useEffect(() => {
-    fetchConversations();
-  }, []);
-
-  // Fetch messages when conversation is selected
-  useEffect(() => {
-    if (selectedConversation) {
-      fetchMessages(selectedConversation.id);
+    if (conversations.length > 0 && !selectedConversation) {
+      setSelectedConversation(conversations[0]);
     }
-  }, [selectedConversation]);
+  }, [conversations, selectedConversation]);
 
-  const fetchConversations = async () => {
-    try {
-      const response = await fetch('http://localhost:8000/api/conversations', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setConversations(data);
-        // Auto-select first conversation
-        if (data.length > 0 && !selectedConversation) {
-          setSelectedConversation(data[0]);
-        }
-      }
-    } catch (error) {
-      console.error('Error fetching conversations:', error);
-    }
-  };
-
-  const fetchMessages = async (conversationId) => {
-    try {
-      const response = await fetch(`http://localhost:8000/api/conversations/${conversationId}/messages`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setMessages(data);
-      }
-    } catch (error) {
-      console.error('Error fetching messages:', error);
-    }
-  };
-
-  const sendMessage = async () => {
+  // Handle sending messages
+  const handleSendMessage = async () => {
     if (!messageInput.trim() || !selectedConversation) return;
 
-    setLoading(true);
-    try {
-      const response = await fetch(`http://localhost:8000/api/conversations/${selectedConversation.id}/messages`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          content: messageInput.trim()
-        })
-      });
-
-      if (response.ok) {
-        const newMessage = await response.json();
-        setMessages(prev => [...prev, newMessage]);
-        setMessageInput('');
-        // Update conversation last message
-        setConversations(prev => 
-          prev.map(conv => 
-            conv.id === selectedConversation.id 
-              ? { ...conv, lastMessage: messageInput.trim(), lastMessageTime: new Date().toISOString() }
-              : conv
-          )
-        );
-      }
-    } catch (error) {
-      console.error('Error sending message:', error);
-    } finally {
-      setLoading(false);
+    const success = await sendRealtimeMessage(messageInput);
+    if (success) {
+      setMessageInput('');
+    } else {
+      antdMessage.error('Failed to send message');
     }
   };
 
   const handleKeyPress = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      sendMessage();
+      handleSendMessage();
     }
   };
 
@@ -145,12 +87,14 @@ const InboxPage = () => {
 
       if (response.ok) {
         const data = await response.json();
-        // Filter out current user
-        const filteredUsers = data.filter(user => user.uuid !== authUser?.uuid);
-        setAvailableUsers(filteredUsers);
+        setAvailableUsers(data || []);
+      } else {
+        console.error('Error searching users:', response.status);
+        setAvailableUsers([]);
       }
     } catch (error) {
       console.error('Error searching users:', error);
+      setAvailableUsers([]);
     } finally {
       setSearchingUsers(false);
     }
@@ -159,29 +103,9 @@ const InboxPage = () => {
   // Create new conversation with selected user
   const createNewConversation = async (otherUserId) => {
     try {
-      const response = await fetch('http://localhost:8000/api/conversations', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          otherUserId
-        })
-      });
-
-      if (response.ok) {
-        const newConversation = await response.json();
-        
-        // Update conversations list
-        setConversations(prev => {
-          const existing = prev.find(conv => conv.id === newConversation.id);
-          if (existing) {
-            return prev; // Conversation already exists
-          }
-          return [newConversation, ...prev];
-        });
-
+      const newConversation = await createConversation(otherUserId);
+      
+      if (newConversation) {
         // Select the new conversation
         setSelectedConversation(newConversation);
         
@@ -233,6 +157,129 @@ const InboxPage = () => {
     }
   };
 
+  // Refresh Supabase Realtime Connection
+  const refreshSupabaseConnection = useCallback(async () => {
+    if (!authUser || isRefreshingConnection) return;
+    
+    setIsRefreshingConnection(true);
+    antdMessage.loading({ content: 'Refreshing connection...', key: 'refreshConnection' });
+    
+    try {
+      console.log('🔄 Starting connection refresh for user:', authUser.uuid);
+      
+      // First, directly import supabase and setupConnectionMonitoring to ensure fresh state
+      const { supabase, setupConnectionMonitoring } = await import('../lib/supabase');
+      
+      // Make sure connection monitoring is active
+      setupConnectionMonitoring();
+      
+      // Remove any existing channels
+      supabase.removeAllChannels();
+      
+      // Use the auth context method to refresh the connection with Supabase
+      const success = await authRefreshConnection();
+      
+      if (success) {
+        console.log('✅ Connection refreshed successfully');
+        
+        // Force hooks to re-initialize by incrementing the refresh key
+        setRefreshKey(prev => prev + 1);
+        
+        // Create a test subscription to verify connection
+        const testChannel = supabase.channel('connection-test');
+        testChannel.subscribe((status) => {
+          console.log(`Test channel status: ${status}`);
+          if (status === 'SUBSCRIBED') {
+            console.log('✅ Realtime connection verified working');
+            // Remove the test channel after confirmation
+            setTimeout(() => supabase.removeChannel(testChannel), 1000);
+          }
+        });
+        
+        antdMessage.success({ 
+          content: 'Connection refreshed successfully!', 
+          key: 'refreshConnection',
+          duration: 2 
+        });
+      } else {
+        console.error('❌ Failed to refresh connection');
+        antdMessage.error({ 
+          content: 'Failed to refresh connection', 
+          key: 'refreshConnection',
+          duration: 2 
+        });
+      }
+    } catch (error) {
+      console.error('❌ Error refreshing connection:', error);
+      antdMessage.error({ 
+        content: 'Failed to refresh connection: ' + error.message, 
+        key: 'refreshConnection',
+        duration: 2
+      });
+    } finally {
+      setIsRefreshingConnection(false);
+    }
+  }, [authUser, isRefreshingConnection, authRefreshConnection]);
+
+  // Auto-refresh connection when component mounts or user changes
+  useEffect(() => {
+    if (authUser) {
+      console.log('🔄 User detected, setting up Supabase connection for:', authUser.uuid);
+      
+      // Add a slight delay to ensure previous cleanup is complete
+      const refreshTimer = setTimeout(() => {
+        console.log('⏰ Delayed refresh triggered for:', authUser.uuid);
+        refreshSupabaseConnection();
+      }, 800);
+      
+      // Also refresh when the component is first mounted
+      if (!sessionStorage.getItem('initialRefreshDone')) {
+        console.log('🆕 Initial component mount, performing initial refresh');
+        refreshSupabaseConnection();
+        sessionStorage.setItem('initialRefreshDone', 'true');
+      }
+      
+      return () => {
+        clearTimeout(refreshTimer);
+        console.log('🧹 Cleanup: refresh timer cleared');
+      };
+    }
+  }, [authUser?.uuid, refreshSupabaseConnection]); // Only refresh when user ID changes
+  
+  // Test connection status
+  const checkConnectionStatus = useCallback(async () => {
+    try {
+      antdMessage.loading({ content: 'Checking connection...', key: 'connectionCheck' });
+      
+      const { checkRealtimeConnection } = await import('../lib/supabase');
+      const isConnected = await checkRealtimeConnection();
+      
+      if (isConnected) {
+        antdMessage.success({ 
+          content: 'Realtime connection is active!', 
+          key: 'connectionCheck', 
+          duration: 2 
+        });
+      } else {
+        antdMessage.error({ 
+          content: 'Realtime connection is not working', 
+          key: 'connectionCheck', 
+          duration: 3
+        });
+        
+        // Auto-refresh if not connected
+        setTimeout(() => refreshSupabaseConnection(), 1000);
+      }
+    } catch (error) {
+      console.error('Error checking connection:', error);
+      antdMessage.error({ 
+        content: 'Error checking connection', 
+        key: 'connectionCheck', 
+        duration: 2
+      });
+    }
+  }, [refreshSupabaseConnection]);
+
   return (
     <div className="h-screen bg-gray-50 flex">
       {/* Left Sidebar - Conversations List */}
@@ -241,13 +288,32 @@ const InboxPage = () => {
         <div className="p-4 border-b border-gray-200">
           <div className="flex items-center justify-between mb-4">
             <h1 className="text-2xl font-bold text-gray-900">Messages</h1>
-            <button
-              onClick={() => setShowNewConversationModal(true)}
-              className="p-2 bg-blue-500 text-white rounded-full hover:bg-blue-600 transition-colors"
-              title="Start new conversation"
-            >
-              <PlusIcon className="h-5 w-5" />
-            </button>
+            <div className="flex items-center space-x-2">
+              <button
+                onClick={checkConnectionStatus}
+                className="p-2 bg-gray-100 text-gray-600 rounded-full hover:bg-gray-200 transition-colors"
+                title="Check connection status"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-4l-4 4-4-4z" />
+                </svg>
+              </button>
+              <button
+                onClick={refreshSupabaseConnection}
+                disabled={isRefreshingConnection}
+                className="p-2 bg-gray-100 text-gray-600 rounded-full hover:bg-gray-200 transition-colors disabled:opacity-50"
+                title="Refresh connection"
+              >
+                <ArrowPathIcon className={`h-5 w-5 ${isRefreshingConnection ? 'animate-spin' : ''}`} />
+              </button>
+              <button
+                onClick={() => setShowNewConversationModal(true)}
+                className="p-2 bg-blue-500 text-white rounded-full hover:bg-blue-600 transition-colors"
+                title="Start new conversation"
+              >
+                <PlusIcon className="h-5 w-5" />
+              </button>
+            </div>
           </div>
           
           {/* Search Bar */}
@@ -400,8 +466,8 @@ const InboxPage = () => {
                 </div>
                 
                 <button
-                  onClick={sendMessage}
-                  disabled={!messageInput.trim() || loading}
+                  onClick={handleSendMessage}
+                  disabled={!messageInput.trim() || messagesLoading}
                   className="p-2 bg-blue-500 text-white rounded-full hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   <PaperAirplaneIcon className="h-5 w-5" />
@@ -447,7 +513,6 @@ const InboxPage = () => {
               value={userSearchTerm}
               onChange={(e) => handleUserSearch(e.target.value)}
               prefix={<MagnifyingGlassIcon className="h-4 w-4 text-gray-400" />}
-              loading={searchingUsers}
             />
           </div>
 
