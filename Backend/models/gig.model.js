@@ -6,12 +6,12 @@ const checkConnection = async () => {
   try {
     const { data, error } = await supabase.from('Gigs').select('count').limit(1);
     if (error) {
-      console.error('❌ [Gig Model] Connection check failed:', error);
+      console.error('Gig Model Connection check failed:', error);
       return false;
     }
     return true;
   } catch (error) {
-    console.error('💥 [Gig Model] Connection check error:', error);
+    console.error('Gig Model Connection check error:', error);
     return false;
   }
 };
@@ -57,14 +57,28 @@ const executeQueryWithRetry = async (queryFunction, queryName = 'unknown') => {
 const Gig = {
   // Find gig by ID
   findById: async (id) => {
-    const { data, error } = await supabase
-      .from('Gigs')
-      .select('*')
-      .eq('id', id)
-      .single();
-    
-    if (error && error.code !== 'PGRST116') throw error;
-    return data;
+    try {
+      const queryFunction = async (client) => {
+        const result = await client
+          .from('Gigs')
+          .select('*')
+          .eq('id', id)
+          .single();
+        
+        if (result.error && result.error.code !== 'PGRST116') {
+          throw result.error;
+        }
+        
+        return result;
+      };
+
+      const result = await executeQueryWithRetry(queryFunction, 'findById');
+      return result.data;
+      
+    } catch (error) {
+      console.error('Gig Model Error in findById:', error);
+      throw error;
+    }
   },
 
   // Create a new gig
@@ -203,15 +217,12 @@ const Gig = {
   // Get count of gigs with filters
   getCount: async (filters = {}) => {
     try {
-      console.log('🔍 [Gig Model] getCount called with filters:', filters);
-      
       const queryFunction = async (client) => {
         let query = client
           .from('Gigs')
           .select('*', { count: 'exact', head: true });
 
         if (filters.status) {
-          console.log('🔍 [Gig Model] Applying count status filter:', filters.status);
           query = query.eq('status', filters.status);
         }
         
@@ -227,20 +238,9 @@ const Gig = {
           query = query.or(`title.ilike.%${filters.search}%,description.ilike.%${filters.search}%`);
         }
 
-        const startTime = Date.now();
         const result = await query;
-        const endTime = Date.now();
-        
-        console.log('⏱️ [Gig Model] Count query took:', endTime - startTime, 'ms');
         
         if (result.error) {
-          console.error('❌ [Gig Model] Count query error:', result.error);
-          console.error('❌ [Gig Model] Count error details:', {
-            message: result.error.message,
-            code: result.error.code,
-            hint: result.error.hint,
-            details: result.error.details
-          });
           throw result.error;
         }
         
@@ -250,12 +250,10 @@ const Gig = {
       const result = await executeQueryWithRetry(queryFunction, 'getCount');
       const count = result.count;
       
-      console.log('✅ [Gig Model] Count query successful, returned:', count);
       return count;
       
     } catch (error) {
-      console.error('💥 [Gig Model] Error in getCount:', error);
-      console.error('💥 [Gig Model] Count stack trace:', error.stack);
+      console.error('Gig Model Error in getCount:', error);
       throw error;
     }
   }

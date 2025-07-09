@@ -19,6 +19,7 @@ const GigDetail = () => {
     const [error, setError] = useState(null);
     const [isFavorited, setIsFavorited] = useState(false);
     const [showCreateOrderModal, setShowCreateOrderModal] = useState(false);
+    const [orderCreated, setOrderCreated] = useState(false);
 
     const handleFavoriteToggle = () => {
         setIsFavorited(!isFavorited);
@@ -51,13 +52,13 @@ const GigDetail = () => {
         try {
             console.log('📝 Creating order from gig detail:', orderData);
             
-            // Create order with pre-filled gig information
+            // Create order with client info and modal data
             const orderPayload = {
                 client_id: authUser.uuid,
-                gig_id: gig.id,
-                price_at_purchase: Number(gig.price),
+                gig_id: orderData.gig_id || gig.id, // Use the gig_id from form or fallback to current gig
+                price_at_purchase: orderData.price_at_purchase || Number(gig.price),
                 requirement: orderData.requirements || `Order for: ${gig.title}`,
-                status: 'pending'
+                status: orderData.status || 'pending'
                 // Note: delivery_deadline will be calculated when seller confirms the order
             };
             
@@ -106,10 +107,8 @@ const GigDetail = () => {
             const data = await response.json();
             
             if (data.status === 'success') {
-                setShowCreateOrderModal(false);
-                alert('Order created successfully!');
-                // Navigate to orders page to see the new order
-                navigate('/orders');
+                // Indicate success
+                setOrderCreated(true);
             } else {
                 throw new Error(data.message || 'Failed to create order');
             }
@@ -547,7 +546,14 @@ const GigDetail = () => {
             {showCreateOrderModal && (
                 <CreateOrderModal
                     gig={gig}
-                    onClose={() => setShowCreateOrderModal(false)}
+                    onClose={() => {
+                        setShowCreateOrderModal(false);
+                        setOrderCreated(false);
+                        // Navigate to orders page if an order was created
+                        if (orderCreated) {
+                            navigate('/orders');
+                        }
+                    }}
                     onSubmit={handleOrderSubmit}
                 />
             )}
