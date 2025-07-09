@@ -11,7 +11,7 @@
 
 import React, { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
-import { CloseOutlined, SearchOutlined, ShoppingCartOutlined, CheckCircleOutlined } from '@ant-design/icons';
+import { CloseOutlined, SearchOutlined, ShoppingCartOutlined } from '@ant-design/icons';
 
 /**
  * CreateOrderModal component for creating new orders
@@ -38,7 +38,6 @@ const CreateOrderModal = ({ onClose, onSubmit, gig = null }) => {
     const [selectedGig, setSelectedGig] = useState(gig || null);
     const [submitting, setSubmitting] = useState(false);
     const [errors, setErrors] = useState({});
-    const [orderSuccess, setOrderSuccess] = useState(false);
 
     // Fetch available gigs when modal opens (only if no gig pre-selected)
     useEffect(() => {
@@ -67,6 +66,7 @@ const CreateOrderModal = ({ onClose, onSubmit, gig = null }) => {
             }
         } catch (error) {
             console.error('Error fetching gigs:', error);
+            alert('Failed to load available gigs');
         } finally {
             setLoadingGigs(false);
         }
@@ -144,28 +144,11 @@ const CreateOrderModal = ({ onClose, onSubmit, gig = null }) => {
         
         try {
             setSubmitting(true);
-            
-            // Get the selected or pre-selected gig
-            const selectedGigData = selectedGig || gig;
-            
-            if (!selectedGigData || !selectedGigData.id) {
-                throw new Error('No gig selected');
-            }
-            
-            // Format the data for submission with all required fields
+            // Format the data for submission
             const submissionData = {
-                gig_id: selectedGigData.id,
-                price_at_purchase: formData.price_at_purchase,
-                requirements: formData.requirement,
-                status: formData.status
+                requirements: formData.requirement
             };
-            
-            console.log('Submitting order with data:', submissionData);
             await onSubmit(submissionData);
-            
-            // Show success message
-            setOrderSuccess(true);
-            
         } catch (error) {
             console.error('Error submitting order:', error);
         } finally {
@@ -182,7 +165,6 @@ const CreateOrderModal = ({ onClose, onSubmit, gig = null }) => {
         }
     };
 
-    // Render
     return (
         <div 
             className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4"
@@ -204,17 +186,8 @@ const CreateOrderModal = ({ onClose, onSubmit, gig = null }) => {
                 </div>
 
                 {/* Content */}
-                {orderSuccess ? (
-                    <div className="p-6 flex flex-col items-center justify-center">
-                        <CheckCircleOutlined className="text-green-500 text-6xl mb-4" />
-                        <p className="text-lg font-semibold text-green-700 mb-4">Order created successfully!</p>
-                        <button onClick={onClose} className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
-                            Close
-                        </button>
-                    </div>
-                ) : (
-                    <div className="p-6 overflow-y-auto max-h-[calc(90vh-180px)]">
-                     <form onSubmit={handleSubmit} className="space-y-6">
+                <div className="p-6 overflow-y-auto max-h-[calc(90vh-180px)]">
+                    <form onSubmit={handleSubmit} className="space-y-6">
                         {/* Gig Selection */}
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -409,36 +382,30 @@ const CreateOrderModal = ({ onClose, onSubmit, gig = null }) => {
                         )}
                     </form>
                 </div>
-                )}
 
                 {/* Footer */}
                 <div className="flex items-center justify-end space-x-4 p-6 border-t border-gray-200 bg-gray-50">
-                    {/* Cancel/Create buttons but hide when success */}
-                    {!orderSuccess && (
-                        <>
-                            <button
-                                type="button"
-                                onClick={onClose}
-                                className="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                onClick={handleSubmit}
-                                disabled={submitting || (!selectedGig && !gig)}
-                                className="px-6 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center"
-                            >
-                                {submitting ? (
-                                    <>
-                                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                                        Creating...
-                                    </>
-                                ) : (
-                                    'Create Order'
-                                )}
-                            </button>
-                        </>
-                    )}
+                    <button
+                        type="button"
+                        onClick={onClose}
+                        className="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                    >
+                        Cancel
+                    </button>
+                    <button
+                        onClick={handleSubmit}
+                        disabled={submitting || (!selectedGig && !gig)}
+                        className="px-6 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center"
+                    >
+                        {submitting ? (
+                            <>
+                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                                Creating...
+                            </>
+                        ) : (
+                            'Create Order'
+                        )}
+                    </button>
                 </div>
             </div>
         </div>
