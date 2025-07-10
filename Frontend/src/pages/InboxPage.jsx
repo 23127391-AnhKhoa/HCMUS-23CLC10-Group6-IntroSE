@@ -41,7 +41,15 @@ const InboxPage = () => {
   };
 
   useEffect(() => {
-    scrollToBottom();
+    const container = messagesEndRef.current?.parentNode;
+
+    if (!container) return;
+
+    const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 100;
+
+    if (isNearBottom) {
+      scrollToBottom();
+    }
   }, [messages]);
 
   // Auto-select first conversation when conversations load
@@ -400,6 +408,8 @@ const InboxPage = () => {
               <div className="flex items-center space-x-2">
                 <button className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full">
                   <EllipsisVerticalIcon className="h-5 w-5" />
+                  
+
                 </button>
               </div>
             </div>
@@ -437,8 +447,24 @@ const InboxPage = () => {
               <div className="flex items-end space-x-3">
                 <button className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full">
                   <PaperClipIcon className="h-6 w-6" />
+
+                  
                 </button>
-                
+                <button 
+                  onClick={scrollToBottom}
+                  className={`fixed bottom-20 right-1/3 transform -translate-x-1/2 
+                    p-3 bg-white text-gray-700 hover:bg-gray-100 
+                    rounded-full shadow-lg border transition-opacity duration-300 z-10 ${
+                    messagesEndRef.current && 
+                    messagesEndRef.current.getBoundingClientRect().top > window.innerHeight - 200 
+                    ? 'opacity-100 visible' : 'opacity-0 invisible'
+                  }`}
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+                  </svg>
+                </button>
+
                 <div className="flex-1">
                   <textarea
                     value={messageInput}
