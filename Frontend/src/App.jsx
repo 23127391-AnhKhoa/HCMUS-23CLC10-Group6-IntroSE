@@ -16,6 +16,7 @@ import BecomeSellerPage from './pages/BecomeSeller';
 import UserManagement from './pages/Admin/UserManagement';
 import DepositPage from './pages/DepositPage';
 import WithdrawPage from './pages/WithdrawPage';
+import SellerInfo from './pages/SellerInfo'; // Import SellerInfo page
 
 function App() {
   return (
@@ -60,6 +61,7 @@ function App() {
 
             <Route path="/withdraw" element={<WithdrawPage />} />
 
+            <Route path="/SellerInfo/:sellerId" element={<SellerInfo />} />
             {/* 404 Route for unmatched paths */}
             <Route path="*" element={
               <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100">
