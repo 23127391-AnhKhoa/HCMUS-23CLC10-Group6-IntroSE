@@ -21,6 +21,7 @@ const gigRoutes = require('./routes/gigs.routes');
 const orderRoutes = require('./routes/orders.routes');
 const transactionRoutes = require('./routes/transactions.routes');
 const adminRoutes = require('./routes/admin.routes');
+const conversationRoutes = require('./routes/conversations.routes');
 
 // Định nghĩa các route chính
 // Mọi request đến /api/auth sẽ được xử lý bởi authRoutes
@@ -29,6 +30,7 @@ const adminRoutes = require('./routes/admin.routes');
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/transactions', transactionRoutes);
+app.use('/api/conversations', conversationRoutes);
 //app.use('/api/gigs', gigRoutes);
 app.use('/api/gigs', gigRoutes);
 app.use('/api/orders', orderRoutes);

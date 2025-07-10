@@ -1,5 +1,7 @@
 // src/contexts/AuthContext.js
-import React, { createContext, useState, useContext, useEffect } from 'react';
+import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
+import { authService } from '../services/authService';
+import { supabase } from '../lib/supabase';
 
 // Tạo Context
 const AuthContext = createContext(null);
@@ -17,6 +19,10 @@ export const AuthProvider = ({ children }) => {
     if (storedToken && storedUser) {
       setToken(storedToken);
       setAuthUser(JSON.parse(storedUser));
+      
+      // Authenticate with Supabase for realtime features
+      const userData = JSON.parse(storedUser);
+      authService.authenticateWithSupabase(userData.uuid, storedToken);
     }
     setIsLoading(false);
   }, []);
@@ -27,6 +33,9 @@ export const AuthProvider = ({ children }) => {
     setToken(userToken);
     localStorage.setItem('user', JSON.stringify(userData));
     localStorage.setItem('token', userToken);
+    
+    // Authenticate with Supabase for realtime features
+    authService.authenticateWithSupabase(userData.uuid, userToken);
   };
 
   const updateUser = (updatedUserData) => {
@@ -43,6 +52,9 @@ export const AuthProvider = ({ children }) => {
     if (newToken) {
       setToken(newToken);
       localStorage.setItem('token', newToken);
+      
+      // Re-authenticate with Supabase if token changed
+      authService.authenticateWithSupabase(updatedUserData.uuid, newToken);
     }
   };
 
@@ -52,7 +64,22 @@ export const AuthProvider = ({ children }) => {
     setToken(null);
     localStorage.removeItem('user');
     localStorage.removeItem('token');
+    
+    // Sign out from Supabase
+    authService.signOutFromSupabase();
   };
+
+  // Hàm để làm mới kết nối Supabase
+  const refreshSupabaseConnection = useCallback(async () => {
+    if (!authUser || !token) return false;
+    
+    try {
+      return await authService.refreshSupabaseConnection(authUser.uuid, token);
+    } catch (error) {
+      console.error('Error refreshing Supabase connection:', error);
+      return false;
+    }
+  }, [authUser, token]);
 
   const value = {
     authUser,
@@ -62,6 +89,7 @@ export const AuthProvider = ({ children }) => {
     logout,
     updateUser,
     updateUserWithToken,
+    refreshSupabaseConnection,
   };
 
   // Chỉ render children khi đã kiểm tra xong localStorage

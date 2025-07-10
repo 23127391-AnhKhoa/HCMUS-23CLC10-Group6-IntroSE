@@ -74,6 +74,19 @@ const User = {
     
     if (error) throw error;
     return { message: 'User profile deleted' };
+  },
+
+  searchUsers: async (query) => {
+    const { data, error } = await supabase
+      .from('User')
+      .select('uuid, fullname, username, avt_url, role, status')
+      .or(`fullname.ilike.%${query}%,username.ilike.%${query}%`)
+      .eq('status', 'active')
+      .order('fullname')
+      .limit(20);
+
+    if (error) throw error;
+    return data || [];
   }
 };
 
