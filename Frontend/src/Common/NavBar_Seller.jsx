@@ -68,7 +68,7 @@ const SellerNavbar = () => {
     const userMenuItems = [
         {
             key: 'profile',
-            label: <Link to="/profile_buyer">My Profile</Link>,
+            label: <Link to="/profile_seller">My Profile</Link>,
         },
         {
             key: 'dashboard',

@@ -6,6 +6,9 @@ const gigMediaRoutes = require('./gigMedia.routes');
 // GET /api/gigs/health - Health check endpoint
 router.get('/health', gigController.healthCheck);
 
+// THÊM MỚI: Endpoint cho recommendations
+router.get('/recommendations', gigController.getRecommendedGigs);
+
 // GET /api/gigs - Get all gigs with pagination and filtering
 router.get('/', gigController.getAllGigs);
 

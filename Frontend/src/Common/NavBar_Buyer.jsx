@@ -82,7 +82,7 @@ const Navbar = () => {
       updateUser(updatedUser);
 
       // Chuyển đến trang seller
-      navigate('/Profile_Seller');
+      navigate('/profile_seller');
     } catch (error) {
       console.error('Error reactivating seller:', error);
       // Fallback về trang become-seller nếu có lỗi
@@ -99,7 +99,7 @@ const Navbar = () => {
   const userMenu = (
     <Menu>
       <Menu.Item key="profile">
-        <Link to="/profile">Profile</Link>
+        <Link to="/profile_buyer">Profile</Link>
       </Menu.Item>
       <Menu.Item key="dashboard">
         <Link to="/dashboard">Dashboard</Link>
@@ -162,7 +162,7 @@ const Navbar = () => {
 
                 {isSeller ? (
                     <button 
-                    onClick={() => navigate('/Profile_Seller')}
+                    onClick={() => navigate('/profile_seller')}
                     className="px-4 py-2 border border-blue-600 text-blue-600 rounded-md font-medium hover:bg-blue-600 hover:text-white transition-colors"
                         >
                             Switch to Selling

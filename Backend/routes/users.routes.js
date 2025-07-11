@@ -28,6 +28,14 @@ router.post('/switch-to-buying', authenticateToken, userController.switchToBuyin
 // Route để reactivate seller cho user đã từng là seller
 router.post('/reactivate-seller', authenticateToken, userController.reactivateSeller);
 
+// ========== User Profile endpoints ==========
+
+// GET /api/users/profile - Lấy thông tin profile của user hiện tại
+router.get('/profile', authenticateToken, userController.getProfile);
+
+// PUT /api/users/profile - Cập nhật profile của user hiện tại
+router.put('/profile', authenticateToken, userController.updateProfile);
+
 // ========== Fetch user info endpoints ==========
 
 // GET /api/users/:id - Lấy user theo ID

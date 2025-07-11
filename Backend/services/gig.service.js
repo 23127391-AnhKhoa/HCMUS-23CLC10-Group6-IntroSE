@@ -272,6 +272,98 @@ const GigService = {
     } catch (error) {
       throw new Error(`Error fetching owner gigs: ${error.message}`);
     }
+  },
+
+  // THÊM MỚI: Smart recommendation algorithm
+  getRecommendedGigs: async (options) => {
+    const { limit = 3 } = options;
+    
+    try {
+      // 1. Query gigs với JOIN user data
+      const { data: gigs, error } = await supabase
+        .from('Gigs')
+        .select(`
+          *,
+          Users!owner_id (
+            username,
+            fullname
+          )
+        `)
+        .eq('status', 'active')
+        .order('created_at', { ascending: false })
+        .limit(20); // Lấy 20 candidates
+
+      if (error) {
+        throw new Error(`Supabase query error: ${error.message}`);
+      }
+
+      if (!gigs || gigs.length === 0) {
+        return [];
+      }
+
+      // 2. Smart scoring algorithm
+      const scoredGigs = gigs.map(gig => {
+        let score = 0;
+        
+        // Rating factor (40% weight)
+        const rating = gig.rating || 4.0;
+        score += rating * 0.4;
+        
+        // Price factor (20% weight)
+        const price = gig.price || 0;
+        if (price >= 20 && price <= 200) {
+          score += 0.2;
+        } else if (price < 20) {
+          score += 0.1;
+        }
+        
+        // Recency factor (20% weight)
+        const daysSinceCreation = (Date.now() - new Date(gig.created_at)) / (1000 * 60 * 60 * 24);
+        if (daysSinceCreation <= 7) {
+          score += 0.2;
+        } else if (daysSinceCreation <= 30) {
+          score += 0.1;
+        }
+        
+        // Title quality factor (10% weight)
+        if (gig.title && gig.title.length > 30) {
+          score += 0.1;
+        }
+        
+        // Description factor (10% weight)
+        if (gig.description && gig.description.length > 50) {
+          score += 0.1;
+        }
+        
+        return {
+          ...gig,
+          recommendation_score: score,
+          seller_name: gig.Users?.username || gig.Users?.fullname || 'Seller'
+        };
+      });
+
+      // 3. Sort và randomize để đa dạng
+      const recommended = scoredGigs
+        .sort((a, b) => b.recommendation_score - a.recommendation_score)
+        .slice(0, limit * 2) // Double candidates
+        .sort(() => Math.random() - 0.5) // Shuffle
+        .slice(0, limit); // Final selection
+
+      // 4. Clean response format
+      return recommended.map(gig => ({
+        gig_id: gig.id,
+        title: gig.title,
+        description: gig.description,
+        price: gig.price,
+        rating: gig.rating || 4.0,
+        seller_name: gig.seller_name,
+        created_at: gig.created_at,
+        recommendation_score: gig.recommendation_score
+      }));
+      
+    } catch (error) {
+      throw new Error(`Error fetching recommended gigs: ${error.message}`);
+    }
   }
 };
 

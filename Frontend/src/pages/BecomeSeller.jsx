@@ -67,7 +67,7 @@ const BecomeSellerPage = () => {
     message.success('Profile completed! Redirecting...');
     
     // 5. Chuyển hướng trực tiếp đến trang Profile_Seller
-    navigate('/Profile_Seller');
+    navigate('/profile_seller');
 
     // Không cần setLoading(false) nữa vì đã chuyển trang
   };

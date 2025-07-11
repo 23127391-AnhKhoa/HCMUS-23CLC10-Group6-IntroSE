@@ -163,9 +163,34 @@ const deleteGig = async (req, res) => {
   }
 };
 
+// THÊM MỚI: Controller method cho recommendations
+const getRecommendedGigs = async (req, res) => {
+  try {
+    const { limit = 3 } = req.query;
+    
+    const result = await GigService.getRecommendedGigs({
+      limit: parseInt(limit)
+    });
+    
+    res.status(200).json({
+      status: 'success',
+      data: result,
+      message: `Retrieved ${result.length} recommended gigs`
+    });
+  } catch (error) {
+    console.error('Get recommended gigs error:', error);
+    res.status(500).json({
+      status: 'error',
+      message: 'Failed to get recommended gigs',
+      error: error.message
+    });
+  }
+};
+
 module.exports = {
   healthCheck,
   getAllGigs,
+  getRecommendedGigs,  // THÊM MỚI
   getGigById,
   createGig,
   updateGig,
