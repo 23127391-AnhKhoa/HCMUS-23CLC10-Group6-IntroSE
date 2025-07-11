@@ -67,7 +67,7 @@ export const AuthProvider = ({ children }) => {
   // Chỉ render children khi đã kiểm tra xong localStorage
   return (
     <AuthContext.Provider value={value}>
-      {!isLoading && children}
+      {children}
     </AuthContext.Provider>
   );
 };
