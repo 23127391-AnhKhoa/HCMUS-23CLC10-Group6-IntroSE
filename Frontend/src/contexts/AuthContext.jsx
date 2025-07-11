@@ -95,7 +95,7 @@ export const AuthProvider = ({ children }) => {
   // Chỉ render children khi đã kiểm tra xong localStorage
   return (
     <AuthContext.Provider value={value}>
-      {!isLoading && children}
+      {children}
     </AuthContext.Provider>
   );
 };
@@ -104,3 +104,6 @@ export const AuthProvider = ({ children }) => {
 export const useAuth = () => {
   return useContext(AuthContext);
 };
+
+// Export AuthContext để có thể import trực tiếp
+export { AuthContext };

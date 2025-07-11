@@ -10,7 +10,8 @@ if (typeof document !== 'undefined') {
     toastContainer.style.position = 'fixed';
     toastContainer.style.top = '20px';
     toastContainer.style.right = '20px';
-    toastContainer.style.zIndex = '1000';
+    toastContainer.style.zIndex = '10000'; // Higher than LoadingOverlay (9999)
+    toastContainer.style.pointerEvents = 'none'; // Allow clicks to pass through
     document.body.appendChild(toastContainer);
   }
 }
@@ -52,7 +53,8 @@ export const Toast = ({ message, type = toastTypes.INFO, duration = 5000, onClos
 
   return createPortal(
     <div 
-      className={`flex items-center rounded-md border px-4 py-3 mb-4 max-w-sm animate-slide-in ${bgColors[type]}`}
+      className={`flex items-center rounded-md border px-4 py-3 mb-4 max-w-sm animate-toast-bounce ${bgColors[type]}`}
+      style={{ pointerEvents: 'auto' }} // Re-enable pointer events for the toast itself
       role="alert"
     >
       <div className="mr-2">{icons[type]}</div>
