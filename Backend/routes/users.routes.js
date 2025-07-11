@@ -16,6 +16,9 @@ router.delete('/:uuid', /* authenticateToken, isAdmin, */ userController.deleteU
 
 // ========== User & Seller endpoints ==========
 
+// Route để search users
+router.get('/search', authenticateToken, userController.searchUsers);
+
 // Route để user trở thành seller
 router.post('/become-seller', authenticateToken, userController.becomeSeller);
 

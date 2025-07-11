@@ -26,16 +26,20 @@ const GigDetail = () => {
         console.log('Favorite toggled for gig ID:', id);
     };
 
+    const [errorNotification, setErrorNotification] = useState('');
+    
     const handleCreateOrder = () => {
         if (!authUser) {
-            alert('Please log in to create an order');
-            navigate('/login');
+            setErrorNotification('Please log in to create an order');
+            setTimeout(() => {
+                navigate('/login');
+            }, 1500);
             return;
         }
         
         // Check if user is trying to order their own gig
         if (gig && gig.owner_id === authUser.uuid) {
-            alert('You cannot order your own gig');
+            setErrorNotification('You cannot order your own gig');
             return;
         }
         
@@ -44,9 +48,11 @@ const GigDetail = () => {
 
     const handleOrderSubmit = async (orderData) => {
         if (!authUser || !token) {
-            alert('Please log in to create an order');
-            navigate('/login');
-            return;
+            setErrorNotification('Please log in to create an order');
+            setTimeout(() => {
+                navigate('/login');
+            }, 1500);
+            return { success: false, error: 'Authentication required' };
         }
 
         try {
@@ -114,13 +120,30 @@ const GigDetail = () => {
             }
         } catch (err) {
             console.error('❌ Error creating order:', err);
-            alert(`Error creating order: ${err.message}`);
+            // Return error object instead of showing alert
+            return {
+                success: false,
+                error: err.message
+            };
         }
+        
+        // If we get here, the order was created successfully
+        return { success: true };
     };
 
     useEffect(() => {
         fetchGigDetail();
     }, [id]);
+
+    // Auto-dismiss error notification after 5 seconds
+    useEffect(() => {
+        if (errorNotification) {
+            const timer = setTimeout(() => {
+                setErrorNotification('');
+            }, 5000);
+            return () => clearTimeout(timer);
+        }
+    }, [errorNotification]);
 
     const fetchGigDetail = async () => {
         try {
@@ -312,6 +335,20 @@ const GigDetail = () => {
         <div className="relative flex size-full min-h-screen flex-col bg-gray-50" style={{fontFamily: 'Inter, "Noto Sans", sans-serif'}}>
             <div className="layout-container flex h-full grow flex-col">
                 <NavBar />
+                
+                {/* Error notification */}
+                {errorNotification && (
+                    <div className="fixed top-20 left-1/2 transform -translate-x-1/2 z-50 px-6 py-3 bg-red-500 text-white rounded-lg shadow-lg flex items-center">
+                        <span className="mr-2">⚠️</span>
+                        <span>{errorNotification}</span>
+                        <button 
+                            onClick={() => setErrorNotification('')}
+                            className="ml-4 text-white hover:text-gray-200 focus:outline-none"
+                        >
+                            ×
+                        </button>
+                    </div>
+                )}
                 
                 <div className="px-40 flex flex-1 justify-center py-5 pt-28">
                     <div className="layout-content-container flex flex-col max-w-[960px] flex-1">
@@ -528,7 +565,10 @@ const GigDetail = () => {
                         {/* Action Buttons */}
                         <div className="flex justify-stretch">
                             <div className="flex flex-1 gap-3 flex-wrap px-4 py-3 justify-start">
-                                <button className="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-10 px-4 bg-[#336088] text-gray-50 text-sm font-bold leading-normal tracking-[0.015em]">
+                                <button 
+                                    className="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-10 px-4 bg-[#336088] text-gray-50 text-sm font-bold leading-normal tracking-[0.015em]"
+                                    onClick={() => navigate(`/SellerInfo/${sellerDetails?.uuid || gig.owner_id}`)}
+                                >
                                     <span className="truncate">Contact Seller</span>
                                 </button>
                                 <button className="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-10 px-4 bg-[#ff4444] text-gray-50 text-sm font-bold leading-normal tracking-[0.015em] hover:bg-[#cc3333]">
