@@ -76,3 +76,6 @@ export const AuthProvider = ({ children }) => {
 export const useAuth = () => {
   return useContext(AuthContext);
 };
+
+// Export AuthContext để có thể import trực tiếp
+export { AuthContext };
