@@ -13,6 +13,14 @@ const ProfileSeller = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [activeOrders, setActiveOrders] = useState([]);
   const [ordersLoading, setOrdersLoading] = useState(true);
+  const [stats, setStats] = useState({
+    totalEarnings: 0,
+    completedOrders: 0,
+    activeOrders: 0,
+    rating: 0,
+    responseRate: 0,
+    deliveryTime: 'N/A'
+  });
   const [formData, setFormData] = useState({
     fullname: '',
     username: '',
@@ -21,16 +29,6 @@ const ProfileSeller = () => {
     skills: '',
     hourlyRate: ''
   });
-
-  // Mock data for demonstration
-  const stats = {
-    totalEarnings: 2850,
-    completedOrders: 47,
-    activeOrders: 3,
-    rating: 4.9,
-    responseRate: 95,
-    deliveryTime: '2 days'
-  };
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -94,11 +92,82 @@ const ProfileSeller = () => {
       }
     };
 
+    const fetchSellerStats = async () => {
+      try {
+        if (!token || !authUser?.uuid) return;
+
+        // Fetch earnings overview
+        const earningsResponse = await fetch(`http://localhost:8000/api/earnings/seller/${authUser.uuid}/overview`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        let earningsData = {
+          totalEarnings: 0,
+          totalOrders: 0,
+          monthlyOrders: 0
+        };
+
+        if (earningsResponse.ok) {
+          const earningsResult = await earningsResponse.json();
+          earningsData = earningsResult.data || earningsData;
+        }
+
+        // Fetch seller's gigs for ratings calculation
+        let avgRating = 0;
+        try {
+          const gigsResponse = await fetch(`http://localhost:8000/api/gigs/seller/${authUser.uuid}`, {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+          });
+
+          if (gigsResponse.ok) {
+            const gigsResult = await gigsResponse.json();
+            const gigsData = gigsResult.data || [];
+            
+            if (gigsData.length > 0) {
+              const ratingsSum = gigsData.reduce((sum, gig) => sum + (parseFloat(gig.rating) || 0), 0);
+              avgRating = Math.round((ratingsSum / gigsData.length) * 10) / 10;
+            }
+          }
+        } catch (gigError) {
+          console.error('Failed to fetch gigs for rating:', gigError);
+        }
+
+        // Update stats with real data
+        setStats({
+          totalEarnings: earningsData.totalEarnings || 0,
+          completedOrders: earningsData.totalOrders || 0,
+          activeOrders: activeOrders.length,
+          rating: avgRating || 0,
+          responseRate: 95, // This would come from messaging/response data
+          deliveryTime: '2-3 days' // This would be calculated from order completion times
+        });
+
+      } catch (err) {
+        console.error('Failed to fetch seller stats:', err);
+        // Keep default stats if fetch fails
+      }
+    };
+
     if (authUser && token) {
       fetchProfile();
       fetchActiveOrders();
+      fetchSellerStats();
     }
   }, [authUser, token]);
+
+  // Update activeOrders count in stats when activeOrders changes
+  useEffect(() => {
+    setStats(prevStats => ({
+      ...prevStats,
+      activeOrders: activeOrders.length
+    }));
+  }, [activeOrders]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;

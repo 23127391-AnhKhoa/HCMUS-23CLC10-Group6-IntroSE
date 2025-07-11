@@ -81,7 +81,17 @@ const ProfileBuyer = () => {
           });
           if (fallbackResponse.ok) {
             const fallbackData = await fallbackResponse.json();
-            setRecommendedGigs(fallbackData.data?.slice(0, 3) || []);
+            // Transform regular gigs data to match recommendations format
+            const transformedGigs = (fallbackData.data || []).slice(0, 3).map(gig => ({
+              gig_id: gig.id,
+              title: gig.title,
+              description: gig.description,
+              price: gig.price,
+              rating: gig.rating || '5.0',
+              seller_name: gig.owner_username || gig.owner_fullname || 'Seller',
+              created_at: gig.created_at
+            }));
+            setRecommendedGigs(transformedGigs);
           } else {
             setRecommendedGigs([]);
           }
@@ -275,7 +285,11 @@ const ProfileBuyer = () => {
               ) : recommendedGigs.length > 0 ? (
                 <div className="space-y-3">
                   {recommendedGigs.map((gig) => (
-                    <div key={gig.gig_id} className="border border-gray-200 rounded-lg p-3 hover:shadow-md hover:border-gray-300 transition-all cursor-pointer">
+                    <div 
+                      key={gig.gig_id} 
+                      className="border border-gray-200 rounded-lg p-3 hover:shadow-md hover:border-gray-300 transition-all cursor-pointer"
+                      onClick={() => navigate(`/gig/${gig.gig_id}`)}
+                    >
                       <h4 className="font-medium text-sm text-gray-800 mb-1 line-clamp-2">
                         {gig.title}
                       </h4>
