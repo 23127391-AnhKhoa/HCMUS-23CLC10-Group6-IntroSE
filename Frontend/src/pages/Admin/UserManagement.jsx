@@ -15,7 +15,7 @@ const Sidebar = () => (
         <span className="font-bold text-xl text-gray-800">FREELAND</span>
       </div>
       <nav className="flex flex-col space-y-2">
-        <a href="#" className="flex items-center p-3 text-gray-600 hover:bg-gray-100 rounded-lg transition-smooth">
+        <a href="/admin/AdminDashboard" className="flex items-center p-3 text-gray-600 hover:bg-gray-100 rounded-lg transition-smooth">
           <FiHome className="mr-3" /> Dashboard
         </a>
         <a href="#" className="flex items-center p-3 text-gray-600 hover:bg-gray-100 rounded-lg transition-smooth">

@@ -16,7 +16,6 @@ import BecomeSellerPage from './pages/BecomeSeller';
 import UserManagement from './pages/Admin/UserManagement';
 import DepositPage from './pages/DepositPage';
 import WithdrawPage from './pages/WithdrawPage';
-
 function App() {
   return (
     <AuthProvider>
@@ -43,6 +42,7 @@ function App() {
             
             <Route path="/explore" element={<ExplorePage />} />
 
+            <Route path="/admin/AdminDashboard" element={<AdminDashboard/>}/>
             <Route path="/admin/Usermanagement" element={<UserManagement />} />
             <Route path="/gig/:id" element={<GigDetail />} />
 

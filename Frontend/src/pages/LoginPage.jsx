@@ -41,7 +41,7 @@ const LoginPage = () => {
 
       // 6. Điều hướng dựa trên role
       if (data.user.role === 'admin') {
-        navigate('/admin/Usermanagement'); 
+        navigate('/admin/AdminDashboard'); 
       } 
       else if (data.user.role === 'buyer'){
         navigate('/explore'); // Chuyển đến trang chính cho user
