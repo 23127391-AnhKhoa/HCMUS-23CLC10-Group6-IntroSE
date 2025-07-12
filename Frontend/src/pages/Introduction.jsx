@@ -10,6 +10,17 @@ import Footer from '../Common/Footer';
  * integrating the HeroSection and CustomerReviewSection to present
  * a professional introduction and customer testimonials.
  */
+
+const BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+
+const oldFetch = window.fetch
+window.fetch = (url, ...args) => {
+  if (typeof url === 'string' && url.startsWith('/api')) {
+    url = `${BASE}${url}`
+  }
+  return oldFetch(url, ...args)
+}
+
 const Introduction = () => {
   return (
     <div className="min-h-screen bg-purple-50 font-sans">
