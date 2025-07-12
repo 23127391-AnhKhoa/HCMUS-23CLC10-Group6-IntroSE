@@ -18,6 +18,7 @@ import DepositPage from './pages/DepositPage';
 import WithdrawPage from './pages/WithdrawPage';
 import InboxPage from './pages/InboxPage';
 import SellerInfo from './pages/SellerInfo'; // Import SellerInfo page
+import EarningsPage from './pages/EarningsPage'; // Import Earnings page
 
 function App() {
   return (
@@ -68,6 +69,7 @@ function App() {
             <Route path="/messages" element={<InboxPage />} />
 
             <Route path="/SellerInfo/:sellerId" element={<SellerInfo />} />
+            <Route path="/earnings" element={<EarningsPage />} />
             {/* 404 Route for unmatched paths */}
             <Route path="*" element={
               <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100">
