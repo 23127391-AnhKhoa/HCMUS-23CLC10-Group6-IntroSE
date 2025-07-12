@@ -38,6 +38,8 @@ const CreateOrderModal = ({ onClose, onSubmit, gig = null }) => {
     const [selectedGig, setSelectedGig] = useState(gig || null);
     const [submitting, setSubmitting] = useState(false);
     const [errors, setErrors] = useState({});
+    const [orderSuccess, setOrderSuccess] = useState(false);
+    const [errorMessage, setErrorMessage] = useState(''); // Added error message state
 
     // Fetch available gigs when modal opens (only if no gig pre-selected)
     useEffect(() => {
@@ -66,7 +68,7 @@ const CreateOrderModal = ({ onClose, onSubmit, gig = null }) => {
             }
         } catch (error) {
             console.error('Error fetching gigs:', error);
-            alert('Failed to load available gigs');
+            setErrorMessage('Failed to load gigs. Please try again later.');
         } finally {
             setLoadingGigs(false);
         }
@@ -146,11 +148,24 @@ const CreateOrderModal = ({ onClose, onSubmit, gig = null }) => {
             setSubmitting(true);
             // Format the data for submission
             const submissionData = {
-                requirements: formData.requirement
+                gig_id: selectedGigData.id,
+                price_at_purchase: formData.price_at_purchase,
+                requirement: formData.requirement,
+                status: formData.status
             };
-            await onSubmit(submissionData);
+            
+            console.log('Submitting order with data:', submissionData);
+            const result = await onSubmit(submissionData);
+              // Only show success message if the submission was successful
+            if (result && result.success) {
+                setOrderSuccess(true);
+            } else {
+                throw new Error(result?.error || 'Failed to create order');
+            }
+            
         } catch (error) {
             console.error('Error submitting order:', error);
+            setErrorMessage(error.message || 'Failed to create order. Please try again.');
         } finally {
             setSubmitting(false);
         }
@@ -167,7 +182,7 @@ const CreateOrderModal = ({ onClose, onSubmit, gig = null }) => {
 
     return (
         <div 
-            className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4"
+            className="fixed inset-0 bg-black bg-opacity-50 z-[9997] flex items-center justify-center p-4"
             onClick={handleBackdropClick}
         >
             <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
@@ -385,27 +400,39 @@ const CreateOrderModal = ({ onClose, onSubmit, gig = null }) => {
 
                 {/* Footer */}
                 <div className="flex items-center justify-end space-x-4 p-6 border-t border-gray-200 bg-gray-50">
-                    <button
-                        type="button"
-                        onClick={onClose}
-                        className="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-                    >
-                        Cancel
-                    </button>
-                    <button
-                        onClick={handleSubmit}
-                        disabled={submitting || (!selectedGig && !gig)}
-                        className="px-6 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center"
-                    >
-                        {submitting ? (
-                            <>
-                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                                Creating...
-                            </>
-                        ) : (
-                            'Create Order'
-                        )}
-                    </button>
+                    {/* Error message */}
+                    {errorMessage && (
+                        <div className="mr-auto px-4 py-2 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
+                            <span className="font-medium">Error:</span> {errorMessage}
+                        </div>
+                    )}
+                    
+                    {/* Cancel/Create buttons but hide when success */}
+                    {!orderSuccess && (
+                        <>
+                            <button
+                                type="button"
+                                onClick={onClose}
+                                className="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleSubmit}
+                                disabled={submitting || (!selectedGig && !gig)}
+                                className="px-6 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center"
+                            >
+                                {submitting ? (
+                                    <>
+                                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                                        Creating...
+                                    </>
+                                ) : (
+                                    'Create Order'
+                                )}
+                            </button>
+                        </>
+                    )}
                 </div>
             </div>
         </div>

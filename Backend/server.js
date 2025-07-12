@@ -2,10 +2,11 @@
 const express = require('express');
 const dotenv = require('dotenv');
 const cors = require('cors');
+const path = require('path');
 
 // Tải các biến môi trường từ file .env
+//dotenv.config({ path: path.join(__dirname, '.env') });
 dotenv.config();
-
 // Khởi tạo ứng dụng Express
 const app = express();
 
@@ -21,6 +22,9 @@ const gigRoutes = require('./routes/gigs.routes');
 const orderRoutes = require('./routes/orders.routes');
 const transactionRoutes = require('./routes/transactions.routes');
 const adminRoutes = require('./routes/admin.routes');
+const uploadRoutes = require('./routes/upload.routes');
+const dashboardRoutes = require('./routes/dashboard.routes');
+const conversationRoutes = require('./routes/conversations.routes');
 
 // Định nghĩa các route chính
 // Mọi request đến /api/auth sẽ được xử lý bởi authRoutes
@@ -29,11 +33,14 @@ const adminRoutes = require('./routes/admin.routes');
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/transactions', transactionRoutes);
+app.use('/api/conversations', conversationRoutes);
 //app.use('/api/gigs', gigRoutes);
 app.use('/api/gigs', gigRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/transactions', transactionRoutes);
+app.use('/api/upload', uploadRoutes);
 
+app.use('/api/dashboard', dashboardRoutes); 
 //app.use('/api/admin', adminRoutes);
 // Xài cái api thì nhớ bỏ // ở đầu, ví dụ xài gigs thì bỏ //, tại bây giờ chưa định nghĩa mà để dô thì nó không được hiểu là function, nó sẽ bị lỗi
 

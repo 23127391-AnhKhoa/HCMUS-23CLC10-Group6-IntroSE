@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react'; 
-import { FiHome, FiList, FiTrendingUp, FiUsers, FiSettings, FiHelpCircle, FiBell, FiSearch, FiChevronLeft, FiChevronRight, FiEye, FiEdit, FiTrash2 } from 'react-icons/fi';
+import { FiHome, FiList, FiTrendingUp, FiUsers, FiSettings, FiHelpCircle, FiBell, FiSearch, FiChevronLeft, FiChevronRight, FiEye, FiEdit, FiTrash2, FiRefreshCw } from 'react-icons/fi';
 import { Link, useNavigate } from 'react-router-dom';
 import { Dropdown, Menu, Avatar } from 'antd';
 import { UserOutlined } from '@ant-design/icons';
@@ -15,7 +15,7 @@ const Sidebar = () => (
         <span className="font-bold text-xl text-gray-800">FREELAND</span>
       </div>
       <nav className="flex flex-col space-y-2">
-        <a href="#" className="flex items-center p-3 text-gray-600 hover:bg-gray-100 rounded-lg transition-smooth">
+        <a href="/admin/AdminDashboard" className="flex items-center p-3 text-gray-600 hover:bg-gray-100 rounded-lg transition-smooth">
           <FiHome className="mr-3" /> Dashboard
         </a>
         <a href="#" className="flex items-center p-3 text-gray-600 hover:bg-gray-100 rounded-lg transition-smooth">
@@ -118,8 +118,9 @@ const StatCard = ({ title, value }) => (
 );
 
 // Sửa UserRow để nhận các hàm xử lý sự kiện
-const UserRow = ({ user, onDelete, onUpdateRole }) => {
-  const statusClass = user.status === 'Active' ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-600';
+const UserRow = ({ user, onDelete, onUpdateRole, onReactivate }) => { // Thêm prop onReactivate
+  const isUserActive = user.status && user.status.toLowerCase() === 'active';
+  const statusClass = isUserActive ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-600';
   
   const handleRoleChange = (e) => {
     const newRole = e.target.value;
@@ -128,17 +129,16 @@ const UserRow = ({ user, onDelete, onUpdateRole }) => {
   
   return (
     <tr className="border-b border-gray-200 hover:bg-gray-50">
+      {/* ... các thẻ <td> cho User, Role không đổi ... */}
       <td className="py-4 px-6">
         <div className="flex items-center space-x-4">
           <img src={user.avatar_url || `https://i.pravatar.cc/150?u=${user.uuid}`} alt={user.username} className="w-10 h-10 rounded-full" />
           <div>
             <div className="font-medium text-gray-800">{user.username}</div>
-            
           </div>
         </div>
       </td>
       <td className="py-4 px-6">
-        {/* Cho phép sửa role trực tiếp */}
         <select value={user.role} onChange={handleRoleChange} className="px-7 border border-gray-300 rounded-md bg-white">
             <option value="buyer">Buyer</option>
             <option value="seller">Seller</option>
@@ -154,7 +154,25 @@ const UserRow = ({ user, onDelete, onUpdateRole }) => {
       <td className="py-4 px-6">
         <div className="flex items-center space-x-4 text-gray-500">
           <FiEye onClick={() => alert(JSON.stringify(user, null, 2))} className="cursor-pointer hover:text-blue-500 transition-smooth" size={20} />
-          <FiTrash2 onClick={() => onDelete(user.uuid, user.name)} className="cursor-pointer hover:text-red-500 transition-smooth" size={20} />
+          
+          {/* --- LOGIC HIỂN THỊ NÚT ĐỘNG --- */}
+          {isUserActive ? (
+            // Nếu active, hiển thị nút xóa/vô hiệu hóa
+            <FiTrash2 
+              onClick={() => onDelete(user.uuid, user.username)} 
+              className="cursor-pointer hover:text-red-500 transition-smooth" 
+              size={20} 
+              title="Deactivate User"
+            />
+          ) : (
+            // Nếu inactive, hiển thị nút kích hoạt lại
+            <FiRefreshCw 
+              onClick={() => onReactivate(user.uuid, user.username)} 
+              className="cursor-pointer hover:text-green-500 transition-smooth" 
+              size={20}
+              title="Reactivate User"
+            />
+          )}
         </div>
       </td>
     </tr>
@@ -247,21 +265,35 @@ const UserManagement = () => {
   // --- Action Handlers ---
 
   const handleDeleteUser = async (uuid, name) => {
-    if (window.confirm(`Are you sure you want to delete user ${name}?`)) {
-      try {
-        const response = await fetch(`http://localhost:8000/api/users/${uuid}`, {
-          method: 'DELETE',
-        });
-        if (!response.ok) {
-          throw new Error('Failed to delete user.');
+    // Tên hàm vẫn là handleDeleteUser vì về mặt ngữ nghĩa đối với người quản trị, đây là hành động "xóa".
+    if (window.confirm(`Are you sure you want to deactivate user ${name}? This will set their status to Inactive.`)) {
+        try {
+            const response = await fetch(`http://localhost:8000/api/users/${uuid}`, {
+                method: 'DELETE', // Method vẫn là DELETE để khớp với API route
+            });
+
+            if (!response.ok) {
+                // Phân tích lỗi từ server nếu có
+                const errorData = await response.json();
+                throw new Error(errorData.message || 'Failed to deactivate user.');
+            }
+
+            // === THAY ĐỔI QUAN TRỌNG Ở ĐÂY ===
+            // Thay vì lọc bỏ (filter), chúng ta dùng map để cập nhật lại status của user.
+            setUsers(prevUsers =>
+                prevUsers.map(user =>
+                    user.uuid === uuid
+                        ? { ...user, status: 'inactive' } // Tìm đúng user và đổi status
+                        : user // Giữ nguyên các user khác
+                )
+            );
+
+        } catch (err) {
+            alert(err.message);
         }
-        // Cập nhật UI ngay lập tức
-        setUsers(prevUsers => prevUsers.filter(user => user.uuid !== uuid));
-      } catch (err) {
-        alert(err.message);
-      }
     }
-  };
+};
+
   
   const handleUpdateUserRole = async (uuid, newRole) => {
     // Cập nhật UI tạm thời để có trải nghiệm tốt hơn
@@ -287,10 +319,37 @@ const UserManagement = () => {
     }
   };
 
+  const handleReactivateUser = async (uuid, name) => {
+    if (window.confirm(`Are you sure you want to reactivate user ${name}?`)) {
+      try {
+        const response = await fetch(`http://localhost:8000/api/users/${uuid}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: 'active' }), // Gửi yêu cầu đổi status thành 'active'
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to reactivate user.');
+        }
+
+        // Cập nhật UI ngay lập tức
+        setUsers(prevUsers =>
+          prevUsers.map(user =>
+            user.uuid === uuid
+              ? { ...user, status: 'active' } // Đổi status thành active
+              : user
+          )
+        );
+      } catch (err) {
+        alert(err.message);
+      }
+    }
+  };
+
   const currentUsers = users; // Nếu phân trang ở client side: .slice(indexOfFirstUser, indexOfLastUser)
 
-  const activeUsers = users.filter(user => user.status === 'Active').length;
-  const inactiveUsers = users.length - activeUsers;
+  const activeUsers = users.filter(user => user.status && user.status.toLowerCase() === 'active').length;
+  const inactiveUsers = users.filter(user => user.status && user.status.toLowerCase() === 'inactive').length;
 
 
   return (
@@ -324,14 +383,15 @@ const UserManagement = () => {
                         <tr><td colSpan="5" className="text-center py-8 text-red-500">{error}</td></tr>
                       ) : (
                         currentUsers.map(user => (
-                          <UserRow 
-                            key={user.uuid} 
-                            user={user} 
-                            onDelete={handleDeleteUser}
-                            onUpdateRole={handleUpdateUserRole}
-                          />
+                        <UserRow 
+                             key={user.uuid} 
+                             user={user} 
+                             onDelete={handleDeleteUser}
+                              onUpdateRole={handleUpdateUserRole}
+                              onReactivate={handleReactivateUser} // <-- TRUYỀN PROP MỚI XUỐNG
+                        />
                         ))
-                      )}
+                        )}
                     </tbody>
                 </table>
             </div>

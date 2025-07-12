@@ -1,4 +1,4 @@
-const UserService = require('../services/user.service');
+const UserService = require('../services/user.Service');
 const User = require('../models/user.model');
 const jwt = require('jsonwebtoken');
 
@@ -224,6 +224,27 @@ const getUserByUsername = async (req, res) => {
     }
 };
 
+const searchUsers = async (req, res) => {
+    try {
+        const { q } = req.query;
+        
+        if (!q || q.trim().length < 2) {
+            return res.status(400).json({ 
+                status: 'error', 
+                message: 'Search query must be at least 2 characters' 
+            });
+        }
+
+        const users = await User.searchUsers(q.trim());
+        res.status(200).json(users);
+    } catch (error) {
+        res.status(500).json({ 
+            status: 'error', 
+            message: error.message 
+        });
+    }
+};
+
 module.exports = {
     getAllUsers,
     updateUser,
@@ -232,5 +253,6 @@ module.exports = {
     switchToBuying,
     reactivateSeller,
     getUserById,
-    getUserByUsername
+    getUserByUsername,
+    searchUsers
 };

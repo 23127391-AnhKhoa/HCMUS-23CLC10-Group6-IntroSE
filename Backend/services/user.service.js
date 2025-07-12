@@ -25,14 +25,19 @@ const updateUserByUuid = async (uuid, updateData) => {
 };
 
 const deleteUserByUuid = async (uuid) => {
-    await User.remove(uuid);
+    // Dữ liệu cần cập nhật
+    const dataToUpdate = { status: 'inactive' };
 
-    const { error: authError } = await supabase.auth.admin.deleteUser(uuid);
-    if (authError) {
-        console.error("Failed to delete auth user:", authError.message);
-    }
+    // Gọi hàm update có sẵn trong model của bạn
+    const updatedUser = await User.updateByUuid(uuid, dataToUpdate);
 
-    return { message: `User ${uuid} deleted successfully.` };
+    // Không còn xóa user khỏi Supabase Auth nữa
+    // Việc này giữ lại tài khoản để họ có thể đăng nhập nếu cần kích hoạt lại
+
+    return { 
+        message: `User ${uuid} has been deactivated.`,
+        user: updatedUser 
+    };
 };
 
 // Từ nhánh kia

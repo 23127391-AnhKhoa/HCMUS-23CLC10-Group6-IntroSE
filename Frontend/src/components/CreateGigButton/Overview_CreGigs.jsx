@@ -1,8 +1,9 @@
 import React, { useState } from 'react'; // Cần useState cho currentTagInput
 import { XMarkIcon } from '@heroicons/react/24/solid'; // Cần cho nút xóa tag
+import MediaGalleryManager from './MediaGalleryManager';
 
 // Props bây giờ sẽ là onUpdateTagsArray thay vì onTagsChange
-const OverviewCreGigs = ({ gigData, onInputChange, onCategoryChange, onUpdateTagsArray }) => {
+const OverviewCreGigs = ({ gigData, onInputChange, onCategoryChange, onUpdateTagsArray, errors = {} }) => {
   const MAX_TITLE_LENGTH = 80;
   const MAX_TAGS = 5;
 
@@ -77,10 +78,12 @@ const OverviewCreGigs = ({ gigData, onInputChange, onCategoryChange, onUpdateTag
         <p className="text-sm text-slate-600">As your Gig storefront, your title is the most important place to include keywords that buyers would likely use to search for a service like yours.</p>
         <div className="relative">
           <span className="absolute left-4 top-3.5 text-sm text-slate-500 pointer-events-none">I will</span>
-          <textarea id="gigTitle" name="gigTitle" rows="3" className={`${inputBaseClasses} pl-14 pr-16 py-3 leading-relaxed`} placeholder="do something I'm really good at" value={gigData.gigTitle || ''} onChange={handleGigTitleChange} aria-describedby="gigTitle-description gigTitle-counter"/>
+          <textarea id="gigTitle" name="gigTitle" rows="3" className={`${inputBaseClasses} pl-14 pr-16 py-3 leading-relaxed ${errors.gigTitle ? 'border-red-500 focus:border-red-500' : ''}`} placeholder="do something I'm really good at" value={gigData.gigTitle || ''} onChange={handleGigTitleChange} aria-describedby="gigTitle-description gigTitle-counter"/>
           <div id="gigTitle-counter" className="absolute right-4 bottom-3 text-xs text-slate-500">{gigData.gigTitle?.length || 0} / {MAX_TITLE_LENGTH}</div>
         </div>
-        <p id="gigTitle-description" className="sr-only">Enter the title for your gig, starting with 'I will'. Maximum {MAX_TITLE_LENGTH} characters.</p>
+        {errors.gigTitle && (
+          <p className="text-sm text-red-600 mt-1">{errors.gigTitle}</p>
+        )}
       </div>
 
       {/* Category Section */}
@@ -90,17 +93,23 @@ const OverviewCreGigs = ({ gigData, onInputChange, onCategoryChange, onUpdateTag
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
             <label htmlFor="category" className="sr-only">Main Category</label>
-            <select id="category" name="category" className={`${inputBaseClasses} py-3 px-4`} value={gigData.category || ''} onChange={(e) => onCategoryChange('category', e.target.value)}>
+            <select id="category" name="category" className={`${inputBaseClasses} py-3 px-4 ${errors.category ? 'border-red-500 focus:border-red-500' : ''}`} value={gigData.category || ''} onChange={(e) => onCategoryChange('category', e.target.value)}>
               <option value="" disabled>SELECT A CATEGORY</option>
               {categories.map(cat => (<option key={cat.id} value={cat.id}>{cat.name}</option>))}
             </select>
+            {errors.category && (
+              <p className="text-sm text-red-600 mt-1">{errors.category}</p>
+            )}
           </div>
           <div>
             <label htmlFor="subcategory" className="sr-only">Sub Category</label>
-            <select id="subcategory" name="subcategory" className={`${inputBaseClasses} py-3 px-4`} value={gigData.subcategory || ''} onChange={(e) => onCategoryChange('subcategory', e.target.value)} disabled={!gigData.category || !selectedCategoryObject?.subcategories?.length}>
+            <select id="subcategory" name="subcategory" className={`${inputBaseClasses} py-3 px-4 ${errors.subcategory ? 'border-red-500 focus:border-red-500' : ''}`} value={gigData.subcategory || ''} onChange={(e) => onCategoryChange('subcategory', e.target.value)} disabled={!gigData.category || !selectedCategoryObject?.subcategories?.length}>
               <option value="" disabled>SELECT A SUBCATEGORY</option>
               {selectedCategoryObject?.subcategories?.map(subcat => (<option key={subcat.id} value={subcat.id}>{subcat.name}</option>))}
             </select>
+            {errors.subcategory && (
+              <p className="text-sm text-red-600 mt-1">{errors.subcategory}</p>
+            )}
           </div>
         </div>
       </div>
@@ -112,7 +121,7 @@ const OverviewCreGigs = ({ gigData, onInputChange, onCategoryChange, onUpdateTag
           <label htmlFor="search-tags-input" className={labelClasses}>Search tags</label>
           <p className="text-sm text-slate-600">Tag your Gig with buzz words that are relevant to the services you offer. Use up to {MAX_TAGS} tags to get found.</p>
           <div 
-            className={`${inputBaseClasses} flex flex-wrap items-center gap-x-2 gap-y-1.5 p-2.5 min-h-[50px] cursor-text`} 
+            className={`${inputBaseClasses} flex flex-wrap items-center gap-x-2 gap-y-1.5 p-2.5 min-h-[50px] cursor-text ${errors.searchTags ? 'border-red-500 focus:border-red-500' : ''}`} 
             onClick={() => document.getElementById('search-tags-input')?.focus()}
           >
             {gigData.searchTags.map((tag, index) => (
@@ -141,6 +150,9 @@ const OverviewCreGigs = ({ gigData, onInputChange, onCategoryChange, onUpdateTag
               />
             )}
           </div>
+          {errors.searchTags && (
+            <p className="text-sm text-red-600 mt-1">{errors.searchTags}</p>
+          )}
           <p id="searchTags-description" className="text-xs text-slate-500">
             {MAX_TAGS - gigData.searchTags.length} tags remaining. Use letters and numbers only.
           </p>
@@ -153,6 +165,13 @@ const OverviewCreGigs = ({ gigData, onInputChange, onCategoryChange, onUpdateTag
           <textarea id="positiveKeywords" name="positiveKeywords" rows="4" className={`${inputBaseClasses} py-3 px-4 resize-none leading-relaxed`} value={gigData.positiveKeywords || ''} onChange={handlePositiveKeywordsChange} placeholder="e.g., professional, high-quality, fast delivery"/>
         </div>
       </div>
+
+      {/* Media Gallery Manager - Cover Image and Additional Media */}
+      <MediaGalleryManager 
+        gigData={gigData}
+        onInputChange={onInputChange}
+        errors={errors}
+      />
 
       {/* Negative Keywords Section */}
       <div className="space-y-3">

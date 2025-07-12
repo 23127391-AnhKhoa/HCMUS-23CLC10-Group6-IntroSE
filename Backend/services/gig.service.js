@@ -207,6 +207,36 @@ const GigService = {
         throw new Error(`Missing required fields: ${missingFields.join(', ')}`);
       }
 
+      // Check for potential duplicate gigs (same owner, similar title)
+      // TEMPORARILY DISABLED - uncomment if needed
+      if (gigData.owner_id && gigData.title) {
+        const { data: existingGigs, error: checkError } = await supabase
+          .from('Gigs')
+          .select('id, title, created_at')
+          .eq('owner_id', gigData.owner_id)
+          .ilike('title', `%${gigData.title.trim()}%`)
+          .gte('created_at', new Date(Date.now() - 60000).toISOString()) // Last 1 minute
+          .limit(5);
+
+        if (!checkError && existingGigs && existingGigs.length > 0) {
+          console.log('⚠️ Potential duplicate gig detected:', {
+            owner_id: gigData.owner_id,
+            new_title: gigData.title,
+            existing_gigs: existingGigs
+          });
+          
+          // If exact title match within last minute, prevent duplicate
+          const exactMatch = existingGigs.find(gig => 
+            gig.title.toLowerCase().trim() === gigData.title.toLowerCase().trim()
+          );
+          
+          if (exactMatch) {
+            throw new Error(`Duplicate gig detected. A gig with title "${gigData.title}" was already created recently.`);
+          }
+        }
+      }
+
+
       // Set default values
       const gigToCreate = {
         owner_id: gigData.owner_id, // Should come from auth middleware
