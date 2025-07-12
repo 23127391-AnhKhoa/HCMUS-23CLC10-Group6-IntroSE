@@ -9,6 +9,9 @@ router.get('/health', gigController.healthCheck);
 // THÊM MỚI: Endpoint cho recommendations
 router.get('/recommendations', gigController.getRecommendedGigs);
 
+// NEW: Endpoint for seller gigs with statistics
+router.get('/seller/:sellerId/stats', gigController.getSellerGigsWithStats);
+
 // GET /api/gigs - Get all gigs with pagination and filtering
 router.get('/', gigController.getAllGigs);
 
@@ -23,6 +26,9 @@ router.post('/', gigController.createGig);
 
 // PUT /api/gigs/:id - Update a gig (require authentication)
 router.put('/:id', gigController.updateGig);
+
+// PATCH /api/gigs/:id - Partially update a gig (require authentication)
+router.patch('/:id', gigController.updateGig);
 
 // DELETE /api/gigs/:id - Delete a gig (require authentication)
 router.delete('/:id', gigController.deleteGig);
