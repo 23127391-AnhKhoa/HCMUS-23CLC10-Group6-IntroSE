@@ -5,10 +5,12 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
   server: {
+    host: '0.0.0.0',
+    port: 10000,
+    allowedHosts: ['hcmus-23clc10-group6-introse.onrender.com'],
     proxy: {
-      // Chuỗi '/api' là tiền tố của các request API bạn muốn chuyển tiếp
       '/api': {
-        target: 'http://localhost:8000', // Đổi thành địa chỉ backend của bạn nếu khác
+        target: 'http://localhost:8000',
         changeOrigin: true,
       }
     }
