@@ -9,6 +9,9 @@ router.get('/health', gigController.healthCheck);
 // THÊM MỚI: Endpoint cho recommendations
 router.get('/recommendations', gigController.getRecommendedGigs);
 
+// NEW: Endpoint for seller gigs with statistics
+router.get('/seller/:sellerId/stats', gigController.getSellerGigsWithStats);
+
 // GET /api/gigs - Get all gigs with pagination and filtering
 router.get('/', gigController.getAllGigs);
 

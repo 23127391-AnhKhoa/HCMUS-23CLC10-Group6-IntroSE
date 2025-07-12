@@ -187,10 +187,34 @@ const getRecommendedGigs = async (req, res) => {
   }
 };
 
+// NEW: Get seller gigs with statistics
+const getSellerGigsWithStats = async (req, res) => {
+  try {
+    const { sellerId } = req.params;
+    
+    console.log('📊 [Gig Controller] getSellerGigsWithStats called for seller:', sellerId);
+
+    const gigsWithStats = await GigService.getSellerGigsWithStats(sellerId);
+
+    res.status(200).json({
+      status: 'success',
+      data: gigsWithStats
+    });
+  } catch (error) {
+    console.error('Get seller gigs with stats error:', error);
+    res.status(500).json({
+      status: 'error',
+      message: 'Failed to get seller gigs with statistics',
+      error: error.message
+    });
+  }
+};
+
 module.exports = {
   healthCheck,
   getAllGigs,
   getRecommendedGigs,  // THÊM MỚI
+  getSellerGigsWithStats, // NEW
   getGigById,
   createGig,
   updateGig,

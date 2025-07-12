@@ -364,6 +364,89 @@ const GigService = {
     } catch (error) {
       throw new Error(`Error fetching recommended gigs: ${error.message}`);
     }
+  },
+
+  /**
+   * Get gig statistics for manage gigs page
+   * 
+   * @param {string} gigId - Gig ID
+   * @returns {Promise<Object>} Gig statistics
+   */
+  getGigStatistics: async (gigId) => {
+    try {
+      console.log('📊 [Gig Service] getGigStatistics called for gig:', gigId);
+
+      // Get orders for this gig from Orders table
+      const { data: orders, error: ordersError } = await supabase
+        .from('Orders')
+        .select('id, status, price_at_purchase, created_at, completed_at')
+        .eq('gig_id', gigId);
+
+      if (ordersError) {
+        throw new Error(`Error fetching orders: ${ordersError.message}`);
+      }
+
+      // Calculate statistics
+      const totalOrders = orders?.length || 0;
+      const completedOrders = orders?.filter(order => order.status === 'completed') || [];
+      const cancelledOrders = orders?.filter(order => order.status === 'cancelled') || [];
+      
+      const totalEarnings = completedOrders.reduce((sum, order) => 
+        sum + parseFloat(order.price_at_purchase || 0), 0
+      );
+
+      // Mock data for impressions and clicks (would need separate tracking in real app)
+      const impressions = Math.floor(Math.random() * 2000) + 500;
+      const clicks = Math.floor(Math.random() * 500) + 100;
+
+      const statistics = {
+        impressions,
+        clicks,
+        orders: totalOrders,
+        cancellations: cancelledOrders.length,
+        earnings: Math.round(totalEarnings * 100) / 100,
+        completedOrders: completedOrders.length,
+        conversionRate: clicks > 0 ? ((totalOrders / clicks) * 100).toFixed(2) : 0
+      };
+
+      console.log('✅ [Gig Service] Statistics calculated:', statistics);
+      return statistics;
+    } catch (error) {
+      console.error('💥 [Gig Service] Error in getGigStatistics:', error);
+      throw new Error(`Error fetching gig statistics: ${error.message}`);
+    }
+  },
+
+  /**
+   * Get all gigs with statistics for a seller
+   * 
+   * @param {string} sellerId - Seller UUID
+   * @returns {Promise<Array>} Array of gigs with statistics
+   */
+  getSellerGigsWithStats: async (sellerId) => {
+    try {
+      console.log('📊 [Gig Service] getSellerGigsWithStats called for seller:', sellerId);
+
+      // Get all gigs for this seller
+      const gigs = await GigService.getGigsByOwnerId(sellerId);
+      
+      // Get statistics for each gig
+      const gigsWithStats = await Promise.all(
+        gigs.map(async (gig) => {
+          const stats = await GigService.getGigStatistics(gig.id);
+          return {
+            ...gig,
+            statistics: stats
+          };
+        })
+      );
+
+      console.log('✅ [Gig Service] Gigs with stats fetched:', gigsWithStats.length);
+      return gigsWithStats;
+    } catch (error) {
+      console.error('💥 [Gig Service] Error in getSellerGigsWithStats:', error);
+      throw new Error(`Error fetching seller gigs with stats: ${error.message}`);
+    }
   }
 };
 
