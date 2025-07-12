@@ -27,6 +27,9 @@ router.post('/', gigController.createGig);
 // PUT /api/gigs/:id - Update a gig (require authentication)
 router.put('/:id', gigController.updateGig);
 
+// PATCH /api/gigs/:id - Partially update a gig (require authentication)
+router.patch('/:id', gigController.updateGig);
+
 // DELETE /api/gigs/:id - Delete a gig (require authentication)
 router.delete('/:id', gigController.deleteGig);
 

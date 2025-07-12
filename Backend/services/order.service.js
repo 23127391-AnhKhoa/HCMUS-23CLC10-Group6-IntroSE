@@ -310,65 +310,64 @@ const OrderService = {
     }
   },
 
-  /**
-   * Get orders for a specific client
-   * 
-   * @param {string} clientId - Client UUID
-   * @param {Object} options - Query options
-   * @returns {Promise<Array>} Array of client orders
-   */
-  getClientOrders: async (clientId, options = {}) => {
-    try {
-      console.log('👤 [Order Service] getClientOrders called for client:', clientId);
-      console.log('🔧 Options:', options);
-      
-      const orders = await Order.findByClientId(clientId, options);
-      console.log('✅ [Order Service] Found', orders?.length || 0, 'orders for client');
-      
-      // Flatten the nested data for easier frontend consumption
-      const flattenedOrders = orders.map(order => ({
-        id: order.id,
-        client_id: order.client_id,
-        gig_id: order.gig_id,
-        price_at_purchase: order.price_at_purchase,
-        requirement: order.requirement,
-        status: order.status,
-        created_at: order.created_at,
-        completed_at: order.completed_at,
-        // Client information (current user)
-        client_username: order.User?.username,
-        client_fullname: order.User?.fullname,
-        client_name: order.User?.fullname || order.User?.username || 'Unknown Client',
-        client_avatar: order.User?.avt_url || 'https://placehold.co/300x300',
-        // Gig information with detailed fields
-        gig_title: order.Gigs?.title,
-        gig_cover_image: order.Gigs?.cover_image,
-        gig_description: order.Gigs?.description,
-        gig_price: order.Gigs?.price,
-        gig_delivery_days: order.Gigs?.delivery_days,
-        gig_num_of_edits: order.Gigs?.num_of_edits,
-        gig_status: order.Gigs?.status,
-        gig_owner_id: order.Gigs?.owner_id,
-        gig_category_id: order.Gigs?.category_id,
-        gig_created_at: order.Gigs?.created_at,
-        gig_updated_at: order.Gigs?.updated_at,
-        // Gig owner information (seller)
-        gig_owner_username: order.Gigs?.User?.username,
-        gig_owner_fullname: order.Gigs?.User?.fullname,
-        gig_owner_name: order.Gigs?.User?.fullname || order.Gigs?.User?.username || 'Unknown Seller',
-        gig_owner_avatar: order.Gigs?.User?.avt_url || 'https://placehold.co/300x300'
-      }));
+/**
+ * Get orders for a specific client
+ * 
+ * @param {string} clientId - Client UUID
+ * @param {Object} options - Query options
+ * @returns {Promise<Array>} Array of client orders
+ */
+getClientOrders: async (clientId, options = {}) => {
+  try {
+    console.log('👤 [Order Service] getClientOrders called for client:', clientId);
+    console.log('🔧 Options:', options);
+    
+    const orders = await Order.findByClientId(clientId, options);
+    console.log('✅ [Order Service] Found', orders?.length || 0, 'orders for client');
+    
+    // Flatten the nested data for easier frontend consumption
+    const flattenedOrders = orders.map(order => ({
+      id: order.id,
+      client_id: order.client_id,
+      gig_id: order.gig_id,
+      price_at_purchase: order.price_at_purchase,
+      requirement: order.requirement,
+      status: order.status,
+      created_at: order.created_at,
+      completed_at: order.completed_at,
+      // Client information
+      client_username: order.User?.username,
+      client_fullname: order.User?.fullname,
+      client_name: order.User?.fullname || order.User?.username || 'Unknown Client',
+      client_avatar: order.User?.avt_url || 'https://placehold.co/300x300',
+      // Gig information with detailed fields
+      gig_title: order.Gigs?.title,
+      gig_cover_image: order.Gigs?.cover_image,
+      gig_description: order.Gigs?.description,
+      gig_price: order.Gigs?.price,
+      gig_delivery_days: order.Gigs?.delivery_days,
+      gig_num_of_edits: order.Gigs?.num_of_edits,
+      gig_status: order.Gigs?.status,
+      gig_owner_id: order.Gigs?.owner_id,
+      gig_category_id: order.Gigs?.category_id,
+      gig_created_at: order.Gigs?.created_at,
+      gig_updated_at: order.Gigs?.updated_at,
+      // Gig owner information
+      gig_owner_username: order.Gigs?.User?.username,
+      gig_owner_fullname: order.Gigs?.User?.fullname,
+      gig_owner_name: order.Gigs?.User?.fullname || order.Gigs?.User?.username || 'Unknown Seller',
+      gig_owner_avatar: order.Gigs?.User?.avt_url || 'https://placehold.co/300x300'
+    }));
 
-      console.log('✅ [Order Service] Flattened client orders:', flattenedOrders?.length || 0);
-      console.log('🔍 Sample order:', flattenedOrders[0]);
-      
-      return flattenedOrders;
-    } catch (error) {
-      console.error('💥 [Order Service] Error in getClientOrders:', error);
-      console.error('Stack trace:', error.stack);
-      throw new Error(`Error fetching client orders: ${error.message}`);
-    }
-  },
+    console.log('✅ [Order Service] Flattened client orders:', flattenedOrders?.length || 0);
+    
+    return flattenedOrders;
+  } catch (error) {
+    console.error('💥 [Order Service] Error in getClientOrders:', error);
+    console.error('Stack trace:', error.stack);
+    throw new Error(`Error fetching client orders: ${error.message}`);
+  }
+},
 
   /**
    * Get orders for gigs owned by a specific user
@@ -755,3 +754,5 @@ const OrderService = {
     }
   }
 };
+
+module.exports = OrderService;

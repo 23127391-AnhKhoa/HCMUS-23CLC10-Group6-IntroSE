@@ -27,8 +27,15 @@ const EarningsPage = () => {
     try {
       setLoading(true);
       
-      // Fetch earnings stats from new endpoint
-      const earningsResponse = await fetch('http://localhost:8000/api/earnings/stats', {
+      // Get seller ID from auth context
+      const sellerId = authUser?.uuid;
+      if (!sellerId) {
+        console.error('No seller ID found');
+        return;
+      }
+      
+      // Fetch earnings stats from new endpoint we created
+      const earningsResponse = await fetch(`http://localhost:8000/api/earnings/seller/${sellerId}/stats?period=thisMonth`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -41,84 +48,52 @@ const EarningsPage = () => {
         
         setEarnings({
           totalEarnings: stats.totalEarnings || 0,
-          thisMonth: stats.thisMonthEarnings || 0,
-          lastMonth: 0, // Will be calculated if needed
-          thisWeek: 0, // Will be calculated if needed
-          availableForWithdraw: stats.availableForWithdraw || 0,
+          thisMonth: stats.totalEarnings || 0, // Using total for thisMonth as example
+          lastMonth: 0,
+          thisWeek: 0,
+          availableForWithdraw: stats.availableBalance || 0,
           pending: stats.pendingEarnings || 0
         });
-      } else {
-        // Fallback to calculating from orders if earnings API is not available
-        const ordersResponse = await fetch('http://localhost:8000/api/orders', {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-        });
 
-        if (ordersResponse.ok) {
-          const ordersData = await ordersResponse.json();
-          calculateEarnings(ordersData.data || []);
+        // Use monthly breakdown from API
+        if (stats.monthlyBreakdown) {
+          setMonthlyEarnings(stats.monthlyBreakdown);
         }
       }
 
-      // Fetch monthly earnings breakdown
-      const monthlyResponse = await fetch('http://localhost:8000/api/earnings/monthly', {
+      // Fetch recent orders for transactions
+      const recentOrdersResponse = await fetch(`http://localhost:8000/api/earnings/seller/${sellerId}/recent-orders?limit=10`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
       });
 
-      if (monthlyResponse.ok) {
-        const monthlyData = await monthlyResponse.json();
-        setMonthlyEarnings(monthlyData.data || []);
-      }
-
-      // Fetch earnings transactions
-      const transactionsResponse = await fetch('http://localhost:8000/api/earnings/transactions', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (transactionsResponse.ok) {
-        const transactionsData = await transactionsResponse.json();
-        setRecentTransactions(transactionsData.data || []);
-      } else {
-        // Fallback to general transactions endpoint
-        const generalTransactionsResponse = await fetch('http://localhost:8000/api/transactions', {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-        });
-
-        if (generalTransactionsResponse.ok) {
-          const transactionsData = await generalTransactionsResponse.json();
-          setRecentTransactions((transactionsData.data || []).slice(0, 10));
-        }
+      if (recentOrdersResponse.ok) {
+        const ordersData = await recentOrdersResponse.json();
+        // Convert orders to transaction format
+        const transactions = (ordersData.data || []).map(order => ({
+          transaction_type: 'payment',
+          amount: order.price_at_purchase,
+          created_at: order.completed_at || order.created_at,
+          description: order.gig_title
+        }));
+        setRecentTransactions(transactions);
       }
 
     } catch (error) {
       console.error('Error fetching earnings data:', error);
-      // Fallback method in case of error
-      try {
-        const ordersResponse = await fetch('http://localhost:8000/api/orders', {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-        });
-
-        if (ordersResponse.ok) {
-          const ordersData = await ordersResponse.json();
-          calculateEarnings(ordersData.data || []);
-        }
-      } catch (fallbackError) {
-        console.error('Fallback error:', fallbackError);
-      }
+      // Set empty data instead of trying fallback orders API
+      setEarnings({
+        totalEarnings: 0,
+        thisMonth: 0,
+        lastMonth: 0,
+        thisWeek: 0,
+        availableForWithdraw: 0,
+        pending: 0
+      });
+      setMonthlyEarnings([]);
+      setRecentTransactions([]);
     } finally {
       setLoading(false);
     }

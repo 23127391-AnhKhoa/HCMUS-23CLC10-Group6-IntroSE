@@ -10,14 +10,16 @@ import ExplorePage from './pages/ExplorePage';
 import GigDetail from './pages/GigDetail';
 import ProfileBuyer from './pages/Profile_Buyer';
 import ProfileSeller from './pages/Profile_Seller';
+import EarningsPage from './pages/EarningsPage';
+import ManageGigs from './pages/ManageGigs';
 import Orders from './pages/Orders';
+import InboxPage from './pages/InboxPage';
+import SellerInfo from './pages/SellerInfo';
 import Footer from './Common/Footer';
 import BecomeSellerPage from './pages/BecomeSeller';
 import UserManagement from './pages/Admin/UserManagement';
 import DepositPage from './pages/DepositPage';
 import WithdrawPage from './pages/WithdrawPage';
-import InboxPage from './pages/InboxPage';
-import SellerInfo from './pages/SellerInfo'; // Import SellerInfo page
 
 function App() {
   return (
@@ -45,7 +47,6 @@ function App() {
             
             <Route path="/explore" element={<ExplorePage />} />
 
-            <Route path="/admin/AdminDashboard" element={<AdminDashboard/>}/>
             <Route path="/admin/Usermanagement" element={<UserManagement />} />
             <Route path="/gig/:id" element={<GigDetail />} />
 
@@ -53,8 +54,19 @@ function App() {
 
             <Route path="/profile_seller" element={<ProfileSeller />} />
 
+            <Route path="/dashboard" element={<ProfileSeller />} />
+            <Route path="/seller/dashboard" element={<ProfileSeller />} />
+
+            <Route path="/earnings" element={<EarningsPage />} />
+            <Route path="/seller/earnings" element={<EarningsPage />} />
+
             <Route path="/orders" element={<Orders />} />
             <Route path="/seller/orders" element={<Orders />} />
+
+            <Route path="/manage-gigs" element={<ManageGigs />} />
+            <Route path="/seller/manage-gigs" element={<ManageGigs />} />
+
+            <Route path="/seller/gigs" element={<CreateGigsPage />} />
 
             <Route path="/become-a-seller" element={<BecomeSellerPage />} />
             <Route path="/become-seller" element={<BecomeSellerPage />} />
@@ -68,6 +80,7 @@ function App() {
             <Route path="/messages" element={<InboxPage />} />
 
             <Route path="/SellerInfo/:sellerId" element={<SellerInfo />} />
+
             {/* 404 Route for unmatched paths */}
             <Route path="*" element={
               <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100">

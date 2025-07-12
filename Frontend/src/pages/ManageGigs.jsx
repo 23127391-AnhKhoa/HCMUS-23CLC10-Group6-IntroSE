@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import NavBar_Seller from '../Common/NavBar_Seller';
+import Footer from '../Common/Footer';
 
 const ManageGigs = () => {
   const { authUser, token } = useAuth();
@@ -50,6 +52,16 @@ const ManageGigs = () => {
 
       if (data.status === 'success') {
         setGigs(data.data || []);
+        console.log('📊 All gigs loaded:', data.data?.length || 0);
+        
+        // Debug: Log gig statuses
+        if (data.data) {
+          const statusCounts = data.data.reduce((acc, gig) => {
+            acc[gig.status] = (acc[gig.status] || 0) + 1;
+            return acc;
+          }, {});
+          console.log('📈 Gig status breakdown:', statusCounts);
+        }
       } else {
         throw new Error(data.message || 'Failed to fetch gigs');
       }
@@ -108,6 +120,8 @@ const ManageGigs = () => {
 
   const handlePause = async (gigId) => {
     try {
+      console.log('🔄 Pausing gig:', gigId);
+      
       const response = await fetch(`http://localhost:8000/api/gigs/${gigId}`, {
         method: 'PATCH',
         headers: {
@@ -117,11 +131,18 @@ const ManageGigs = () => {
         body: JSON.stringify({ status: 'paused' })
       });
 
+      console.log('📡 Response status:', response.status);
+      
       if (response.ok) {
+        const data = await response.json();
+        console.log('✅ Pause response:', data);
         fetchGigs(); // Refresh gigs list
+      } else {
+        const errorData = await response.json();
+        console.error('❌ Pause failed:', errorData);
       }
     } catch (error) {
-      console.error('Error pausing gig:', error);
+      console.error('💥 Error pausing gig:', error);
     }
   };
 
@@ -170,8 +191,10 @@ const ManageGigs = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <>
+      <NavBar_Seller />
+      <div className="min-h-screen bg-gray-50 py-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
         {/* Header */}
         <div className="mb-8">
@@ -345,8 +368,10 @@ const ManageGigs = () => {
             Create New Gig
           </button>
         </div>
+        </div>
       </div>
-    </div>
+      <Footer />
+    </>
   );
 };
 
