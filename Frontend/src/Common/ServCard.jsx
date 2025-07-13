@@ -11,8 +11,9 @@
  */
 
 import { HeartFilled } from '@ant-design/icons';
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from '../contexts/AuthContext';
 
 /**
  * ServCard - A card component for displaying gig/service information
@@ -45,31 +46,12 @@ import { useNavigate } from "react-router-dom";
 const ServCard = ({ gig }) => {
     // Navigation hook for programmatic routing
     const navigate = useNavigate();
+    const { token, authUser } = useAuth();
     
     // State to track favorite status of the gig
     const [isFavorited, setIsFavorited] = useState(false);
 
-    /**
-     * Handles the favorite button click event
-     * Prevents event bubbling to avoid triggering card click
-     * Toggles the favorite state and logs the action
-     * 
-     * @param {React.MouseEvent} e - Mouse event from the button click
-     */
-    const handleFavoriteClick = (e) => {
-        e.stopPropagation(); // Prevent card click event from firing
-        setIsFavorited(!isFavorited);
-        console.log(`Gig ${gigData.id} favorite status: ${!isFavorited}`);
-        // TODO: Implement API call to update the favorite status in backend
-    };
-    
-    /**
-     * Default values used when gig data is not provided or incomplete
-     * Ensures the component renders properly even with missing data
-     * 
-     * @type {Object}
-     * @constant
-     */
+    // Default values used when gig data is not provided or incomplete
     const defaultGig = {
         id: '',
         title: 'Service Title',
@@ -86,6 +68,71 @@ const ServCard = ({ gig }) => {
 
     // Merge provided gig data with defaults to ensure all required fields exist
     const gigData = gig ? { ...defaultGig, ...gig } : defaultGig;
+
+    // Check favorite status when component mounts
+    useEffect(() => {
+        if (authUser && gigData.id && token) {
+            checkFavoriteStatus();
+        }
+    }, [authUser, gigData.id, token]);
+
+    const checkFavoriteStatus = async () => {
+        if (!authUser || !token || !gigData.id) return;
+        
+        try {
+            const response = await fetch(`http://localhost:8000/api/favorites/check/${authUser.uuid}/${gigData.id}`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                },
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                if (data.status === 'success') {
+                    setIsFavorited(data.data.isFavorited);
+                }
+            }
+        } catch (error) {
+            console.error('Error checking favorite status:', error);
+        }
+    };
+
+    /**
+     * Handles the favorite button click event
+     * Prevents event bubbling to avoid triggering card click
+     * Toggles the favorite state using API
+     * 
+     * @param {React.MouseEvent} e - Mouse event from the button click
+     */
+    const handleFavoriteClick = async (e) => {
+        e.stopPropagation(); // Prevent card click event from firing
+        
+        if (!authUser || !token) {
+            navigate('/login');
+            return;
+        }
+
+        try {
+            const response = await fetch('http://localhost:8000/api/favorites/toggle', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ gig_id: gigData.id }),
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                if (data.status === 'success') {
+                    setIsFavorited(data.data.isFavorited);
+                }
+            }
+        } catch (error) {
+            console.error('Error toggling favorite:', error);
+        }
+    };
 
     /**
      * Handles navigation to the detailed gig view

@@ -20,6 +20,7 @@ import BecomeSellerPage from './pages/BecomeSeller';
 import UserManagement from './pages/Admin/UserManagement';
 import DepositPage from './pages/DepositPage';
 import WithdrawPage from './pages/WithdrawPage';
+import Favorites from './pages/Favorites';
 
 function App() {
   return (
@@ -80,6 +81,8 @@ function App() {
             <Route path="/messages" element={<InboxPage />} />
 
             <Route path="/SellerInfo/:sellerId" element={<SellerInfo />} />
+
+            <Route path="/favorites" element={<Favorites />} />
 
             {/* 404 Route for unmatched paths */}
             <Route path="*" element={

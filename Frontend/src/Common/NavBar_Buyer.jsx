@@ -153,7 +153,9 @@ const Navbar = () => {
                   <BellOutlined className="text-xl hover:text-blue-600 cursor-pointer" />
                 </Tooltip>
                 <Tooltip title="Favorites">
-                  <HeartOutlined className="text-xl hover:text-blue-600 cursor-pointer" />
+                  <Link to="/favorites">
+                    <HeartOutlined className="text-xl hover:text-blue-600 cursor-pointer" />
+                  </Link>
                 </Tooltip>
                 
                 <Link to="/orders" className="hover:text-blue-600 font-medium">

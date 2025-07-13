@@ -24,6 +24,7 @@ const adminRoutes = require('./routes/admin.routes');
 const dashboardRoutes = require('./routes/dashboard.routes');
 const conversationRoutes = require('./routes/conversations.routes');
 const earningsRoutes = require('./routes/earnings.routes');
+const userFavoritesRoutes = require('./routes/userFavorites.routes');
 
 // Định nghĩa các route chính
 // Mọi request đến /api/auth sẽ được xử lý bởi authRoutes
@@ -39,6 +40,7 @@ app.use('/api/orders', orderRoutes);
 app.use('/api/transactions', transactionRoutes);
 app.use('/api/dashboard', dashboardRoutes); 
 app.use('/api/earnings', earningsRoutes);
+app.use('/api/favorites', userFavoritesRoutes);
 //app.use('/api/admin', adminRoutes);
 // Xài cái api thì nhớ bỏ // ở đầu, ví dụ xài gigs thì bỏ //, tại bây giờ chưa định nghĩa mà để dô thì nó không được hiểu là function, nó sẽ bị lỗi
 
