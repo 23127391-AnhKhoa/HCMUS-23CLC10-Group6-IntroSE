@@ -116,7 +116,7 @@ const SellerNavbar = () => {
               <NavLink to="/seller/manage-gigs" className={({ isActive }) => isActive ? "text-blue-600" : "hover:text-blue-600"}>
                 Manage Gigs
               </NavLink>
-              <NavLink to="/seller/earnings" className={({ isActive }) => isActive ? "text-blue-600" : "hover:text-blue-600"}>
+              <NavLink to="/earnings" className={({ isActive }) => isActive ? "text-blue-600" : "hover:text-blue-600"}>
                 Earnings
               </NavLink>
             </nav>
