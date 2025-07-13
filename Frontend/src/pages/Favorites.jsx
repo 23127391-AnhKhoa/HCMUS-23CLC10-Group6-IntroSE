@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Heart, Trash2, User, Clock, DollarSign } from 'lucide-react';
+import { Heart, Trash2, Clock, DollarSign } from 'lucide-react';
 import NavBar from '../Common/NavBar_Buyer';
 import Footer from '../Common/Footer';
 import { useAuth } from '../contexts/AuthContext';
@@ -155,15 +155,18 @@ const Favorites = () => {
                         ) : (
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 px-4 pb-8">
                                 {favorites.map((favorite) => (
-                                    <div key={favorite.gig_id} className="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow duration-200 overflow-hidden group">
+                                    <div 
+                                        key={favorite.gig_id} 
+                                        className="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow duration-200 overflow-hidden group cursor-pointer"
+                                        onClick={() => handleGigClick(favorite.gig_id)}
+                                    >
                                         {/* Gig Image */}
                                         <div className="relative">
                                             <div
-                                                className="w-full h-48 bg-center bg-cover cursor-pointer"
+                                                className="w-full h-48 bg-center bg-cover"
                                                 style={{
                                                     backgroundImage: `url("${favorite.gig?.cover_image || 'https://placehold.co/400x300'}")`
                                                 }}
-                                                onClick={() => handleGigClick(favorite.gig_id)}
                                             ></div>
                                             
                                             {/* Remove button */}
@@ -181,10 +184,7 @@ const Favorites = () => {
 
                                         {/* Gig Info */}
                                         <div className="p-4">
-                                            <h3 
-                                                className="text-lg font-semibold text-gray-800 mb-2 line-clamp-2 cursor-pointer hover:text-[#1dbf73]"
-                                                onClick={() => handleGigClick(favorite.gig_id)}
-                                            >
+                                            <h3 className="text-lg font-semibold text-gray-800 mb-2 line-clamp-2 hover:text-[#1dbf73] transition-colors">
                                                 {favorite.gig?.title || 'Untitled Gig'}
                                             </h3>
                                             
@@ -195,32 +195,6 @@ const Favorites = () => {
                                                     ${favorite.gig?.price || 0}
                                                 </span>
                                             </div>
-
-                                            {/* Owner Info */}
-                                            {favorite.gig?.owner && (
-                                                <div className="flex items-center gap-2 mb-3">
-                                                    <div className="w-6 h-6 rounded-full overflow-hidden">
-                                                        <div
-                                                            className="w-full h-full bg-center bg-cover"
-                                                            style={{
-                                                                backgroundImage: `url("${favorite.gig.owner.avatar || 'https://placehold.co/100x100'}")`
-                                                            }}
-                                                        ></div>
-                                                    </div>
-                                                    <span className="text-sm text-gray-600">
-                                                        {favorite.gig.owner.fullname || favorite.gig.owner.username}
-                                                    </span>
-                                                </div>
-                                            )}
-
-                                            {/* Category */}
-                                            {favorite.gig?.category && (
-                                                <div className="mb-3">
-                                                    <span className="inline-block px-3 py-1 bg-gray-100 text-gray-700 text-xs rounded-full">
-                                                        {favorite.gig.category.name}
-                                                    </span>
-                                                </div>
-                                            )}
 
                                             {/* Date Added */}
                                             <div className="flex items-center gap-2 text-sm text-gray-500">
@@ -234,7 +208,10 @@ const Favorites = () => {
                                         {/* Action Buttons */}
                                         <div className="px-4 pb-4">
                                             <button
-                                                onClick={() => handleGigClick(favorite.gig_id)}
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    handleGigClick(favorite.gig_id);
+                                                }}
                                                 className="w-full py-2 bg-[#1dbf73] text-white rounded-lg hover:bg-[#19a463] font-semibold transition-colors duration-200"
                                             >
                                                 View Gig

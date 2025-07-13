@@ -42,7 +42,14 @@ class UserFavoritesService {
             // Lấy thêm thông tin về owner và category cho mỗi gig
             const enhancedFavorites = await Promise.all(
                 favorites.map(async (favorite) => {
-                    const gig = favorite.gig_id;
+                    const gig = favorite.Gigs; // Changed from gig_id to Gigs
+                    
+                    if (!gig) {
+                        return {
+                            ...favorite,
+                            gig: null
+                        };
+                    }
                     
                     // Lấy thông tin owner
                     const { data: owner } = await supabase

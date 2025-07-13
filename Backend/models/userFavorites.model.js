@@ -57,7 +57,7 @@ class UserFavorites {
                 .from('UserFavorites')
                 .select(`
                     *,
-                    gig_id (
+                    Gigs!UserFavorites_gig_id_fkey (
                         id,
                         title,
                         description,
