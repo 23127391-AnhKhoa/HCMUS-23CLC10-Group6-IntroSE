@@ -107,13 +107,13 @@ const SellerNavbar = () => {
               <img src={FreelandLogo} alt="FREELAND Logo" className="h-8 w-auto" />
             </Link>
             <nav className="flex items-center space-x-6 font-medium text-gray-600">
-              <NavLink to="/seller/dashboard" className={({ isActive }) => isActive ? "text-blue-600" : "hover:text-blue-600"}>
+              <NavLink to="/dashboard" className={({ isActive }) => isActive ? "text-blue-600" : "hover:text-blue-600"}>
                 Dashboard
               </NavLink>
-              <NavLink to="/seller/orders" className={({ isActive }) => isActive ? "text-blue-600" : "hover:text-blue-600"}>
+              <NavLink to="/orders" className={({ isActive }) => isActive ? "text-blue-600" : "hover:text-blue-600"}>
                 Orders
               </NavLink>
-              <NavLink to="/seller/manage-gigs" className={({ isActive }) => isActive ? "text-blue-600" : "hover:text-blue-600"}>
+              <NavLink to="/manage-gigs" className={({ isActive }) => isActive ? "text-blue-600" : "hover:text-blue-600"}>
                 Manage Gigs
               </NavLink>
               <NavLink to="/earnings" className={({ isActive }) => isActive ? "text-blue-600" : "hover:text-blue-600"}>
