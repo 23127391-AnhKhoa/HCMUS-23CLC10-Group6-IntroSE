@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '../Common/Navbar_LD'; // Đảm bảo đường dẫn đúng
 import { useAuth } from '../contexts/AuthContext'; // 1. Import hook useAuth
+import API_BASE_URL from '../config/api'; // Import API config
+import { supabase } from '../lib/supabase';
 import '../index.css';
 
 const LoginPage = () => {
@@ -20,7 +22,7 @@ const LoginPage = () => {
     setLoading(true);
 
     try {
-      const response = await fetch('http://localhost:8000/api/auth/login', {
+      const response = await fetch(`${API_BASE_URL}/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -37,6 +39,11 @@ const LoginPage = () => {
 
       // 5. Xử lý khi đăng nhập thành công
       // Gọi hàm login từ context để lưu thông tin vào state toàn cục và localStorage
+      await supabase.auth.setSession({
+        access_token: data.token,
+        refresh_token: '' // nếu backend không trả về refresh_token
+      });
+
       login(data.user, data.token);
 
       // 6. Điều hướng dựa trên role

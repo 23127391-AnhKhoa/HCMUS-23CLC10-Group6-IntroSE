@@ -43,7 +43,7 @@ import { useAuth } from '../contexts/AuthContext';
  *   {gigs.map(gig => <ServCard key={gig.id} gig={gig} />)}
  * </div>
  */
-const ServCard = ({ gig }) => {
+const ServCard = ({ gig, isPreview = false }) => {
     // Navigation hook for programmatic routing
     const navigate = useNavigate();
     const { token, authUser } = useAuth();
@@ -237,11 +237,20 @@ const ServCard = ({ gig }) => {
                     </div>
                 </div>
                 
-                {/* Service Title - Truncated if too long */}
+                {/* Service Title - Show full title for preview, truncated for regular cards */}
                 <div className="flex-1">
-                    <p className="text-base text-gray-700 line-clamp-3 leading-relaxed max-h-[60px] min-h-[26px]">
-                        {truncateTitle(gigData.title)}
-                    </p>
+                    {isPreview ? (
+                        <div 
+                            className="text-base text-gray-700 leading-relaxed"
+                            dangerouslySetInnerHTML={{
+                                __html: gigData.title || gigData.description || 'No description'
+                            }}
+                        />
+                    ) : (
+                        <p className="text-base text-gray-700 line-clamp-3 leading-relaxed max-h-[60px] min-h-[26px]">
+                            {truncateTitle(gigData.title)}
+                        </p>
+                    )}
                 </div>
 
                 {/* Delivery Time and Category Badge */}

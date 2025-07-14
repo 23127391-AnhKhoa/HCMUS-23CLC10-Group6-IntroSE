@@ -10,6 +10,66 @@ import Footer from '../Common/Footer';
  * integrating the HeroSection and CustomerReviewSection to present
  * a professional introduction and customer testimonials.
  */
+
+const URLS = [
+  import.meta.env.VITE_PUBLIC_API_URL,
+  import.meta.env.VITE_API_URL,
+  window.location.origin,
+  'http://localhost:8000'
+].filter(Boolean)
+
+console.log('[🔍 API URLs AVAILABLE]', URLS);
+
+// Set default API URL
+window.BASE_API = URLS.at(-1) || 'https://hcmus-23clc10-group6-introse.onrender.com' // fallback chắc cú
+console.log('[🚀 INITIAL API URL]', window.BASE_API);
+
+// ⚡ Patch fetch luôn sẵn
+const oldFetch = window.fetch
+window.fetch = (url, ...args) => {
+  const originalUrl = url;
+  if (typeof url === 'string' && url.startsWith('/api')) {
+    url = `${window.BASE_API}${url}`
+    console.debug('[🔄 FETCH REWRITE]', originalUrl, '→', url);
+  }
+  return oldFetch(url, ...args)
+}
+
+// 🔎 Check server nào sống nhất → dùng luôn
+;(async () => {
+  console.log('[🔎 CHECKING API ENDPOINTS]', 'Starting health checks...');
+  let foundLiveAPI = false;
+  
+  for (const url of URLS) {
+    try {
+      console.log('[🔍 TESTING API]', url);
+      const startTime = performance.now();
+      const res = await fetch(`${url}/api/gigs?limit=5&sort_by=created_at&sort_order=desc&filter_by_status=active`)
+      const endTime = performance.now();
+      const responseTime = Math.round(endTime - startTime);
+      
+      if (res.ok) {
+        foundLiveAPI = true;
+        window.BASE_API = url
+        console.log('[✅ API ALIVE]', url, `(Response time: ${responseTime}ms)`);
+        console.log('[🔥 BASE_API SELECTED]', url);
+        break
+      } else {
+        console.warn('[⚠️ API RESPONDED BUT NOT OK]', url, `Status: ${res.status}`, `(Response time: ${responseTime}ms)`);
+      }
+    } catch (err) {
+      console.warn('[❌ API DEAD]', url, 'Error:', err.message);
+    }
+  }
+  
+  if (!foundLiveAPI) {
+    console.error('[⛔ NO LIVE API FOUND]', 'Using fallback URL:', window.BASE_API);
+  }
+  
+  console.log('[🌐 FINAL API URL]', window.BASE_API);
+})()
+
+
 const Introduction = () => {
   return (
     <div className="min-h-screen bg-purple-50 font-sans">
