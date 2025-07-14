@@ -1,5 +1,5 @@
 // controllers/userFavorites.controller.js
-const UserFavoritesService = require('../services/userFavorites.service');
+const User = require('../models/user.model');
 
 class UserFavoritesController {
     // Thêm favorite
@@ -15,7 +15,7 @@ class UserFavoritesController {
                 });
             }
 
-            const result = await UserFavoritesService.addFavorite(userId, gig_id);
+            const result = await User.addFavorite(userId, gig_id);
 
             res.status(201).json({
                 status: 'success',
@@ -44,7 +44,7 @@ class UserFavoritesController {
                 });
             }
 
-            await UserFavoritesService.removeFavorite(userId, gig_id);
+            await User.removeFavorite(userId, gig_id);
 
             res.status(200).json({
                 status: 'success',
@@ -73,7 +73,7 @@ class UserFavoritesController {
                 });
             }
 
-            const favorites = await UserFavoritesService.getUserFavorites(userId);
+            const favorites = await User.getUserFavorites(userId);
 
             res.status(200).json({
                 status: 'success',
@@ -102,7 +102,7 @@ class UserFavoritesController {
                 });
             }
 
-            const result = await UserFavoritesService.toggleFavorite(userId, gig_id);
+            const result = await User.toggleFavorite(userId, gig_id);
 
             res.status(200).json({
                 status: 'success',
@@ -132,11 +132,11 @@ class UserFavoritesController {
                 });
             }
 
-            const result = await UserFavoritesService.checkFavoriteStatus(userId, gigId);
+            const result = await User.isFavorited(userId, gigId);
 
             res.status(200).json({
                 status: 'success',
-                data: result
+                data: { isFavorited: result }
             });
         } catch (error) {
             console.error('Error in checkFavorite controller:', error);

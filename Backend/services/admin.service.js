@@ -1,16 +1,16 @@
-// services/dashboard.service.js
-const DashboardModel = require('../models/dashboard.model');
+// services/admin.service.js
+const AdminModel = require('../models/admin.model');
 
-const fetchAllDashboardData = async () => {
+const fetchAllAdminData = async () => {
     // Thực hiện các truy vấn lấy dữ liệu song song để tối ưu hiệu suất
     const [
         statCards,
         topBuyers,
         topServices
     ] = await Promise.all([
-        DashboardModel.getStatCardData(),
-        DashboardModel.getTopBuyersOfMonth(),
-        DashboardModel.getTopSellingServices()
+        AdminModel.getStatCardData(),
+        AdminModel.getTopBuyersOfMonth(),
+        AdminModel.getTopSellingServices()
     ]);
 
     return {
@@ -21,5 +21,5 @@ const fetchAllDashboardData = async () => {
 };
 
 module.exports = {
-    fetchAllDashboardData,
+    fetchAllAdminData,
 };
