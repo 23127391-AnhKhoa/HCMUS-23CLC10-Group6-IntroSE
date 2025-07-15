@@ -116,7 +116,9 @@ const AuthService = {
                 avatar_url: userProfile.avt_url, // Sửa tên field cho đúng với schema
                 seller_headline: userProfile.seller_headline,
                 seller_description: userProfile.seller_description,
-                seller_since: userProfile.seller_since
+                seller_since: userProfile.seller_since,
+                // Trả về thông tin từ Supabase Auth, đó là JWT cho FE vào Supabase mà dùng REALTIME SOCKET
+                token: data.session.access_token
             } // Trả về thông tin user đầy đủ hơn
         };
     },

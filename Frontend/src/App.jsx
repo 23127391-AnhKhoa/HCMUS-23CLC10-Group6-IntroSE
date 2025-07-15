@@ -56,20 +56,15 @@ function App() {
             <Route path="/profile_seller" element={<ProfileSeller />} />
 
             <Route path="/dashboard" element={<ProfileSeller />} />
-            <Route path="/seller/dashboard" element={<ProfileSeller />} />
 
             <Route path="/earnings" element={<EarningsPage />} />
-            <Route path="/seller/earnings" element={<EarningsPage />} />
 
             <Route path="/orders" element={<Orders />} />
-            <Route path="/seller/orders" element={<Orders />} />
 
             <Route path="/manage-gigs" element={<ManageGigs />} />
-            <Route path="/seller/manage-gigs" element={<ManageGigs />} />
 
             <Route path="/seller/gigs" element={<CreateGigsPage />} />
 
-            <Route path="/become-a-seller" element={<BecomeSellerPage />} />
             <Route path="/become-seller" element={<BecomeSellerPage />} />
 
             <Route path="/deposit" element={<DepositPage />} />
