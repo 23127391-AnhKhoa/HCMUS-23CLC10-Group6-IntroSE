@@ -227,4 +227,4 @@ const SellerInfo = () => {
     );
 };
 
-export default SellerInfo
+export default SellerInfo;

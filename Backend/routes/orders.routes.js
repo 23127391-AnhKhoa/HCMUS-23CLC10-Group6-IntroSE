@@ -14,6 +14,7 @@ const express = require('express');
 const router = express.Router();
 const OrderController = require('../controllers/order.controller');
 const { authenticateToken, optionalAuth } = require('../middleware/auth.middleware');
+const { deliveryUpload } = require('../middleware/multer.middleware');
 
 /**
  * @route GET /api/orders
@@ -108,6 +109,82 @@ router.get('/owner/:ownerId', authenticateToken, OrderController.getOwnerOrders)
  * @returns {Object} JSON response with updated order
  */
 router.patch('/:id/status', authenticateToken, OrderController.updateOrderStatus);
+
+/**
+ * @route POST /api/orders/:id/upload-delivery
+ * @description Upload delivery files for an order
+ * @access Protected - Requires authentication (seller only)
+ * @params {string} id - Order ID
+ * @body {file} files - Delivery files to upload
+ * @returns {Object} JSON response with upload confirmation
+ */
+router.post('/:id/upload-delivery', authenticateToken, deliveryUpload, OrderController.uploadDelivery);
+
+/**
+ * @route GET /api/orders/:orderId/delivery/:filename
+ * @description Get signed URL for delivery file access
+ * @access Protected - Requires authentication (buyer or seller)
+ * @params {string} orderId - Order ID
+ * @params {string} filename - File name
+ * @returns {Object} JSON response with signed URL
+ */
+router.get('/:orderId/delivery/:filename', authenticateToken, OrderController.getDeliveryFileUrl);
+
+/**
+ * @route GET /api/orders/:orderId/delivery-files
+ * @description Get all delivery files for an order
+ * @access Protected - Requires authentication (buyer or seller)
+ * @params {string} orderId - Order ID
+ * @returns {Object} JSON response with delivery files list
+ */
+router.get('/:orderId/delivery-files', authenticateToken, OrderController.getDeliveryFiles);
+
+/**
+ * @route DELETE /api/orders/:orderId/delivery-files/:fileId
+ * @description Delete a delivery file
+ * @access Protected - Requires authentication (buyer or seller)
+ * @params {string} orderId - Order ID
+ * @params {string} fileId - File ID to delete
+ * @returns {Object} JSON response with success status
+ */
+router.delete('/:orderId/delivery-files/:fileId', authenticateToken, OrderController.deleteDeliveryFile);
+
+/**
+ * @route POST /api/orders/:id/mark-delivered
+ * @description Mark order as delivered (seller action)
+ * @access Protected - Requires authentication
+ * @params {string} id - Order ID
+ * @returns {Object} JSON response with updated order
+ */
+router.post('/:id/mark-delivered', authenticateToken, OrderController.markAsDelivered);
+
+/**
+ * @route POST /api/orders/:id/pay
+ * @description Process payment for order (buyer action)
+ * @access Protected - Requires authentication
+ * @params {string} id - Order ID
+ * @returns {Object} JSON response with payment result
+ */
+router.post('/:id/pay', authenticateToken, OrderController.processPayment);
+
+/**
+ * @route POST /api/orders/:id/request-revision
+ * @description Request revision for order (buyer action)
+ * @access Protected - Requires authentication
+ * @params {string} id - Order ID
+ * @body {string} revision_note - Revision note
+ * @returns {Object} JSON response with updated order
+ */
+router.post('/:id/request-revision', authenticateToken, OrderController.requestRevision);
+
+/**
+ * @route GET /api/orders/:id/workflow
+ * @description Get order workflow status and available actions
+ * @access Protected - Requires authentication
+ * @params {string} id - Order ID
+ * @returns {Object} JSON response with workflow status
+ */
+router.get('/:id/workflow', authenticateToken, OrderController.getOrderWorkflow);
 
 module.exports = router;
 

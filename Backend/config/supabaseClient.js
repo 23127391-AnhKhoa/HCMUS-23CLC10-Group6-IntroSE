@@ -6,8 +6,24 @@ const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_KEY;
 
 if (!supabaseUrl || !supabaseKey) {
-  console.error('Missing Supabase environment variables');
-  throw new Error('Missing Supabase URL or Service Key');
+  console.error('⚠️  Missing Supabase environment variables');
+  console.error('Please check your .env file for:');
+  console.error('SUPABASE_URL=your_supabase_url');
+  console.error('SUPABASE_SERVICE_KEY=your_service_key');
+  console.error('');
+  console.error('You can find these in your Supabase Dashboard > Settings > API');
+  
+  // Export a dummy client for testing purposes
+  module.exports = {
+    from: () => ({ select: () => ({ limit: () => Promise.resolve({ data: null, error: { message: 'Supabase not configured' } }) }) }),
+    storage: {
+      from: () => ({ 
+        upload: () => Promise.resolve({ data: null, error: { message: 'Storage not configured' } }),
+        createSignedUrl: () => Promise.resolve({ data: null, error: { message: 'Storage not configured' } })
+      })
+    }
+  };
+  return;
 }
 
 // Create client with enhanced connection options for WebSocket stability
@@ -62,8 +78,10 @@ const testRealtimeConnection = async () => {
     try {
       console.log('Testing Supabase realtime connection...');
       
-      // Create a test channel to verify WebSocket connection
-      const channel = supabase.channel('connection_test');
+      // Create a test channel with unique name
+      const channelName = 'connection_test_' + Date.now();
+      const channel = supabase.channel(channelName);
+      
       let timeoutId = setTimeout(() => {
         console.error('Supabase realtime connection test timed out');
         try {
@@ -72,32 +90,48 @@ const testRealtimeConnection = async () => {
           console.warn('Error cleaning up test channel:', err.message);
         }
         resolve(false);
-      }, 5000);
+      }, 6000); // Increased timeout to 6 seconds
       
-      channel
-        .on('system', { event: 'connected' }, () => {
+      let resolved = false;
+      
+      channel.subscribe((status, error) => {
+        console.log(`Realtime test channel status: ${status}`);
+        
+        if (resolved) return; // Prevent multiple resolves
+        
+        if (error) {
+          console.error('Realtime subscription error:', error);
           clearTimeout(timeoutId);
-          console.log('Supabase realtime connected successfully');
+          resolved = true;
+          resolve(false);
+        } else if (status === 'SUBSCRIBED') {
+          clearTimeout(timeoutId);
+          console.log('Supabase realtime subscription successful');
+          resolved = true;
           
-          // Clean up test channel
+          // Clean up after short delay
           setTimeout(() => {
             try {
               supabase.removeChannel(channel);
             } catch (err) {
               console.warn('Error cleaning up test channel:', err.message);
             }
-          }, 1000);
+          }, 500);
           
           resolve(true);
-        })
-        .subscribe((status) => {
-          console.log(`Realtime test channel status: ${status}`);
-          if (status === 'SUBSCRIBED') {
-            clearTimeout(timeoutId);
-            console.log('Supabase realtime subscription successful');
-            resolve(true);
-          }
-        });
+        } else if (status === 'CHANNEL_ERROR') {
+          clearTimeout(timeoutId);
+          console.error('Supabase realtime channel error - may be disabled in project settings');
+          resolved = true;
+          resolve(false);
+        } else if (status === 'CLOSED') {
+          clearTimeout(timeoutId);
+          console.error('Supabase realtime channel closed unexpectedly');
+          resolved = true;
+          resolve(false);
+        }
+      });
+      
     } catch (error) {
       console.error('Error testing realtime connection:', error);
       resolve(false);

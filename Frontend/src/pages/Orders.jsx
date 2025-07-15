@@ -5,18 +5,22 @@
  * @description Main page for viewing and managing orders
  * Shows different views based on user role (buyer/seller)
  * 
- * @requires react - For component state and lifecycle
+ * @requir                // Add files to FormData with correct field name
+                for (let i = 0; i < files.length; i++) {
+                    formData.append('deliveryFiles', files[i]);
+                }eact - For component state and lifecycle
  * @requires react-router-dom - For navigation
  * @requires @ant-design/icons - For icons
  */
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { EyeOutlined, ClockCircleOutlined, CheckCircleOutlined, CloseCircleOutlined, ShoppingOutlined } from '@ant-design/icons';
+import { EyeOutlined, ClockCircleOutlined, CheckCircleOutlined, CloseCircleOutlined, ShoppingOutlined, FileTextOutlined } from '@ant-design/icons';
 import NavBar from '../Common/NavBar_Buyer';
 import Footer from '../Common/Footer';
 import OrderCard from '../components/OrderCard/OrderCard';
 import { useAuth } from '../contexts/AuthContext';
+import ApiService from '../services/apiService';
 
 /**
  * Orders component for managing user orders
@@ -149,31 +153,153 @@ const Orders = () => {
         try {
             console.log('🔄 Updating order status:', orderId, newStatus);
             
-            const response = await fetch(`http://localhost:8000/api/orders/${orderId}/status`, {
-                method: 'PATCH',
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ status: newStatus })
-            });
-
-            if (!response.ok) {
-                throw new Error(`Failed to update order status: ${response.status}`);
-            }
-
-            const data = await response.json();
+            await ApiService.updateOrderStatus(orderId, newStatus);
             
-            if (data.status === 'success') {
-                // Refresh orders list
-                fetchOrders();
-                console.log('✅ Order status updated successfully');
-            } else {
-                throw new Error(data.message || 'Failed to update order status');
-            }
+            // Refresh orders list
+            fetchOrders();
+            console.log('✅ Order status updated successfully');
         } catch (err) {
             console.error('❌ Error updating order status:', err);
             alert(`Error updating order status: ${err.message}`);
+        }
+    };
+
+    /**
+     * Handle payment trigger for completed orders
+     */
+    const handlePaymentTrigger = (order) => {
+        console.log('💳 Triggering payment for order:', order.id);
+        navigate(`/payment/${order.id}`);
+    };
+
+    /**
+     * Handle file download for delivered orders
+     */
+    const handleFileDownload = async (order) => {
+        console.log('📥 Downloading files for order:', order.id);
+        
+        try {
+            // Get order details to access delivery files
+            const orderDetails = await ApiService.getOrderDetails(order.id);
+            
+            if (orderDetails.delivery_files && orderDetails.delivery_files.length > 0) {
+                // In a real app, this would trigger file downloads
+                alert(`Downloading ${orderDetails.delivery_files.length} files for order #${order.id}...\n\nFiles:\n${orderDetails.delivery_files.map(file => `- ${file.name}`).join('\n')}`);
+                
+                // For each file, you could create download links
+                orderDetails.delivery_files.forEach(file => {
+                    const link = document.createElement('a');
+                    link.href = file.url;
+                    link.download = file.name;
+                    link.click();
+                });
+            } else {
+                alert('No delivery files found for this order.');
+            }
+        } catch (error) {
+            console.error('Error downloading files:', error);
+            alert(`Error downloading files: ${error.message}`);
+        }
+    };
+
+    /**
+     * Handle delivery upload for sellers
+     */
+    const handleDeliveryUpload = async (order) => {
+        console.log('📤 Uploading delivery for order:', order.id);
+        
+        // Create file input element
+        const fileInput = document.createElement('input');
+        fileInput.type = 'file';
+        fileInput.multiple = true;
+        fileInput.accept = '*/*'; // Accept all file types
+        
+        fileInput.onchange = async (event) => {
+            const files = event.target.files;
+            if (files.length === 0) return;
+            
+            try {
+                // Add delivery message
+                const deliveryMessage = prompt('Add a message for the delivery (optional):');
+                
+                // Convert FileList to Array
+                const fileArray = Array.from(files);
+                
+                // Upload files using ApiService
+                await ApiService.uploadDeliveryFiles(order.id, fileArray, deliveryMessage || '');
+                
+                alert('Delivery files uploaded successfully!');
+                
+                // Refresh orders list
+                fetchOrders();
+            } catch (error) {
+                console.error('Error uploading delivery:', error);
+                
+                // Parse error response for better user feedback
+                let errorMessage = 'Error uploading delivery files';
+                if (error.response?.data?.message) {
+                    errorMessage = error.response.data.message;
+                    
+                    // Show specific guidance for common errors
+                    if (error.response.data.details?.current_user_role === 'buyer') {
+                        errorMessage += '\n\nPlease log in as the seller to upload delivery files.';
+                    }
+                } else if (error.message) {
+                    errorMessage = error.message;
+                }
+                
+                alert(errorMessage);
+            }
+        };
+        
+        fileInput.click();
+    };
+
+    /**
+     * Handle messaging between buyer and seller
+     */
+    const handleMessage = async (order) => {
+        console.log('💬 Opening chat for order:', order.id);
+        
+        try {
+            // Tạo hoặc lấy conversation cho order
+            const response = await ApiService.getOrCreateOrderConversation(order.id);
+            
+            if (response.status === 'success') {
+                // Navigate to inbox with conversation ID và order info
+                navigate(`/inbox?conversation=${response.data.id}&order=${order.id}&gig=${order.gig_title}`);
+            } else {
+                throw new Error(response.message || 'Failed to create conversation');
+            }
+        } catch (error) {
+            console.error('Error creating conversation:', error);
+            alert(`Error creating conversation: ${error.message}`);
+            // Fallback to general inbox
+            navigate(`/inbox?order=${order.id}`);
+        }
+    };
+
+    /**
+     * Handle revision request
+     */
+    const handleRevisionRequest = async (order) => {
+        console.log('🔄 Requesting revision for order:', order.id);
+        
+        const revisionReason = prompt('Please specify what needs to be revised:');
+        if (revisionReason && revisionReason.trim()) {
+            try {
+                // Update status to revision_requested
+                await ApiService.updateOrderStatus(order.id, 'revision_requested');
+                
+                // In a real app, you would also send the revision reason to the seller
+                alert('Revision request sent to seller.');
+                
+                // Refresh orders list
+                fetchOrders();
+            } catch (error) {
+                console.error('Error requesting revision:', error);
+                alert(`Error requesting revision: ${error.message}`);
+            }
         }
     };
 
@@ -186,10 +312,14 @@ const Orders = () => {
                 return 'bg-yellow-100 text-yellow-800';
             case 'in_progress':
                 return 'bg-blue-100 text-blue-800';
+            case 'delivered':
+                return 'bg-purple-100 text-purple-800';
             case 'completed':
                 return 'bg-green-100 text-green-800';
             case 'cancelled':
                 return 'bg-red-100 text-red-800';
+            case 'revision_requested':
+                return 'bg-orange-100 text-orange-800';
             default:
                 return 'bg-gray-100 text-gray-800';
         }
@@ -204,10 +334,14 @@ const Orders = () => {
                 return <ClockCircleOutlined />;
             case 'in_progress':
                 return <ClockCircleOutlined />;
+            case 'delivered':
+                return <CheckCircleOutlined />;
             case 'completed':
                 return <CheckCircleOutlined />;
             case 'cancelled':
                 return <CloseCircleOutlined />;
+            case 'revision_requested':
+                return <FileTextOutlined />;
             default:
                 return <ClockCircleOutlined />;
         }
@@ -220,6 +354,8 @@ const Orders = () => {
         { key: 'all', label: 'All Orders', count: totalOrders },
         { key: 'pending', label: 'Pending', count: 0 },
         { key: 'in_progress', label: 'In Progress', count: 0 },
+        { key: 'delivered', label: 'Delivered', count: 0 },
+        { key: 'revision_requested', label: 'Revision Requested', count: 0 },
         { key: 'completed', label: 'Completed', count: 0 },
         { key: 'cancelled', label: 'Cancelled', count: 0 }
     ];
@@ -357,15 +493,19 @@ const Orders = () => {
                         <>
                             {orders.map((order) => {
                                 try {
-                                    return (
-                                        <OrderCard
-                                            key={order.id}
-                                            order={order}
-                                            userRole={activeTab}
-                                            onStatusUpdate={handleStatusUpdate}
-                                            getStatusColor={getStatusColor}
-                                            getStatusIcon={getStatusIcon}
-                                        />
+                                    return (                        <OrderCard
+                            key={order.id}
+                            order={order}
+                            userRole={activeTab}
+                            onStatusUpdate={handleStatusUpdate}
+                            onPaymentTrigger={handlePaymentTrigger}
+                            onFileDownload={handleFileDownload}
+                            onDeliveryUpload={handleDeliveryUpload}
+                            onMessage={handleMessage}
+                            onRevisionRequest={handleRevisionRequest}
+                            getStatusColor={getStatusColor}
+                            getStatusIcon={getStatusIcon}
+                        />
                                     );
                                 } catch (error) {
                                     console.error('❌ Error rendering order card:', error, 'Order data:', order);

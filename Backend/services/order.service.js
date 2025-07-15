@@ -10,6 +10,8 @@
  */
 
 const Order = require('../models/order.model');
+const Transaction = require('../models/transaction.model');
+const NotificationService = require('./notification.service');
 const supabase = require('../config/supabaseClient');
 
 const OrderService = {
@@ -170,6 +172,13 @@ const OrderService = {
       };
 
       console.log('✅ Order found and flattened');
+      console.log('🔍 Debug gig_owner_id:', {
+        raw_gig_owner_id: order.Gigs?.owner_id,
+        flattened_gig_owner_id: flattenedOrder.gig_owner_id,
+        gig_exists: !!order.Gigs,
+        gig_owner_exists: !!order.Gigs?.owner_id
+      });
+      
       return flattenedOrder;
     } catch (error) {
       console.error('💥 Error in getOrderById:', error);
@@ -263,9 +272,9 @@ const OrderService = {
 
       // Validate status transition if status is being updated
       if (updateData.status) {
-        const validStatuses = ['pending', 'in_progress', 'completed', 'cancelled'];
+        const validStatuses = ['pending', 'in_progress', 'delivered', 'completed', 'cancelled'];
         if (!validStatuses.includes(updateData.status)) {
-          throw new Error('Invalid status. Must be one of: pending, in_progress, completed, cancelled');
+          throw new Error('Invalid status. Must be one of: pending, in_progress, delivered, completed, cancelled');
         }
       }
 
@@ -442,23 +451,50 @@ const OrderService = {
       console.log('🔄 [Order Service] updateOrderStatus called with ID:', orderId, 'and status:', status);
       
       // Validate status
-      const validStatuses = ['pending', 'in_progress', 'completed', 'cancelled'];
+      const validStatuses = ['pending', 'in_progress', 'delivered', 'completed', 'cancelled', 'revision_requested'];
       if (!validStatuses.includes(status)) {
         console.log('❌ Invalid status provided:', status);
-        throw new Error('Invalid status. Must be one of: pending, in_progress, completed, cancelled');
+        throw new Error('Invalid status. Must be one of: pending, in_progress, delivered, completed, cancelled, revision_requested');
       }
 
-      // Check if order exists
+      // Check if order exists and get current status
       const existingOrder = await Order.findById(orderId);
       if (!existingOrder) {
         console.log('❌ Order not found for ID:', orderId);
         throw new Error('Order not found');
       }
 
-      console.log('📊 Existing order found:', existingOrder.id);
+      const oldStatus = existingOrder.status;
+      console.log('📊 Existing order found:', existingOrder.id, 'Current status:', oldStatus);
       
       const updatedOrder = await Order.updateStatus(orderId, status);
       console.log('✅ [Order Service] Order status updated successfully');
+      
+      // Send notifications for status change
+      try {
+        // Determine recipient role based on status change
+        let recipientRole = null;
+        
+        if (status === 'in_progress' && oldStatus === 'pending') {
+          recipientRole = 'buyer'; // Notify buyer that order is accepted
+        } else if (status === 'delivered') {
+          recipientRole = 'buyer'; // Notify buyer that order is delivered
+        } else if (status === 'revision_requested') {
+          recipientRole = 'seller'; // Notify seller that revision is requested
+        }
+        
+        if (recipientRole) {
+          await NotificationService.sendOrderStatusUpdate(
+            updatedOrder, 
+            oldStatus, 
+            status, 
+            recipientRole
+          );
+        }
+      } catch (notificationError) {
+        console.error('❌ Failed to send notification:', notificationError);
+        // Don't fail the entire operation if notification fails
+      }
       
       return updatedOrder;
     } catch (error) {
@@ -517,51 +553,157 @@ const OrderService = {
   },
 
   /**
+   * Process payment for order
+   * 
+   * @param {string} orderId - Order ID
+   * @param {string} userId - User ID (buyer)
+   * @returns {Promise<Object>} Payment result
+   */
+  processPayment: async (orderId, userId) => {
+    try {
+      console.log('💳 [Order Service] processPayment called:', { orderId, userId });
+      
+      // Get order details
+      const order = await OrderService.getOrderById(orderId);
+      if (!order) {
+        throw new Error('Order not found');
+      }
+      
+      // Verify user is the buyer
+      if (order.client_id !== userId) {
+        throw new Error('Only the buyer can process payment');
+      }
+      
+      // Check order status
+      if (order.status !== 'delivered') {
+        throw new Error('Order must be delivered before payment');
+      }
+      
+      // Get buyer's current balance
+      const { data: buyer, error: buyerError } = await supabase
+        .from('User')
+        .select('balance')
+        .eq('uuid', userId)
+        .single();
+      
+      if (buyerError || !buyer) {
+        throw new Error('Buyer not found');
+      }
+      
+      // Check if buyer has sufficient balance
+      if (buyer.balance < order.price_at_purchase) {
+        throw new Error('Insufficient balance to complete payment');
+      }
+      
+      // Get seller details
+      const { data: seller, error: sellerError } = await supabase
+        .from('User')
+        .select('balance')
+        .eq('uuid', order.gig_owner_id)
+        .single();
+      
+      if (sellerError || !seller) {
+        throw new Error('Seller not found');
+      }
+      
+      // Start transaction using database function
+      const { data: transactionResult, error: transactionError } = await supabase.rpc('process_order_payment', {
+        p_order_id: parseInt(orderId),
+        p_buyer_id: userId,
+        p_seller_id: order.gig_owner_id,
+        p_amount: order.price_at_purchase
+      });
+      
+      if (transactionError) {
+        console.error('Database transaction failed:', transactionError);
+        throw new Error(transactionError.message || 'Payment processing failed');
+      }
+      
+      console.log('✅ Payment processed via database function:', transactionResult);
+      
+      // Get updated order
+      const updatedOrder = await OrderService.getOrderById(orderId);
+      
+      // Send payment notifications
+      try {
+        await NotificationService.sendPaymentNotification(updatedOrder, order.price_at_purchase);
+      } catch (notificationError) {
+        console.error('❌ Failed to send payment notification:', notificationError);
+        // Don't fail the entire operation if notification fails
+      }
+      
+      console.log('✅ Payment processed successfully:', orderId);
+      
+      return {
+        order: updatedOrder,
+        payment_amount: order.price_at_purchase,
+        buyer_new_balance: transactionResult.buyer_new_balance,
+        seller_new_balance: transactionResult.seller_new_balance,
+        transaction_id: 'database_function'
+      };
+      
+    } catch (error) {
+      console.error('❌ [Order Service] Error in processPayment:', error);
+      throw error;
+    }
+  },
+
+  /**
    * Get order statistics for dashboard
    * 
-   * @param {Object} filters - Filters for statistics
-   * @param {string} [filters.status] - Filter by order status
-   * @param {string} [filters.client_id] - Filter by client ID
-   * @param {string} [filters.gig_id] - Filter by gig ID
-   * @returns {Promise<Object>} Object containing statistics data
+   * @param {string} userId - User ID
+   * @param {string} role - User role (buyer/seller)
+   * @returns {Promise<Object>} Order statistics
    */
-  getOrderStatistics: async (filters = {}) => {
+  getOrderStatistics: async (userId, role) => {
     try {
-      console.log('📊 [Order Service] getOrderStatistics called with filters:', filters);
+      console.log('📊 [Order Service] getOrderStatistics called:', { userId, role });
       
-      // Prepare base query
       let query = supabase
         .from('Orders')
-        .select('status, count(id) as count', { count: 'exact' })
-        .group('status')
-        .order('status', { ascending: true });
-
-      // Apply filters
-      if (filters.status) {
-        query = query.eq('status', filters.status);
+        .select('status, price_at_purchase, created_at');
+      
+      if (role === 'buyer') {
+        query = query.eq('client_id', userId);
+      } else if (role === 'seller') {
+        query = query
+          .select('status, price_at_purchase, created_at, Gigs!inner(owner_id)')
+          .eq('Gigs.owner_id', userId);
       }
-
-      if (filters.client_id) {
-        query = query.eq('client_id', filters.client_id);
-      }
-
-      if (filters.gig_id) {
-        query = query.eq('gig_id', filters.gig_id);
-      }
-
-      const { data, error } = await query;
+      
+      const { data: orders, error } = await query;
       
       if (error) {
-        throw new Error(`Error fetching statistics: ${error.message}`);
+        throw new Error(`Failed to get order statistics: ${error.message}`);
       }
-
-      console.log('✅ [Order Service] Statistics data:', data);
       
-      return data;
+      // Calculate statistics
+      const stats = {
+        total_orders: orders.length,
+        pending: orders.filter(o => o.status === 'pending').length,
+        in_progress: orders.filter(o => o.status === 'in_progress').length,
+        delivered: orders.filter(o => o.status === 'delivered').length,
+        completed: orders.filter(o => o.status === 'completed').length,
+        cancelled: orders.filter(o => o.status === 'cancelled').length,
+        revision_requested: orders.filter(o => o.status === 'revision_requested').length,
+        total_revenue: orders
+          .filter(o => o.status === 'completed')
+          .reduce((sum, o) => sum + parseFloat(o.price_at_purchase), 0),
+        this_month_orders: orders.filter(o => {
+          const orderDate = new Date(o.created_at);
+          const currentDate = new Date();
+          return orderDate.getMonth() === currentDate.getMonth() && 
+                 orderDate.getFullYear() === currentDate.getFullYear();
+        }).length
+      };
+      
+      console.log('📊 Order statistics calculated:', stats);
+      
+      return stats;
+      
     } catch (error) {
-      console.error('💥 [Order Service] Error in getOrderStatistics:', error);
-      console.error('Stack trace:', error.stack);
-      throw new Error(`Error fetching order statistics: ${error.message}`);
+      console.error('❌ [Order Service] Error in getOrderStatistics:', error);
+      throw error;
     }
   }
 };

@@ -1,5 +1,6 @@
 // controllers/transaction.controller.js
 const User = require('../models/user.model');
+const Transaction = require('../models/transaction.model');
 const jwt = require('jsonwebtoken');
 
 /**

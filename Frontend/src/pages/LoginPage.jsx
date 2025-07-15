@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '../Common/Navbar_LD'; // Đảm bảo đường dẫn đúng
 import { useAuth } from '../contexts/AuthContext'; // 1. Import hook useAuth
-import API_BASE_URL from '../config/api'; // Import API config
 import '../index.css';
 
 const LoginPage = () => {
@@ -21,7 +20,7 @@ const LoginPage = () => {
     setLoading(true);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/auth/login`, {
+      const response = await fetch('http://localhost:8000/api/auth/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

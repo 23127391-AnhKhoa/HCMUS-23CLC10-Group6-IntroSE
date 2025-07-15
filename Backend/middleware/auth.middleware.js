@@ -34,6 +34,7 @@ const authenticateToken = (req, res, next) => {
         // Verify token
         jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
             if (err) {
+                console.log('🔐 JWT verification failed:', err.message);
                 return res.status(403).json({
                     status: 'error',
                     message: 'Invalid or expired token'
@@ -42,6 +43,11 @@ const authenticateToken = (req, res, next) => {
             
             // Add user info to request object
             req.user = user;
+            console.log('🔐 User authenticated:', {
+                uuid: user.uuid,
+                username: user.username,
+                role: user.role
+            });
             next();
         });
     } catch (error) {

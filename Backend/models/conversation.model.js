@@ -103,6 +103,62 @@ const Conversation = {
       user1: user1.data,
       user2: user2.data
     };
+  },
+
+  // Tạo hoặc tìm conversation cho order
+  findOrCreateForOrder: async (orderId) => {
+    try {
+      // Lấy thông tin order với client và gig owner
+      const { data: orderData, error: orderError } = await supabase
+        .from('Orders')
+        .select(`
+          *,
+          User!Orders_client_id_fkey (
+            uuid,
+            username,
+            fullname,
+            avt_url
+          ),
+          Gigs!Orders_gig_id_fkey (
+            owner_id,
+            User!Gigs_owner_id_fkey (
+              uuid,
+              username,
+              fullname,
+              avt_url
+            )
+          )
+        `)
+        .eq('id', orderId)
+        .single();
+
+      if (orderError) throw orderError;
+
+      const clientId = orderData.User.uuid;
+      const ownerId = orderData.Gigs.User.uuid;
+
+      // Tìm conversation hiện tại giữa client và owner
+      let conversation = await Conversation.findBetweenUsers(clientId, ownerId);
+
+      // Nếu không có conversation, tạo mới
+      if (!conversation) {
+        conversation = await Conversation.create(clientId, ownerId);
+      }
+
+      // Thêm thông tin order vào conversation
+      return {
+        ...conversation,
+        order: {
+          id: orderData.id,
+          gig_title: orderData.Gigs?.title || 'N/A',
+          status: orderData.status,
+          price: orderData.price_at_purchase
+        }
+      };
+    } catch (error) {
+      console.error('Error in findOrCreateForOrder:', error);
+      throw error;
+    }
   }
 };
 
