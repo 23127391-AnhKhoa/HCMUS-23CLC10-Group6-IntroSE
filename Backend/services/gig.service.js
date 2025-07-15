@@ -309,14 +309,15 @@ const GigService = {
     const { limit = 3 } = options;
     
     try {
-      // 1. Query gigs với JOIN user data
+      // 1. Query gigs với JOIN user data - SỬA TÊN BẢNG VÀ FOREIGN KEY
       const { data: gigs, error } = await supabase
         .from('Gigs')
         .select(`
           *,
-          Users!owner_id (
+          User!Gigs_owner_id_fkey (
             username,
-            fullname
+            fullname,
+            avt_url
           )
         `)
         .eq('status', 'active')
@@ -368,7 +369,7 @@ const GigService = {
         return {
           ...gig,
           recommendation_score: score,
-          seller_name: gig.Users?.username || gig.Users?.fullname || 'Seller'
+          seller_name: gig.User?.username || gig.User?.fullname || 'Seller'
         };
       });
 
