@@ -21,30 +21,16 @@ const executeQueryWithRetry = async (queryFunction, queryName = 'unknown') => {
   try {
     const result = await queryFunction(supabase);
     
-    // If we get empty results, try with fresh connection
+    // If we get empty results, just return them (no retry needed)
     if (result.data && Array.isArray(result.data) && result.data.length === 0) {
-      const { refreshConnection } = require('../config/supabaseClient');
-      const freshClient = refreshConnection();
-      const retryResult = await queryFunction(freshClient);
-      
-      if (retryResult.data && Array.isArray(retryResult.data) && retryResult.data.length > 0) {
-        return retryResult;
-      } else {
-        return result;
-      }
+      console.log(`Query ${queryName} returned no results`);
+      return result;
     }
     
-    // If we get a count of 0, try with fresh connection
+    // If we get a count of 0, just return it (no retry needed)
     if (result.count === 0) {
-      const { refreshConnection } = require('../config/supabaseClient');
-      const freshClient = refreshConnection();
-      const retryResult = await queryFunction(freshClient);
-      
-      if (retryResult.count > 0) {
-        return retryResult;
-      } else {
-        return result;
-      }
+      console.log(`Query ${queryName} returned count of 0`);
+      return result;
     }
     
     return result;
