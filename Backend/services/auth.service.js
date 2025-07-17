@@ -88,6 +88,11 @@ const AuthService = {
         const userProfile = await User.findById(authUser.id); // Giả sử bạn đã đổi tên hàm thành findByUuid
         if (!userProfile) throw new Error("User profile not found in public schema.");
 
+        // Kiểm tra trạng thái tài khoản
+        if (userProfile.status !== 'active') {
+            throw new Error('Your account is not active. Please contact support.');
+        }
+
         // 3. Tạo payload cho JWT, kết hợp thông tin từ cả hai nguồn
         const payload = {
         // Lấy uuid từ userProfile (hoặc authUser.id, chúng giống nhau)
