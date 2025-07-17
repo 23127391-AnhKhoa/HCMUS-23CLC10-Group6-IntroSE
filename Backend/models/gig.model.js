@@ -131,6 +131,102 @@ const Gig = {
   findWithDetails: async (filters = {}) => {
     try {
       const queryFunction = async (client) => {
+        // If search is provided, implement priority-based search
+        if (filters.search) {
+          // First query: Title matches (higher priority)
+          let titleQuery = client
+            .from('Gigs')
+            .select(`
+              *,
+              User!Gigs_owner_id_fkey (
+                uuid,
+                username,
+                fullname,
+                avt_url
+              ),
+              Categories!Gigs_category_id_fkey (
+                id,
+                name,
+                description
+              )
+            `)
+            .ilike('title', `%${filters.search}%`);
+
+          // Second query: Description matches (lower priority)
+          let descQuery = client
+            .from('Gigs')
+            .select(`
+              *,
+              User!Gigs_owner_id_fkey (
+                uuid,
+                username,
+                fullname,
+                avt_url
+              ),
+              Categories!Gigs_category_id_fkey (
+                id,
+                name,
+                description
+              )
+            `)
+            .ilike('description', `%${filters.search}%`)
+            .not('title', 'ilike', `%${filters.search}%`); // Exclude title matches to avoid duplicates
+
+          // Apply common filters to both queries
+          if (filters.status) {
+            titleQuery = titleQuery.eq('status', filters.status);
+            descQuery = descQuery.eq('status', filters.status);
+          }
+          
+          if (filters.owner_id) {
+            titleQuery = titleQuery.eq('owner_id', filters.owner_id);
+            descQuery = descQuery.eq('owner_id', filters.owner_id);
+          }
+          
+          if (filters.category_id !== undefined && filters.category_id !== null && filters.category_id !== '') {
+            titleQuery = titleQuery.eq('category_id', filters.category_id);
+            descQuery = descQuery.eq('category_id', filters.category_id);
+          }
+
+          // Apply sorting to both queries
+          if (filters.sort_by && filters.sort_order) {
+            titleQuery = titleQuery.order(filters.sort_by, { ascending: filters.sort_order === 'asc' });
+            descQuery = descQuery.order(filters.sort_by, { ascending: filters.sort_order === 'asc' });
+          } else {
+            titleQuery = titleQuery.order('created_at', { ascending: false });
+            descQuery = descQuery.order('created_at', { ascending: false });
+          }
+
+          // Execute both queries
+          const [titleResult, descResult] = await Promise.all([
+            titleQuery,
+            descQuery
+          ]);
+
+          if (titleResult.error) {
+            console.error('Title search query error:', titleResult.error);
+            throw titleResult.error;
+          }
+          if (descResult.error) {
+            console.error('Description search query error:', descResult.error);
+            throw descResult.error;
+          }
+
+          // Merge results with title matches first
+          const mergedData = [...(titleResult.data || []), ...(descResult.data || [])];
+          
+          // Apply pagination to merged results
+          let finalData = mergedData;
+          if (filters.limit) {
+            const from = ((filters.page || 1) - 1) * filters.limit;
+            const to = from + filters.limit;
+            finalData = mergedData.slice(from, to);
+          }
+
+          return { data: finalData, error: null };
+        }
+
+        // Regular query without search
         let query = client
           .from('Gigs')
           .select(`
@@ -157,12 +253,8 @@ const Gig = {
           query = query.eq('owner_id', filters.owner_id);
         }
         
-        if (filters.category_id) {
+        if (filters.category_id !== undefined && filters.category_id !== null && filters.category_id !== '') {
           query = query.eq('category_id', filters.category_id);
-        }
-
-        if (filters.search) {
-          query = query.or(`title.ilike.%${filters.search}%,description.ilike.%${filters.search}%`);
         }
 
         // Apply sorting
@@ -204,6 +296,56 @@ const Gig = {
   getCount: async (filters = {}) => {
     try {
       const queryFunction = async (client) => {
+        // If search is provided, count both title and description matches
+        if (filters.search) {
+          // Count title matches
+          let titleCountQuery = client
+            .from('Gigs')
+            .select('*', { count: 'exact', head: true })
+            .ilike('title', `%${filters.search}%`);
+
+          // Count description matches (excluding title matches to avoid duplicates)
+          let descCountQuery = client
+            .from('Gigs')
+            .select('*', { count: 'exact', head: true })
+            .ilike('description', `%${filters.search}%`)
+            .not('title', 'ilike', `%${filters.search}%`);
+
+          // Apply common filters to both queries
+          if (filters.status) {
+            titleCountQuery = titleCountQuery.eq('status', filters.status);
+            descCountQuery = descCountQuery.eq('status', filters.status);
+          }
+          
+          if (filters.owner_id) {
+            titleCountQuery = titleCountQuery.eq('owner_id', filters.owner_id);
+            descCountQuery = descCountQuery.eq('owner_id', filters.owner_id);
+          }
+          
+          if (filters.category_id !== undefined && filters.category_id !== null && filters.category_id !== '') {
+            titleCountQuery = titleCountQuery.eq('category_id', filters.category_id);
+            descCountQuery = descCountQuery.eq('category_id', filters.category_id);
+          }
+
+          // Execute both count queries
+          const [titleCountResult, descCountResult] = await Promise.all([
+            titleCountQuery,
+            descCountQuery
+          ]);
+
+          if (titleCountResult.error) {
+            throw titleCountResult.error;
+          }
+          if (descCountResult.error) {
+            throw descCountResult.error;
+          }
+
+          // Return combined count
+          const totalCount = (titleCountResult.count || 0) + (descCountResult.count || 0);
+          return { count: totalCount, error: null };
+        }
+
+        // Regular count query without search
         let query = client
           .from('Gigs')
           .select('*', { count: 'exact', head: true });
@@ -216,12 +358,8 @@ const Gig = {
           query = query.eq('owner_id', filters.owner_id);
         }
         
-        if (filters.category_id) {
+        if (filters.category_id !== undefined && filters.category_id !== null && filters.category_id !== '') {
           query = query.eq('category_id', filters.category_id);
-        }
-
-        if (filters.search) {
-          query = query.or(`title.ilike.%${filters.search}%,description.ilike.%${filters.search}%`);
         }
 
         const result = await query;
