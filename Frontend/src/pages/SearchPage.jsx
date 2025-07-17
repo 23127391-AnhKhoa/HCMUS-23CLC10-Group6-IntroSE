@@ -15,16 +15,37 @@ const SearchPage = () => {
     const [priceRange, setPriceRange] = useState({ min: '', max: '' });
     const [sort, setSort] = useState('relevance_desc'); // Combined sort state with relevance as default
     const [categories, setCategories] = useState([]);
-    const [showFilters, setShowFilters] = useState(false);
+    const [showFilters, setShowFilters] = useState(true); // Show filters by default
     const [totalResults, setTotalResults] = useState(0);
     const [categoryFromNavbar, setCategoryFromNavbar] = useState(false); // Track if category came from navbar
     const [isInitialLoad, setIsInitialLoad] = useState(true); // Track initial load
+    const [currentPage, setCurrentPage] = useState(1); // Track current page
+    const [totalPages, setTotalPages] = useState(1); // Track total pages
+    const [showScrollTop, setShowScrollTop] = useState(false); // Track scroll position for scroll-to-top button
 
     // Derived values from sort state
     const [sortBy, sortOrder] = sort.split('_');
     
     // Debug log to track sort state
     console.log('[SearchPage] Current sort state:', { sort, sortBy, sortOrder });
+
+    // Handle scroll to show/hide scroll-to-top button
+    useEffect(() => {
+        const handleScroll = () => {
+            setShowScrollTop(window.pageYOffset > 300);
+        };
+
+        window.addEventListener('scroll', handleScroll);
+        return () => window.removeEventListener('scroll', handleScroll);
+    }, []);
+
+    // Scroll to top function
+    const scrollToTop = () => {
+        window.scrollTo({
+            top: 0,
+            behavior: 'smooth'
+        });
+    };
 
     useEffect(() => {
         const queryFromUrl = searchParams.get('q');
@@ -40,13 +61,14 @@ const SearchPage = () => {
             setCategoryFromNavbar(!queryFromUrl);
         }
         
-        // Perform search if either query or category is provided
-        if (queryFromUrl || categoryFromUrl) {
-            searchGigs(queryFromUrl);
-        }
+        // Always perform search - pass both query and category to ensure proper filtering
+        searchGigs(queryFromUrl || '', 1, categoryFromUrl);
         
         fetchCategories();
         setIsInitialLoad(false);
+        
+        // Auto scroll to top when entering search page
+        scrollToTop();
     }, [searchParams]);
 
     // Fetch categories for filter dropdown
@@ -71,46 +93,41 @@ const SearchPage = () => {
         }
     };
 
-    // Search gigs
-    const searchGigs = async (query = searchQuery) => {
+    // Search gigs with pagination support
+    const searchGigs = async (query = searchQuery, page = 1, categoryId = selectedCategory) => {
         try {
             setLoading(true);
             setError(null);
             console.log('[SearchPage] Starting search with:', {
                 search: query,
-                category: selectedCategory,
+                category: categoryId,
                 priceRange,
-                sort: sort
+                sort: sort,
+                page: page
             });
 
             const params = new URLSearchParams({
-                limit: '24',
+                limit: '24', // Keep consistent page size
+                page: page.toString(),
                 sort_by: sortBy,
                 sort_order: sortOrder,
                 filter_by_status: 'active'
             });
 
-            console.log('[SearchPage] Sort parameters:', { sort_by: sortBy, sort_order: sortOrder });
+            console.log('[SearchPage] Sort parameters:', { sort_by: sortBy, sort_order: sortOrder, page });
             console.log('[SearchPage] Current dropdown value should be:', sort);
 
+            // Only add search param if query is not empty - empty query shows all gigs with "most relevant" sorting
             if (query?.trim()) {
                 params.append('search', query.trim());
             }
 
-            if (selectedCategory) {
-                params.append('filter_by_category_id', selectedCategory);
+            // Use the categoryId parameter instead of the state to ensure proper filtering
+            if (categoryId) {
+                params.append('filter_by_category_id', categoryId);
             } else if (selectedSubcategory) {
                 params.append('filter_by_category_id', selectedSubcategory);
             }
-
-            // Note: Price filtering will be done on frontend since backend doesn't support min_price/max_price yet
-            // if (priceRange.min && !isNaN(parseFloat(priceRange.min))) {
-            //     params.append('min_price', priceRange.min);
-            // }
-            // 
-            // if (priceRange.max && !isNaN(parseFloat(priceRange.max))) {
-            //     params.append('max_price', priceRange.max);
-            // }
 
             const searchUrl = `http://localhost:8000/api/gigs?${params}`;
             console.log('[SearchPage] Search URL:', searchUrl);
@@ -145,8 +162,28 @@ const SearchPage = () => {
                 }
 
                 setSearchResults(results);
-                setTotalResults(results.length);
-                console.log('[SearchPage] Search results:', results.length);
+                
+                // Handle pagination logic more conservatively
+                const itemsPerPage = 24;
+                setCurrentPage(page);
+                
+                if (results.length < itemsPerPage) {
+                    // This is the last page (or no results)
+                    setTotalPages(page);
+                    setTotalResults((page - 1) * itemsPerPage + results.length);
+                } else {
+                    // We have full results, so there might be more
+                    // But only show one extra page until we know for sure
+                    setTotalPages(page + 1);
+                    setTotalResults((page - 1) * itemsPerPage + results.length); // Actual results counted so far
+                }
+                
+                // Auto scroll to top after search (but not on initial load)
+                if (!isInitialLoad && page === 1) {
+                    setTimeout(() => scrollToTop(), 100);
+                }
+                
+                console.log('[SearchPage] Search results:', results.length, 'on page', page);
             } else {
                 throw new Error(data.message || 'Search failed');
             }
@@ -166,7 +203,16 @@ const SearchPage = () => {
         setSort('relevance_desc'); // Reset to default sort
         setError(null);
         setCategoryFromNavbar(false); // Reset navbar tracking
-        searchGigs();
+        setCurrentPage(1); // Reset pagination
+        setTotalPages(1);
+        searchGigs('', 1, ''); // Start fresh search from page 1 with no category
+    };
+
+    // Navigate to specific page
+    const goToPage = (page) => {
+        if (page >= 1 && page !== currentPage) {
+            searchGigs(searchQuery, page, selectedCategory);
+        }
     };
 
     // Handle filter changes
@@ -174,10 +220,14 @@ const SearchPage = () => {
         // Skip the initial load to avoid double search
         if (isInitialLoad) return;
         
+        // Reset pagination when filters change
+        setCurrentPage(1);
+        setTotalPages(1);
+        
         // Always trigger search when sort parameters or categories change
         // This ensures sorting works even when viewing "All Gigs"
         console.log('[SearchPage] useEffect triggered for filters:', { selectedCategory, selectedSubcategory, sort });
-        searchGigs();
+        searchGigs(searchQuery, 1, selectedCategory); // Start from page 1 with new filters
     }, [selectedCategory, selectedSubcategory, sort, isInitialLoad]);
 
     // Handle category change - reset subcategory when parent category changes
@@ -188,8 +238,11 @@ const SearchPage = () => {
     // Handle price range changes with debounce
     useEffect(() => {
         const timer = setTimeout(() => {
+            // Reset pagination when price filter changes
+            setCurrentPage(1);
+            setTotalPages(1);
             // Always search when price range changes (even for "All Gigs")
-            searchGigs();
+            searchGigs(searchQuery, 1, selectedCategory);
         }, 500); // 500ms debounce
 
         return () => clearTimeout(timer);
@@ -302,12 +355,82 @@ const SearchPage = () => {
             <div className="relative z-10 flex flex-col items-center">
                 <NavBar />
                 
-                {/* Search Header */}
-                <div className="w-full max-w-6xl px-4 sm:px-6 lg:px-8 py-8 mt-4">
+                {/* Hero Search Section */}
+                <div className="w-full max-w-4xl px-4 sm:px-6 lg:px-8 py-12 mt-4">
+                    <div className="text-center mb-8">
+                        <h1 className="text-4xl lg:text-5xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent mb-4">
+                            Find the Perfect Service
+                        </h1>
+                        <p className="text-xl text-gray-600 mb-8">
+                            Discover amazing freelance services from talented professionals
+                        </p>
+                        
+                        {/* Enhanced Search Bar */}
+                        <div className="relative max-w-3xl mx-auto">
+                            <div className="relative bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden">
+                                <input
+                                    type="text"
+                                    placeholder="What service are you looking for today?"
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    onKeyPress={(e) => {
+                                        if (e.key === 'Enter') {
+                                            setCurrentPage(1);
+                                            setTotalPages(1);
+                                            searchGigs(searchQuery, 1, selectedCategory);
+                                            // Scroll to top after search
+                                            setTimeout(() => scrollToTop(), 100);
+                                        }
+                                    }}
+                                    className="w-full pl-6 pr-32 py-6 text-lg border-none outline-none focus:ring-0"
+                                />
+                                <button
+                                    onClick={() => {
+                                        setCurrentPage(1);
+                                        setTotalPages(1);
+                                        searchGigs(searchQuery, 1, selectedCategory);
+                                        // Scroll to top after search
+                                        setTimeout(() => scrollToTop(), 100);
+                                    }}
+                                    className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-8 py-4 rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl flex items-center gap-2 font-semibold"
+                                >
+                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                    </svg>
+                                    Search
+                                </button>
+                            </div>
+                            
+                            {/* Popular Searches */}
+                            <div className="mt-6 flex flex-wrap justify-center gap-3">
+                                <span className="text-gray-500 text-sm">Popular:</span>
+                                {['Logo Design', 'Website Development', 'Content Writing', 'Video Editing', 'Social Media'].map((term) => (
+                                    <button
+                                        key={term}
+                                        onClick={() => {
+                                            setSearchQuery(term);
+                                            setCurrentPage(1);
+                                            setTotalPages(1);
+                                            searchGigs(term, 1, selectedCategory);
+                                            // Scroll to top after search
+                                            setTimeout(() => scrollToTop(), 100);
+                                        }}
+                                        className="text-sm bg-gray-100 hover:bg-blue-100 text-gray-700 hover:text-blue-700 px-4 py-2 rounded-full transition-colors duration-200"
+                                    >
+                                        {term}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                {/* Search Results Header */}
+                <div className="w-full max-w-6xl px-4 sm:px-6 lg:px-8 pb-8">
                     <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-6">
                         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
                             <div>
-                                <h1 className="text-2xl lg:text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                                <h2 className="text-2xl lg:text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
                                     {(() => {
                                         const selectedCategoryObj = categories.find(cat => cat.id.toString() === selectedCategory);
                                         const selectedSubcategoryObj = selectedCategoryObj?.children?.find(sub => sub.id.toString() === selectedSubcategory);
@@ -318,21 +441,31 @@ const SearchPage = () => {
                                         } else if (searchQuery) {
                                             return "Search Results";
                                         } else {
-                                            return "All Gigs";
+                                            return "Most Relevant Services";
                                         }
                                     })()}
-                                </h1>
-                                {searchQuery && (
-                                    <p className="text-gray-600 mt-2">
-                                        {totalResults} result{totalResults !== 1 ? 's' : ''} for "{searchQuery}"
-                                        {selectedSubcategory && categories.find(cat => cat.id.toString() === selectedCategory)?.children?.find(sub => sub.id.toString() === selectedSubcategory) && 
-                                            ` in ${categories.find(cat => cat.id.toString() === selectedCategory).children.find(sub => sub.id.toString() === selectedSubcategory).name}`
-                                        }
-                                        {!selectedSubcategory && selectedCategory && categories.find(cat => cat.id.toString() === selectedCategory) && 
-                                            ` in ${categories.find(cat => cat.id.toString() === selectedCategory).name}`
-                                        }
-                                    </p>
-                                )}
+                                </h2>
+                {searchQuery && (
+                    <p className="text-gray-600 mt-2">
+                        {(() => {
+                            if (currentPage === 1 && searchResults.length < 24) {
+                                // On first page with less than full results - we know the exact total
+                                return `${totalResults} result${totalResults !== 1 ? 's' : ''}`;
+                            } else {
+                                // We have more pages or full results - show range
+                                const startResult = (currentPage - 1) * 24 + 1;
+                                const endResult = (currentPage - 1) * 24 + searchResults.length;
+                                return `Showing ${startResult}-${endResult} of ${totalResults}+ results`;
+                            }
+                        })()} for "{searchQuery}"
+                        {selectedSubcategory && categories.find(cat => cat.id.toString() === selectedCategory)?.children?.find(sub => sub.id.toString() === selectedSubcategory) && 
+                            ` in ${categories.find(cat => cat.id.toString() === selectedCategory).children.find(sub => sub.id.toString() === selectedSubcategory).name}`
+                        }
+                        {!selectedSubcategory && selectedCategory && categories.find(cat => cat.id.toString() === selectedCategory) && 
+                            ` in ${categories.find(cat => cat.id.toString() === selectedCategory).name}`
+                        }
+                    </p>
+                )}
                                 {!searchQuery && (selectedCategory || selectedSubcategory) && (
                                     <div className="mt-2">
                                         <p className="text-gray-600">
@@ -350,23 +483,21 @@ const SearchPage = () => {
                                         )}
                                     </div>
                                 )}
+                                {!searchQuery && !selectedCategory && !selectedSubcategory && (
+                                    <div className="mt-2">
+                                        <p className="text-gray-600">
+                                            Showing {totalResults} most relevant services
+                                        </p>
+                                        <p className="text-gray-500 text-sm mt-1 italic">
+                                            Discover the best freelance services tailored for you
+                                        </p>
+                                    </div>
+                                )}
                             </div>
-                            
-                            {/* Filters Toggle */}
-                            <button
-                                onClick={() => setShowFilters(!showFilters)}
-                                className="px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-xl hover:from-blue-600 hover:to-purple-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 flex items-center gap-2"
-                            >
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.414A1 1 0 013 6.707V4z" />
-                                </svg>
-                                Filters
-                            </button>
                         </div>
                         
                         {/* Filters Panel */}
-                        {showFilters && (
-                            <div className="mt-6 p-4 bg-gray-50 rounded-xl border">
+                        <div className="mt-6 p-4 bg-gray-50 rounded-xl border">
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
                                     {/* Category Filter */}
                                     <div>
@@ -460,14 +591,17 @@ const SearchPage = () => {
                                         Clear Filters
                                     </button>
                                     <button
-                                        onClick={() => searchGigs()}
+                                        onClick={() => {
+                                            setCurrentPage(1);
+                                            setTotalPages(1);
+                                            searchGigs(searchQuery, 1, selectedCategory);
+                                        }}
                                         className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                                     >
                                         Apply Filters
                                     </button>
                                 </div>
                             </div>
-                        )}
                     </div>
                 </div>
                 
@@ -477,10 +611,117 @@ const SearchPage = () => {
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 justify-items-center">
                             {renderGigCards()}
                         </div>
+                        
+                        {/* Pagination Controls */}
+                        {!loading && !error && searchResults.length > 0 && totalPages > 1 && (
+                            <div className="flex justify-center items-center mt-8 gap-2">
+                                {/* Previous Button */}
+                                <button
+                                    onClick={() => goToPage(currentPage - 1)}
+                                    disabled={currentPage === 1}
+                                    className="px-3 py-2 text-sm bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    ←
+                                </button>
+                                
+                                {/* Page Numbers */}
+                                {(() => {
+                                    const pages = [];
+                                    const maxVisiblePages = 5;
+                                    let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+                                    let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+                                    
+                                    // Adjust start if we're near the end
+                                    if (endPage - startPage + 1 < maxVisiblePages) {
+                                        startPage = Math.max(1, endPage - maxVisiblePages + 1);
+                                    }
+                                    
+                                    // Show first page if not visible
+                                    if (startPage > 1) {
+                                        pages.push(
+                                            <button
+                                                key={1}
+                                                onClick={() => goToPage(1)}
+                                                className="px-3 py-2 text-sm bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
+                                            >
+                                                1
+                                            </button>
+                                        );
+                                        if (startPage > 2) {
+                                            pages.push(<span key="start-ellipsis" className="px-2 py-2 text-gray-500">...</span>);
+                                        }
+                                    }
+                                    
+                                    // Show visible page range
+                                    for (let page = startPage; page <= endPage; page++) {
+                                        pages.push(
+                                            <button
+                                                key={page}
+                                                onClick={() => goToPage(page)}
+                                                className={`px-3 py-2 text-sm rounded-lg border ${
+                                                    page === currentPage
+                                                        ? 'bg-blue-600 text-white border-blue-600'
+                                                        : 'bg-white border-gray-300 hover:bg-gray-50'
+                                                }`}
+                                            >
+                                                {page}
+                                            </button>
+                                        );
+                                    }
+                                    
+                                    // Show last page if not visible
+                                    if (endPage < totalPages) {
+                                        if (endPage < totalPages - 1) {
+                                            pages.push(<span key="end-ellipsis" className="px-2 py-2 text-gray-500">...</span>);
+                                        }
+                                        pages.push(
+                                            <button
+                                                key={totalPages}
+                                                onClick={() => goToPage(totalPages)}
+                                                className="px-3 py-2 text-sm bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
+                                            >
+                                                {totalPages}
+                                            </button>
+                                        );
+                                    }
+                                    
+                                    return pages;
+                                })()}
+                                
+                                {/* Next Button */}
+                                <button
+                                    onClick={() => goToPage(currentPage + 1)}
+                                    disabled={currentPage === totalPages}
+                                    className="px-3 py-2 text-sm bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    →
+                                </button>
+                            </div>
+                        )}
+                        
+                        {/* Results Info */}
+                        {!loading && !error && searchResults.length > 0 && (
+                            <div className="text-center mt-4 text-sm text-gray-600">
+                                Page {currentPage} of {totalPages} • Showing {searchResults.length} gigs
+                            </div>
+                        )}
                     </div>
                 </div>
                 
                 <Footer />
+                
+                {/* Scroll to Top Button */}
+                {showScrollTop && (
+                    <button
+                        onClick={scrollToTop}
+                        className="fixed bottom-8 left-1/2 transform -translate-x-1/2 z-50 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white p-3 rounded-full shadow-2xl transition-all duration-300 hover:shadow-xl hover:-translate-y-1"
+                        aria-label="Scroll to top"
+                    >
+                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" />
+                        </svg>
+                    </button>
+                )}
             </div>
         </div>
     );

@@ -117,8 +117,13 @@ const Navbar = () => {
   };
 
   const handleSearch = (value) => {
-    if (value.trim()) {
-      navigate(`/search?q=${encodeURIComponent(value.trim())}`);
+    // Always navigate to search page - if no value, show most relevant results
+    const searchValue = value?.trim() || '';
+    if (searchValue) {
+      navigate(`/search?q=${encodeURIComponent(searchValue)}`);
+    } else {
+      // Navigate to search page without query to show all gigs with most relevant sorting
+      navigate('/search');
     }
   };
 
