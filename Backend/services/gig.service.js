@@ -149,19 +149,14 @@ const GigService = {
       try {
         result = await queryFunction(supabase);
         
-        // If we get null/empty result, try with fresh connection
+        // If we get null/empty result, just return it
         if (!result.data) {
-          const { refreshConnection } = require('../config/supabaseClient');
-          const freshClient = refreshConnection();
-          result = await queryFunction(freshClient);
+          console.log('No gig found with the given criteria');
         }
         
       } catch (error) {
-        console.error('Error in getGigById query, retrying with fresh connection:', error);
-        // Retry with fresh connection
-        const { refreshConnection } = require('../config/supabaseClient');
-        const freshClient = refreshConnection();
-        result = await queryFunction(freshClient);
+        console.error('Error in getGigById query:', error);
+        throw error; // Re-throw the error instead of trying to refresh connection
       }
 
       const gigWithDetails = result.data;
