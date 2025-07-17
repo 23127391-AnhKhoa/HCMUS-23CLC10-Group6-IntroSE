@@ -97,7 +97,7 @@ const ProfileSeller = () => {
         if (!token || !authUser?.uuid) return;
 
         // Fetch earnings overview
-        const earningsResponse = await fetch(`http://localhost:8000/api/earnings/seller/${authUser.uuid}/overview`, {
+        const earningsResponse = await fetch(`http://localhost:8000/api/users/${authUser.uuid}/earnings/stats`, {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json',
@@ -115,7 +115,7 @@ const ProfileSeller = () => {
           earningsData = earningsResult.data || earningsData;
         }
 
-        // Fetch seller's gigs for ratings calculation
+        /*// Fetch seller's gigs for ratings calculation
         let avgRating = 0;
         try {
           const gigsResponse = await fetch(`http://localhost:8000/api/gigs/seller/${authUser.uuid}`, {
@@ -136,7 +136,7 @@ const ProfileSeller = () => {
           }
         } catch (gigError) {
           console.error('Failed to fetch gigs for rating:', gigError);
-        }
+        }*/
 
         // Update stats with real data
         setStats({

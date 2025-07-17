@@ -80,7 +80,7 @@ const ServCard = ({ gig, isPreview = false }) => {
         if (!authUser || !token || !gigData.id) return;
         
         try {
-            const response = await fetch(`http://localhost:8000/api/favorites/check/${authUser.uuid}/${gigData.id}`, {
+            const response = await fetch(`http://localhost:8000/api/users/favorite/check/${authUser.uuid}/${gigData.id}`, {
                 headers: {
                     'Authorization': `Bearer ${token}`,
                     'Content-Type': 'application/json',
@@ -114,7 +114,7 @@ const ServCard = ({ gig, isPreview = false }) => {
         }
 
         try {
-            const response = await fetch('http://localhost:8000/api/favorites/toggle', {
+            const response = await fetch('http://localhost:8000/api/users/favorite/toggle', {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${token}`,

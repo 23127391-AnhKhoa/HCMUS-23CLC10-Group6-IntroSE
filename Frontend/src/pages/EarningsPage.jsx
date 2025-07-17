@@ -35,7 +35,7 @@ const EarningsPage = () => {
       }
       
       // Fetch earnings stats from new endpoint we created
-      const earningsResponse = await fetch(`http://localhost:8000/api/earnings/seller/${sellerId}/stats?period=thisMonth`, {
+      const earningsResponse = await fetch(`http://localhost:8000/api/users/${sellerId}/earnings/stats?period=thisMonth`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -62,7 +62,7 @@ const EarningsPage = () => {
       }
 
       // Fetch recent orders for transactions
-      const recentOrdersResponse = await fetch(`http://localhost:8000/api/earnings/seller/${sellerId}/recent-orders?limit=10`, {
+      const recentOrdersResponse = await fetch(`http://localhost:8000/api/users/${sellerId}/earnings/recent-orders?limit=10`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',

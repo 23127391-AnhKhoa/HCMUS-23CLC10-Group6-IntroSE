@@ -152,6 +152,53 @@ const EarningsController = {
         details: error.message
       });
     }
+  },
+
+  /**
+   * Get recent orders for earnings page
+   * 
+   * @route GET /api/users/:sellerId/earnings/recent-orders
+   * @param {Object} req - Express request object
+   * @param {Object} req.params - Route parameters
+   * @param {string} req.params.sellerId - Seller UUID
+   * @param {Object} req.query - Query parameters
+   * @param {number} [req.query.limit=10] - Number of recent orders to fetch
+   * @param {Object} res - Express response object
+   * @returns {Object} JSON response with recent orders
+   */
+  getSellerRecentOrders: async (req, res) => {
+    try {
+      const { sellerId } = req.params;
+      const { limit = 10 } = req.query;
+      
+      console.log('📋 [Earnings Controller] getSellerRecentOrders called');
+      console.log('👤 Seller ID:', sellerId);
+      console.log('📊 Limit:', limit);
+
+      // Validate that authenticated user matches the seller ID (security check)
+      if (req.user.uuid !== sellerId) {
+        return res.status(403).json({
+          status: 'error',
+          message: 'Access denied: You can only view your own orders'
+        });
+      }
+
+      // Get recent orders using the service function
+      const recentOrders = await OrderService.getSellerRecentOrders(sellerId, parseInt(limit));
+      
+      res.status(200).json({
+        status: 'success',
+        data: recentOrders
+      });
+
+    } catch (error) {
+      console.error('❌ [Earnings Controller] Error in getSellerRecentOrders:', error);
+      res.status(500).json({
+        status: 'error',
+        message: 'Internal server error',
+        details: error.message
+      });
+    }
   }
 };
 

@@ -32,7 +32,7 @@ const GigDetail = () => {
         if (!authUser || !token) return;
         
         try {
-            const response = await fetch(`http://localhost:8000/api/users/check/${authUser.uuid}/${id}`, {
+            const response = await fetch(`http://localhost:8000/api/users/favorite/check/${authUser.uuid}/${id}`, {
                 headers: {
                     'Authorization': `Bearer ${token}`,
                     'Content-Type': 'application/json',
@@ -60,7 +60,7 @@ const GigDetail = () => {
         }
 
         try {
-            const response = await fetch('http://localhost:8000/api/users/toggle', {
+            const response = await fetch('http://localhost:8000/api/users/favorite/toggle', {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${token}`,

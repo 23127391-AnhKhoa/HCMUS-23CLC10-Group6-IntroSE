@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const userController = require('../controllers/user.controller');
 const UserFavoritesController = require('../controllers/userFavorites.controller');
+const EarningsController = require('../controllers/earnings.controller');
 const { authenticateToken } = require('../middleware/auth.middleware'); // Sử dụng middleware xác thực token
 
 // ========== Admin endpoints ==========
@@ -47,19 +48,47 @@ router.get('/username/:username', userController.getUserByUsername);
 
 // =========== User Favorites endpoints ==========
 // POST /api/favorites/add - Thêm vào favorites
-router.post('/add', authenticateToken, UserFavoritesController.addFavorite);
+router.post('/favorite/add', authenticateToken, UserFavoritesController.addFavorite);
 
 // DELETE /api/favorites/remove - Xóa khỏi favorites
-router.delete('/remove', authenticateToken, UserFavoritesController.removeFavorite);
+router.delete('/favorite/remove', authenticateToken, UserFavoritesController.removeFavorite);
 
 // POST /api/favorites/toggle - Toggle favorite status
-router.post('/toggle', authenticateToken, UserFavoritesController.toggleFavorite);
+router.post('/favorite/toggle', authenticateToken, UserFavoritesController.toggleFavorite);
 
-// GET /api/favorites/user/:userId - Lấy favorites của user
-router.get('/user/:userId', authenticateToken, UserFavoritesController.getUserFavorites);
+// GET /api/favorites/:userId - Lấy favorites của user
+router.get('/favorite/:userId', authenticateToken, UserFavoritesController.getUserFavorites);
 
 // GET /api/favorites/check/:userId/:gigId - Kiểm tra favorite status
-router.get('/check/:userId/:gigId', authenticateToken, UserFavoritesController.checkFavorite);
+router.get('/favorite/check/:userId/:gigId', authenticateToken, UserFavoritesController.checkFavorite);
 
+// ========== Earnings endpoints ==========
+
+/**
+ * @route GET /api/users/:sellerId/earnings/stats
+ * @desc Get seller earnings statistics
+ * @access Private (Seller only)
+ * @param {string} sellerId - Seller UUID
+ * @param {string} [period] - Time period (thisMonth, lastMonth, thisYear, allTime)
+ */
+router.get('/:sellerId/earnings/stats', authenticateToken, EarningsController.getSellerEarningsStats);
+
+/**
+ * @route GET /api/users/:sellerId/earnings/recent-orders
+ * @desc Get recent orders for earnings page
+ * @access Private (Seller only)
+ * @param {string} sellerId - Seller UUID
+ * @param {number} [limit=10] - Number of recent orders to fetch
+ */
+router.get('/:sellerId/earnings/recent-orders', authenticateToken, EarningsController.getSellerRecentOrders);
+
+/**
+ * @route GET /api/users/:sellerId/earnings/monthly
+ * @desc Get monthly earnings breakdown for charts
+ * @access Private (Seller only)
+ * @param {string} sellerId - Seller UUID
+ * @param {number} [months=12] - Number of months to include
+ */
+router.get('/:sellerId/earnings/monthly', authenticateToken, EarningsController.getMonthlyEarnings);
 
 module.exports = router;
