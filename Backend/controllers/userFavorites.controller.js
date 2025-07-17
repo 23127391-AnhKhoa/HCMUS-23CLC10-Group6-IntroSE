@@ -1,5 +1,5 @@
 // controllers/userFavorites.controller.js
-const User = require('../models/user.model');
+const User = require('../models/user.model'); // model
 
 class UserFavoritesController {
     // Thêm favorite
@@ -74,7 +74,6 @@ class UserFavoritesController {
             }
 
             const favorites = await User.getUserFavorites(userId);
-
             res.status(200).json({
                 status: 'success',
                 message: 'Favorites retrieved successfully',

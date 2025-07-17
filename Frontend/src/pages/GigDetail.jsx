@@ -32,7 +32,7 @@ const GigDetail = () => {
         if (!authUser || !token) return;
         
         try {
-            const response = await fetch(`http://localhost:8000/api/favorites/check/${authUser.uuid}/${id}`, {
+            const response = await fetch(`http://localhost:8000/api/users/favorite/check/${authUser.uuid}/${id}`, {
                 headers: {
                     'Authorization': `Bearer ${token}`,
                     'Content-Type': 'application/json',
@@ -60,7 +60,7 @@ const GigDetail = () => {
         }
 
         try {
-            const response = await fetch('http://localhost:8000/api/favorites/toggle', {
+            const response = await fetch('http://localhost:8000/api/users/favorite/toggle', {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${token}`,
@@ -280,7 +280,7 @@ const GigDetail = () => {
         }
     };
 
-    // Helper function to get all images (cover + additional media)
+    // Helper function to get all images and videos (cover + additional media)
     const getAllImages = () => {
         const images = [];
         
@@ -293,14 +293,14 @@ const GigDetail = () => {
             });
         }
         
-        // Add additional media images
+        // Add additional media images and videos
         if (gigMedia && gigMedia.length > 0) {
             console.log('🎬 Processing gigMedia:', gigMedia);
             gigMedia.forEach(media => {
                 if (media.url && media.url !== gig?.cover_image) {
                     images.push({
                         url: media.url,
-                        type: media.media_type || 'image', // Default to 'image' if media_type is null
+                        type: media.media_type || 'image', // Can be 'image', 'video', etc.
                         id: media.id
                     });
                 }
@@ -337,308 +337,406 @@ const GigDetail = () => {
 
     if (loading || authLoading) {
         return (
-            <div className="relative flex size-full min-h-screen flex-col bg-gray-50" style={{fontFamily: 'Inter, "Noto Sans", sans-serif'}}>
-                <NavBar />
-                <div className="flex-1 flex items-center justify-center">
-                    <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-500"></div>
+            <div className="relative flex size-full min-h-screen flex-col bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100" style={{fontFamily: 'Inter, "Noto Sans", sans-serif'}}>
+                {/* Background Elements */}
+                <div className="absolute inset-0 z-0 overflow-hidden">
+                    <div className="absolute top-20 left-10 w-80 h-80 bg-blue-100/20 rounded-full blur-3xl animate-pulse"></div>
+                    <div className="absolute top-40 right-20 w-96 h-96 bg-indigo-100/15 rounded-full blur-3xl animate-pulse delay-1000"></div>
                 </div>
-                <Footer />
+                <div className="relative z-10">
+                    <NavBar />
+                    <div className="flex-1 flex items-center justify-center min-h-screen">
+                        <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-8">
+                            <div className="flex flex-col items-center">
+                                <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-200 border-t-blue-600 mb-4"></div>
+                                <p className="text-gray-600 font-medium">Loading gig details...</p>
+                            </div>
+                        </div>
+                    </div>
+                    <Footer />
+                </div>
             </div>
         );
     }
 
     if (error) {
         return (
-            <div className="relative flex size-full min-h-screen flex-col bg-gray-50" style={{fontFamily: 'Inter, "Noto Sans", sans-serif'}}>
-                <NavBar />
-                <div className="flex-1 flex items-center justify-center">
-                    <div className="text-center">
-                        <h1 className="text-2xl font-bold text-red-600 mb-4">Error Loading Gig</h1>
-                        <p className="text-gray-600 mb-4">{error}</p>
-                        <div className="space-x-4">
-                            <button 
-                                onClick={fetchGigDetail}
-                                className="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-10 px-4 bg-[#336088] text-gray-50 text-sm font-bold leading-normal tracking-[0.015em]"
-                            >
-                                Retry
-                            </button>
-                            <button 
-                                onClick={() => navigate(-1)}
-                                className="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-10 px-4 bg-[#eaedf0] text-[#111518] text-sm font-bold leading-normal tracking-[0.015em]"
-                            >
-                                Go Back
-                            </button>
+            <div className="relative flex size-full min-h-screen flex-col bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100" style={{fontFamily: 'Inter, "Noto Sans", sans-serif'}}>
+                {/* Background Elements */}
+                <div className="absolute inset-0 z-0 overflow-hidden">
+                    <div className="absolute top-20 left-10 w-80 h-80 bg-blue-100/20 rounded-full blur-3xl animate-pulse"></div>
+                    <div className="absolute top-40 right-20 w-96 h-96 bg-indigo-100/15 rounded-full blur-3xl animate-pulse delay-1000"></div>
+                </div>
+                <div className="relative z-10">
+                    <NavBar />
+                    <div className="flex-1 flex items-center justify-center min-h-screen">
+                        <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-8 max-w-md text-center">
+                            <div className="w-16 h-16 bg-gradient-to-br from-red-400 to-red-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L4.268 18.5c-.77.833.192 2.5 1.732 2.5z" />
+                                </svg>
+                            </div>
+                            <h1 className="text-2xl font-bold text-red-600 mb-4">Error Loading Gig</h1>
+                            <p className="text-gray-600 mb-6 bg-red-50 p-4 rounded-xl">{error}</p>
+                            <div className="flex gap-3 justify-center">
+                                <button 
+                                    onClick={fetchGigDetail}
+                                    className="px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-2xl hover:from-blue-600 hover:to-blue-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 font-medium"
+                                >
+                                    Retry
+                                </button>
+                                <button 
+                                    onClick={() => navigate(-1)}
+                                    className="px-6 py-3 bg-white border border-gray-300 text-gray-700 rounded-2xl hover:bg-gray-50 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 font-medium"
+                                >
+                                    Go Back
+                                </button>
+                            </div>
                         </div>
                     </div>
+                    <Footer />
                 </div>
-                <Footer />
             </div>
         );
     }
 
     if (!gig) {
         return (
-            <div className="relative flex size-full min-h-screen flex-col bg-gray-50" style={{fontFamily: 'Inter, "Noto Sans", sans-serif'}}>
-                <NavBar />
-                <div className="flex-1 flex items-center justify-center">
-                    <div className="text-center">
-                        <h1 className="text-2xl font-bold text-gray-600 mb-4">Gig Not Found</h1>
-                        <button 
-                            onClick={() => navigate(-1)}
-                            className="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-10 px-4 bg-[#336088] text-gray-50 text-sm font-bold leading-normal tracking-[0.015em]"
-                        >
-                            Go Back
-                        </button>
-                    </div>
+            <div className="relative flex size-full min-h-screen flex-col bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100" style={{fontFamily: 'Inter, "Noto Sans", sans-serif'}}>
+                {/* Background Elements */}
+                <div className="absolute inset-0 z-0 overflow-hidden">
+                    <div className="absolute top-20 left-10 w-80 h-80 bg-blue-100/20 rounded-full blur-3xl animate-pulse"></div>
+                    <div className="absolute top-40 right-20 w-96 h-96 bg-indigo-100/15 rounded-full blur-3xl animate-pulse delay-1000"></div>
                 </div>
-                <Footer />
+                <div className="relative z-10">
+                    <NavBar />
+                    <div className="flex-1 flex items-center justify-center min-h-screen">
+                        <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-8 max-w-md text-center">
+                            <div className="w-16 h-16 bg-gradient-to-br from-gray-400 to-gray-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                </svg>
+                            </div>
+                            <h1 className="text-2xl font-bold text-gray-600 mb-4">Gig Not Found</h1>
+                            <p className="text-gray-500 mb-6">The service you're looking for doesn't exist or has been removed.</p>
+                            <button 
+                                onClick={() => navigate(-1)}
+                                className="px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-2xl hover:from-blue-600 hover:to-blue-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 font-medium"
+                            >
+                                Go Back
+                            </button>
+                        </div>
+                    </div>
+                    <Footer />
+                </div>
             </div>
         );
     }
 
     return (
-        <div className="relative flex size-full min-h-screen flex-col bg-gray-50" style={{fontFamily: 'Inter, "Noto Sans", sans-serif'}}>
-            <div className="layout-container flex h-full grow flex-col">
+        <div className="relative flex size-full min-h-screen flex-col bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100" style={{fontFamily: 'Inter, "Noto Sans", sans-serif'}}>
+            {/* Background Elements */}
+            <div className="absolute inset-0 z-0 overflow-hidden">
+                <div className="absolute top-20 left-10 w-80 h-80 bg-blue-100/20 rounded-full blur-3xl animate-pulse"></div>
+                <div className="absolute top-40 right-20 w-96 h-96 bg-indigo-100/15 rounded-full blur-3xl animate-pulse delay-1000"></div>
+                <div className="absolute bottom-20 left-1/4 w-72 h-72 bg-purple-100/20 rounded-full blur-3xl animate-pulse delay-2000"></div>
+            </div>
+            
+            <div className="layout-container flex h-full grow flex-col relative z-10">
                 <NavBar />
                 
                 {/* Error notification */}
                 {errorNotification && (
-                    <div className="fixed top-20 left-1/2 transform -translate-x-1/2 z-50 px-6 py-3 bg-red-500 text-white rounded-lg shadow-lg flex items-center">
+                    <div className="fixed top-20 left-1/2 transform -translate-x-1/2 z-50 px-6 py-3 bg-white/90 backdrop-blur-sm border border-red-200 text-red-600 rounded-2xl shadow-xl flex items-center">
                         <span className="mr-2">⚠️</span>
-                        <span>{errorNotification}</span>
+                        <span className="font-medium">{errorNotification}</span>
                         <button 
                             onClick={() => setErrorNotification('')}
-                            className="ml-4 text-white hover:text-gray-200 focus:outline-none"
+                            className="ml-4 text-red-400 hover:text-red-600 focus:outline-none transition-colors duration-200"
                         >
                             ×
                         </button>
                     </div>
                 )}
                 
-                <div className="px-40 flex flex-1 justify-center py-5 pt-28">
+                <div className="px-6 lg:px-40 flex flex-1 justify-center py-5 pt-28">
                     <div className="layout-content-container flex flex-col max-w-[960px] flex-1">
                         {/* Breadcrumb */}
-                        <div className="flex flex-wrap gap-2 p-4">
+                        <div className="flex flex-wrap gap-2 p-6 mb-6">
                             <button 
                                 onClick={() => navigate(-1)}
-                                className="text-[#5e7487] text-base font-medium leading-normal hover:text-[#336088]"
+                                className="text-blue-600 text-base font-medium leading-normal hover:text-purple-600 transition-colors duration-200"
                             >
                                 {gig.category_name || 'Graphics & Design'}
                             </button>
-                            <span className="text-[#5e7487] text-base font-medium leading-normal">/</span>
-                            <span className="text-[#111518] text-base font-medium leading-normal">
+                            <span className="text-gray-400 text-base font-medium leading-normal">/</span>
+                            <span className="text-gray-700 text-base font-medium leading-normal">
                                 {gig.title?.substring(0, 50) || 'Service Details'}
                                 {gig.title?.length > 50 ? '...' : ''}
                             </span>
                         </div>
 
                         {/* Title & Favorite Button */}
-                        <div className="flex justify-between items-start px-4 pt-5 pb-3">
-                            <h2 className="text-[#111518] tracking-light text-[28px] font-bold leading-tight text-left flex-1 pr-4">
+                        <div className="flex justify-between items-start p-6 mb-6">
+                            <h2 className="text-gray-800 tracking-light text-[28px] font-bold leading-tight text-left flex-1 pr-4 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
                                 {gig.title}
                             </h2>
-                            <button
-                                onClick={handleFavoriteToggle}
-                                className="p-2 rounded-full hover:bg-gray-200 transition-colors duration-200"
-                                aria-label="Toggle Favorite"
-                            >
-                                <HeartFilled
-                                    style={{
-                                        fontSize: '28px',
-                                        color: isFavorited ? '#1dbf73' : '#a9a9a9', // Gray when not favorited
-                                    }}
-                                />
-                            </button>
+                            <div className="flex gap-3 items-center">
+                                <button
+                                    onClick={handleFavoriteToggle}
+                                    className="p-3 rounded-full bg-white/60 backdrop-blur-sm border border-white/30 hover:bg-white/80 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+                                    aria-label="Toggle Favorite"
+                                >
+                                    <HeartFilled
+                                        style={{
+                                            fontSize: '28px',
+                                            color: isFavorited ? '#1dbf73' : '#a9a9a9',
+                                        }}
+                                    />
+                                </button>
+                                <button 
+                                    className="flex w-10 h-10 cursor-pointer items-center justify-center rounded-full border-2 border-red-400 text-red-500 hover:border-red-500 hover:text-red-600 transition-all duration-200 hover:shadow-lg transform hover:-translate-y-0.5"
+                                    title="Report Gig"
+                                >
+                                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                                        <path d="M12 2L1 21h22L12 2zm0 3.5L19.5 19h-15L12 5.5zM11 10v4h2v-4h-2zm0 5v2h2v-2h-2z"/>
+                                    </svg>
+                                </button>
+                            </div>
                         </div>
 
                         {/* Image Slider */}
-                        <div className="flex w-full grow bg-gray-50 p-4">
-                            <div className="w-full relative">
-                                {/* Main Image Display */}
-                                <div className="w-full overflow-hidden bg-gray-50 aspect-[3/2] rounded-xl flex relative">
+                        <div className="w-full relative p-6 mb-6">
+                            {/* Main Image/Video Display */}
+                            <div className="w-full overflow-hidden bg-gradient-to-br from-gray-100 to-gray-200 aspect-[3/2] rounded-2xl flex relative shadow-inner">
+                                {allImages[currentImageIndex]?.type === 'video' ? (
+                                    <video
+                                        className="w-full h-full object-cover rounded-2xl"
+                                        autoPlay
+                                        muted
+                                        loop
+                                        preload="metadata"
+                                        style={{ outline: 'none' }}
+                                        controlsList="nodownload noremoteplayback noplaybackrate"
+                                        disablePictureInPicture
+                                        controls
+                                        key={currentImageIndex} // Force re-render when switching videos
+                                    >
+                                        <source src={allImages[currentImageIndex]?.url} type="video/mp4" />
+                                        <source src={allImages[currentImageIndex]?.url} type="video/webm" />
+                                        <source src={allImages[currentImageIndex]?.url} type="video/ogg" />
+                                        Your browser does not support the video tag.
+                                    </video>
+                                ) : (
                                     <div
-                                        className="w-full bg-center bg-no-repeat bg-cover aspect-auto rounded-none flex-1 transition-all duration-300"
+                                        className="w-full bg-center bg-no-repeat bg-cover aspect-auto rounded-2xl flex-1 transition-all duration-300"
                                         style={{
                                             backgroundImage: `url("${allImages[currentImageIndex]?.url || gig?.cover_image || 'https://placehold.co/800x400'}")`
                                         }}
                                     ></div>
-                                    
-                                    {/* Navigation Arrows */}
-                                    {allImages.length > 1 && (
-                                        <>
-                                            <button
-                                                onClick={prevImage}
-                                                className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 hover:bg-opacity-70 text-white rounded-full p-2 transition-all duration-200 z-10"
-                                            >
-                                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 256 256">
-                                                    <path d="M165.66,202.34a8,8,0,0,1-11.32,11.32l-80-80a8,8,0,0,1,0-11.32l80-80a8,8,0,0,1,11.32,11.32L91.31,128Z"></path>
-                                                </svg>
-                                            </button>
-                                            <button
-                                                onClick={nextImage}
-                                                className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 hover:bg-opacity-70 text-white rounded-full p-2 transition-all duration-200 z-10"
-                                            >
-                                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 256 256">
-                                                    <path d="M181.66,133.66l-80,80a8,8,0,0,1-11.32-11.32L164.69,128,90.34,53.66a8,8,0,0,1,11.32-11.32l80,80A8,8,0,0,1,181.66,133.66Z"></path>
-                                                </svg>
-                                            </button>
-                                        </>
-                                    )}
-
-                                    {/* Image Counter */}
-                                    {allImages.length > 1 && (
-                                        <div className="absolute bottom-4 right-4 bg-black bg-opacity-50 text-white px-3 py-1 rounded-full text-sm z-10">
-                                            {currentImageIndex + 1} / {allImages.length}
-                                        </div>
-                                    )}
-
-                                    {/* Dot Indicators */}
-                                    {allImages.length > 1 && (
-                                        <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex gap-2 z-10">
-                                            {allImages.map((_, index) => (
-                                                <button
-                                                    key={index}
-                                                    onClick={() => goToImage(index)}
-                                                    className={`w-3 h-3 rounded-full transition-all duration-200 ${
-                                                        currentImageIndex === index 
-                                                            ? 'bg-white scale-125' 
-                                                            : 'bg-white bg-opacity-50 hover:bg-opacity-75'
-                                                    }`}
-                                                    aria-label={`Go to image ${index + 1}`}
-                                                ></button>
-                                            ))}
-                                        </div>
-                                    )}
-                                </div>
-
-                                {/* Thumbnail Navigation */}
+                                )}
+                                
+                                {/* Navigation Arrows */}
                                 {allImages.length > 1 && (
-                                    <div className="flex gap-2 mt-4 overflow-x-auto pb-2">
-                                        {allImages.map((image, index) => (
+                                    <>
+                                        <button
+                                            onClick={prevImage}
+                                            className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-white/90 backdrop-blur-sm hover:bg-white text-gray-700 rounded-full p-3 transition-all duration-200 z-10 shadow-lg hover:shadow-xl border border-white/20"
+                                        >
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 256 256">
+                                                <path d="M165.66,202.34a8,8,0,0,1-11.32,11.32l-80-80a8,8,0,0,1,0-11.32l80-80a8,8,0,0,1,11.32,11.32L91.31,128Z"></path>
+                                            </svg>
+                                        </button>
+                                        <button
+                                            onClick={nextImage}
+                                            className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-white/90 backdrop-blur-sm hover:bg-white text-gray-700 rounded-full p-3 transition-all duration-200 z-10 shadow-lg hover:shadow-xl border border-white/20"
+                                        >
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 256 256">
+                                                <path d="M181.66,133.66l-80,80a8,8,0,0,1-11.32-11.32L164.69,128,90.34,53.66a8,8,0,0,1,11.32-11.32l80,80A8,8,0,0,1,181.66,133.66Z"></path>
+                                            </svg>
+                                        </button>
+                                    </>
+                                )}
+
+                                {/* Media Type Indicator */}
+                                {allImages[currentImageIndex]?.type === 'video' && (
+                                    <div className="absolute top-4 left-4 bg-black/60 backdrop-blur-sm text-white px-3 py-1 rounded-full text-sm z-10 flex items-center gap-2">
+                                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                                            <path d="M8 5v14l11-7z"/>
+                                        </svg>
+                                        Video
+                                    </div>
+                                )}
+
+                                {/* Image Counter */}
+                                {allImages.length > 1 && (
+                                    <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm text-gray-700 px-4 py-2 rounded-full text-sm z-10 border border-white/20 shadow-lg">
+                                        {currentImageIndex + 1} / {allImages.length}
+                                    </div>
+                                )}
+
+                                {/* Dot Indicators */}
+                                {allImages.length > 1 && (
+                                    <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex gap-2 z-10 bg-white/20 backdrop-blur-sm px-4 py-2 rounded-full">
+                                        {allImages.map((_, index) => (
                                             <button
-                                                key={image.id}
+                                                key={index}
                                                 onClick={() => goToImage(index)}
-                                                className={`flex-shrink-0 w-20 h-16 rounded-lg overflow-hidden border-2 transition-all duration-200 ${
+                                                className={`w-3 h-3 rounded-full transition-all duration-200 ${
                                                     currentImageIndex === index 
-                                                        ? 'border-[#336088] ring-2 ring-[#336088] ring-opacity-30' 
-                                                        : 'border-gray-300 hover:border-gray-400'
+                                                        ? 'bg-white scale-125 shadow-lg' 
+                                                        : 'bg-white/60 hover:bg-white/80'
                                                 }`}
-                                            >
+                                                aria-label={`Go to ${allImages[index]?.type === 'video' ? 'video' : 'image'} ${index + 1}`}
+                                            ></button>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Thumbnail Navigation */}
+                            {allImages.length > 1 && (
+                                <div className="flex gap-3 mt-6 overflow-x-auto pb-2">
+                                    {allImages.map((image, index) => (
+                                        <button
+                                            key={image.id}
+                                            onClick={() => goToImage(index)}
+                                            className={`flex-shrink-0 w-20 h-16 rounded-xl overflow-hidden border-2 transition-all duration-200 shadow-md hover:shadow-lg relative ${
+                                                currentImageIndex === index 
+                                                    ? 'border-blue-500 ring-2 ring-blue-500 ring-opacity-30 transform scale-105' 
+                                                    : 'border-gray-300 hover:border-gray-400'
+                                            }`}
+                                        >
+                                            {image.type === 'video' ? (
+                                                <>
+                                                    <video
+                                                        className="w-full h-full object-cover"
+                                                        preload="metadata"
+                                                        muted
+                                                    >
+                                                        <source src={image.url} type="video/mp4" />
+                                                    </video>
+                                                    <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+                                                        <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
+                                                            <path d="M8 5v14l11-7z"/>
+                                                        </svg>
+                                                    </div>
+                                                </>
+                                            ) : (
                                                 <div
                                                     className="w-full h-full bg-center bg-no-repeat bg-cover"
                                                     style={{
                                                         backgroundImage: `url("${image.url}")`
                                                     }}
                                                 ></div>
-                                            </button>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
+                                            )}
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
                         </div>
 
                         {/* About This Gig */}
-                        <h2 className="text-[#111518] text-[22px] font-bold leading-tight tracking-[-0.015em] px-4 pb-3 pt-5">
-                            About This Gig
-                        </h2>
-                        <div 
-                            className="text-[#111518] text-base font-normal leading-normal pb-3 pt-1 px-4 prose prose-sm max-w-none"
-                            dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(gig.description) }}
-                        ></div>
-
-                        {/* Pricing - Single Package */}
-                        <h2 className="text-[#111518] text-[22px] font-bold leading-tight tracking-[-0.015em] px-4 pb-3 pt-5">
-                            Pricing
-                        </h2>
-                        <div className="px-4 py-3">
-                            <div className="flex flex-1 flex-col gap-4 bg-gray-50 p-6 max-w-md">
-                                <div className="flex flex-col gap-1">
-                                    <h1 className="text-[#111518] text-base font-bold leading-tight">Service Package</h1>
-                                    <p className="flex items-baseline gap-1 text-[#111518]">
-                                        <span className="text-[#111518] text-4xl font-black leading-tight tracking-[-0.033em]">
-                                            ${gig.price}
-                                        </span>
-                                        <span className="text-[#111518] text-base font-bold leading-tight">one-time</span>
-                                    </p>
-                                </div>
-                                {/* Only show order button if user is not the owner */}
-                                {authUser && gig.owner_id !== authUser.uuid ? (
-                                    <button 
-                                        onClick={handleCreateOrder}
-                                        className="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-10 px-4 bg-[#1dbf73] text-gray-50 text-sm font-bold leading-normal tracking-[0.015em] hover:bg-[#19a463]"
-                                    >
-                                        <span className="truncate">Continue (${gig.price})</span>
-                                    </button>
-                                ) : authUser && gig.owner_id === authUser.uuid ? (
-                                    <div className="flex min-w-[84px] max-w-[480px] items-center justify-center overflow-hidden rounded-full h-10 px-4 bg-gray-400 text-gray-700 text-sm font-bold leading-normal tracking-[0.015em] cursor-not-allowed">
-                                        <span className="truncate">This is your gig</span>
-                                    </div>
-                                ) : (
-                                    <button 
-                                        onClick={() => navigate('/login')}
-                                        className="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-10 px-4 bg-[#1dbf73] text-gray-50 text-sm font-bold leading-normal tracking-[0.015em] hover:bg-[#19a463]"
-                                    >
-                                        <span className="truncate">Login to Order</span>
-                                    </button>
-                                )}
-                            </div>
+                        <div className="p-6 mb-6">
+                            <h2 className="text-gray-800 text-[22px] font-bold leading-tight tracking-[-0.015em] pb-4 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                                About This Gig
+                            </h2>
+                            <div 
+                                className="text-gray-700 text-base font-normal leading-relaxed prose prose-sm max-w-none prose-headings:text-gray-800 prose-p:text-gray-700 prose-a:text-blue-600 prose-strong:text-gray-800"
+                                dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(gig.description) }}
+                            ></div>
                         </div>
 
-                        {/* About The Seller */}
-                        <h2 className="text-[#111518] text-[22px] font-bold leading-tight tracking-[-0.015em] px-4 pb-3 pt-5">
-                            About The Seller
-                        </h2>
-                        <div className="flex p-4">
-                            <div className="flex w-full flex-col gap-4">
-                                <div className="flex gap-4">
-                                    <div
-                                        className="bg-center bg-no-repeat aspect-square bg-cover rounded-full min-h-32 w-32"
-                                        style={{
-                                            backgroundImage: `url("${(sellerDetails?.avatar || gig.owner_avatar || 'https://placehold.co/300x300')}")`
-                                        }}
-                                    ></div>
-                                    <div className="flex flex-col justify-center">
-                                        <p className="text-[#111518] text-[22px] font-bold leading-tight tracking-[-0.015em]">
-                                            {sellerDetails?.fullname || gig.owner_fullname || 'Professional Seller'}
-                                        </p>
-                                        <p className="text-[#5e7487] text-base font-normal leading-normal">
-                                            @{sellerDetails?.username || gig.owner_username || 'seller'}
-                                        </p>
-                                        <p className="text-[#5e7487] text-base font-normal leading-normal">
-                                            {sellerDetails?.seller_headline || gig.category_name || 'Service Provider'}
-                                        </p>
-                                        {sellerDetails?.seller_since && (
-                                            <p className="text-[#5e7487] text-base font-normal leading-normal">
-                                                Member since {new Date(sellerDetails.seller_since).getFullYear()}
+                        {/* Pricing - Single Package */}
+                        <div className="p-6 mb-6">
+                            <h2 className="text-gray-800 text-[22px] font-bold leading-tight tracking-[-0.015em] pb-4 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                                Pricing
+                            </h2>
+                            <div className="max-w-md">
+                                <div className="bg-gradient-to-br from-blue-50 to-purple-50 border border-blue-200 rounded-2xl p-6 shadow-lg">
+                                    <div className="flex flex-col gap-4">
+                                        <div className="flex flex-col gap-2">
+                                            <h3 className="text-gray-800 text-lg font-bold leading-tight">Service Package</h3>
+                                            <p className="flex items-baseline gap-1">
+                                                <span className="text-gray-800 text-4xl font-black leading-tight tracking-[-0.033em] bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
+                                                    ${gig.price}
+                                                </span>
+                                                <span className="text-gray-600 text-base font-bold leading-tight">one-time</span>
                                             </p>
+                                        </div>
+                                        {/* Only show order button if user is not the owner */}
+                                        {authUser && gig.owner_id !== authUser.uuid ? (
+                                            <button 
+                                                onClick={handleCreateOrder}
+                                                className="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-2xl h-12 px-6 bg-gradient-to-r from-green-500 to-emerald-600 text-white text-sm font-bold leading-normal tracking-[0.015em] hover:from-green-600 hover:to-emerald-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+                                            >
+                                                <span className="truncate">Continue (${gig.price})</span>
+                                            </button>
+                                        ) : authUser && gig.owner_id === authUser.uuid ? (
+                                            <div className="flex min-w-[84px] max-w-[480px] items-center justify-center overflow-hidden rounded-2xl h-12 px-6 bg-gray-300 text-gray-600 text-sm font-bold leading-normal tracking-[0.015em] cursor-not-allowed border-2 border-gray-200">
+                                                <span className="truncate">This is your gig</span>
+                                            </div>
+                                        ) : (
+                                            <button 
+                                                onClick={() => navigate('/login')}
+                                                className="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-2xl h-12 px-6 bg-gradient-to-r from-blue-500 to-purple-600 text-white text-sm font-bold leading-normal tracking-[0.015em] hover:from-blue-600 hover:to-purple-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+                                            >
+                                                <span className="truncate">Login to Order</span>
+                                            </button>
                                         )}
                                     </div>
                                 </div>
                             </div>
                         </div>
-                        <div 
-                            className="text-[#111518] text-base font-normal leading-normal pb-3 pt-1 px-4 prose prose-sm max-w-none"
-                            dangerouslySetInnerHTML={{ 
-                                __html: DOMPurify.sanitize(
-                                    sellerDetails?.seller_description || 
-                                    gig.owner_bio || 
-                                    `${sellerDetails?.fullname || gig.owner_fullname || 'This seller'} is a skilled professional with expertise in ${gig.category_name || 'their field'}. They are committed to delivering high-quality work and excellent customer service.`
-                                )
-                            }}
-                        ></div>
 
-                        {/* Action Buttons */}
-                        <div className="flex justify-stretch">
-                            <div className="flex flex-1 gap-3 flex-wrap px-4 py-3 justify-start">
-                                <button 
-                                    className="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-10 px-4 bg-[#336088] text-gray-50 text-sm font-bold leading-normal tracking-[0.015em]"
-                                    onClick={() => navigate(`/SellerInfo/${sellerDetails?.uuid || gig.owner_id}`)}
-                                >
-                                    <span className="truncate">Contact Seller</span>
-                                </button>
-                                <button className="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-10 px-4 bg-[#ff4444] text-gray-50 text-sm font-bold leading-normal tracking-[0.015em] hover:bg-[#cc3333]">
-                                    <span className="truncate">Report Gig</span>
-                                </button>
+                        {/* About The Seller */}
+                        <div className="p-6 mb-6">
+                            <h2 className="text-gray-800 text-[22px] font-bold leading-tight tracking-[-0.015em] pb-4 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                                About The Seller
+                            </h2>
+                            <div className="flex w-full flex-col gap-6">
+                                <div className="flex gap-6 items-start">
+                                    <div
+                                        className="bg-center bg-no-repeat aspect-square bg-cover rounded-full min-h-32 w-32 ring-4 ring-white shadow-xl border-4 border-white"
+                                        style={{
+                                            backgroundImage: `url("${(sellerDetails?.avatar || gig.owner_avatar || 'https://placehold.co/300x300')}")`
+                                        }}
+                                    ></div>
+                                    <div className="flex flex-col justify-center flex-1">
+                                        <p className="text-gray-800 text-[22px] font-bold leading-tight tracking-[-0.015em] mb-1">
+                                            {sellerDetails?.fullname || gig.owner_fullname || 'Professional Seller'}
+                                        </p>
+                                        <p className="text-blue-600 text-base font-medium leading-normal mb-1">
+                                            @{sellerDetails?.username || gig.owner_username || 'seller'}
+                                        </p>
+                                        <p className="text-gray-600 text-base font-normal leading-normal mb-2">
+                                            {sellerDetails?.seller_headline || gig.category_name || 'Service Provider'}
+                                        </p>
+                                        {sellerDetails?.seller_since && (
+                                            <p className="text-gray-500 text-sm font-medium mb-3">
+                                                Member since {new Date(sellerDetails.seller_since).getFullYear()}
+                                            </p>
+                                        )}
+                                        <div className="flex gap-3 items-center">
+                                            <button 
+                                                className="flex cursor-pointer items-center justify-center overflow-hidden rounded-2xl h-10 px-6 bg-gradient-to-r from-blue-500 to-blue-600 text-white text-sm font-bold leading-normal tracking-[0.015em] hover:from-blue-600 hover:to-blue-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+                                                onClick={() => navigate(`/SellerInfo/${sellerDetails?.uuid || gig.owner_id}`)}
+                                            >
+                                                <span className="truncate">Contact Seller</span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div 
+                                    className="text-gray-700 text-base font-normal leading-relaxed prose prose-sm max-w-none prose-headings:text-gray-800 prose-p:text-gray-700 prose-a:text-blue-600 prose-strong:text-gray-800"
+                                    dangerouslySetInnerHTML={{ 
+                                        __html: DOMPurify.sanitize(
+                                            sellerDetails?.seller_description || 
+                                            gig.owner_bio || 
+                                            `${sellerDetails?.fullname || gig.owner_fullname || 'This seller'} is a skilled professional with expertise in ${gig.category_name || 'their field'}. They are committed to delivering high-quality work and excellent customer service.`
+                                        )
+                                    }}
+                                ></div>
                             </div>
                         </div>
                     </div>

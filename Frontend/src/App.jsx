@@ -21,6 +21,7 @@ import UserManagement from './pages/Admin/UserManagement';
 import DepositPage from './pages/DepositPage';
 import WithdrawPage from './pages/WithdrawPage';
 import Favorites from './pages/Favorites';
+import SearchPage from './pages/SearchPage';
 
 function App() {
   return (
@@ -47,6 +48,8 @@ function App() {
             <Route path="/create-gig" element={<CreateGigsPage />} />
             
             <Route path="/explore" element={<ExplorePage />} />
+
+            <Route path="/search" element={<SearchPage />} />
 
             <Route path="/admin/Usermanagement" element={<UserManagement />} />
             <Route path="/gig/:id" element={<GigDetail />} />

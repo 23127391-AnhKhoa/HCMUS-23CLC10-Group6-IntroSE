@@ -80,7 +80,7 @@ const ServCard = ({ gig, isPreview = false }) => {
         if (!authUser || !token || !gigData.id) return;
         
         try {
-            const response = await fetch(`http://localhost:8000/api/favorites/check/${authUser.uuid}/${gigData.id}`, {
+            const response = await fetch(`http://localhost:8000/api/users/favorite/check/${authUser.uuid}/${gigData.id}`, {
                 headers: {
                     'Authorization': `Bearer ${token}`,
                     'Content-Type': 'application/json',
@@ -114,7 +114,7 @@ const ServCard = ({ gig, isPreview = false }) => {
         }
 
         try {
-            const response = await fetch('http://localhost:8000/api/favorites/toggle', {
+            const response = await fetch('http://localhost:8000/api/users/favorite/toggle', {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${token}`,
@@ -170,7 +170,7 @@ const ServCard = ({ gig, isPreview = false }) => {
 
     return (
         <div 
-            className="flex flex-col h-[420px] w-[300px] m-1 bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm hover:shadow-lg hover:scale-105 transition-all duration-300 cursor-pointer"
+            className="flex flex-col h-[420px] w-full max-w-[300px] bg-white/90 backdrop-blur-sm border border-white/30 rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl hover:scale-105 transition-all duration-300 cursor-pointer group"
             onClick={handleCardClick}
         >
             {/* 
@@ -186,52 +186,48 @@ const ServCard = ({ gig, isPreview = false }) => {
                         e.target.src = 'https://placehold.co/600x400';
                     }}
                 />
+                {/* Gradient overlay for better text readability */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent"></div>
+                
                 {/* Favorite Button Overlay */}
                 <button 
                     onClick={handleFavoriteClick}
-                    className="absolute top-2 right-2 p-2 bg-transparent border-none cursor-pointer"
+                    className="absolute top-3 right-3 p-2 bg-white/80 backdrop-blur-sm hover:bg-white/95 rounded-full border border-white/30 transition-all duration-200 transform hover:scale-110"
                     aria-label="Favorite this gig"
-                    style={{ transition: 'transform 0.2s' }}
                 >
                     <HeartFilled 
                         style={{ 
-                            fontSize: '22px', 
-                            color: isFavorited ? '#1dbf73' : 'white',
-                            stroke: 'black', 
-                            strokeWidth: 40
+                            fontSize: '18px', 
+                            color: isFavorited ? '#ef4444' : '#6b7280',
                         }} 
                     />
                 </button>
-                {/* Status Badge - Currently hidden to avoid overlap with favorite button */}
-                {/* {gigData.status === 'active' && (
-                    <div className="absolute top-2 right-2 px-2 py-1 bg-green-500 text-white text-xs font-medium rounded-full">
-                        Active
-                    </div>
-                )} */}
             </div>
             
             {/* 
                 Content Section (45% of card height)
                 Contains seller info, title, and metadata
             */}
-            <div className="h-[45%] p-4 flex flex-col justify-between">
+            <div className="h-[45%] p-5 flex flex-col justify-between">
                 {/* Seller Information */}
                 <div className="flex items-center mb-3">
-                    <div className="w-8 h-8 rounded-full overflow-hidden border-2 border-gray-100">
-                        <img 
-                            src={gigData.owner_avatar || 'https://placehold.co/300x300'} 
-                            alt={`${gigData.owner_username} avatar`}
-                            className="w-full h-full object-cover" 
-                            onError={(e) => {
-                                e.target.src = 'https://placehold.co/300x300';
-                            }}
-                        />
+                    <div className="w-9 h-9 rounded-full overflow-hidden border-2 border-gradient-to-br from-blue-400 to-purple-600 p-0.5">
+                        <div className="w-full h-full rounded-full overflow-hidden bg-white">
+                            <img 
+                                src={gigData.owner_avatar || 'https://placehold.co/300x300'} 
+                                alt={`${gigData.owner_username} avatar`}
+                                className="w-full h-full object-cover" 
+                                onError={(e) => {
+                                    e.target.src = 'https://placehold.co/300x300';
+                                }}
+                            />
+                        </div>
                     </div>
                     <div className="ml-3">
-                        <div className="text-sm font-semibold text-gray-800">
+                        <div className="text-sm font-semibold bg-gradient-to-r from-gray-700 to-gray-900 bg-clip-text text-transparent">
                             {gigData.owner_username || 'username'}
                         </div>
-                        <div className="text-xs text-gray-500">
+                        <div className="text-xs text-blue-600 font-medium">
                             {gigData.category_name || 'Professional Seller'}
                         </div>
                     </div>
@@ -241,55 +237,50 @@ const ServCard = ({ gig, isPreview = false }) => {
                 <div className="flex-1">
                     {isPreview ? (
                         <div 
-                            className="text-base text-gray-700 leading-relaxed"
+                            className="text-base text-gray-700 leading-relaxed font-medium"
                             dangerouslySetInnerHTML={{
                                 __html: gigData.title || gigData.description || 'No description'
                             }}
                         />
                     ) : (
-                        <p className="text-base text-gray-700 line-clamp-3 leading-relaxed max-h-[60px] min-h-[26px]">
+                        <p className="text-base text-gray-700 line-clamp-3 leading-relaxed max-h-[60px] min-h-[26px] font-medium">
                             {truncateTitle(gigData.title)}
                         </p>
                     )}
                 </div>
 
-                {/* Delivery Time and Category Badge */}
-                <div className="flex justify-between items-center pt-2 border-t border-gray-100">
-                    <div className="flex items-center">
-                        <span className="text-blue-500 text-sm">📅</span>
-                        <span className="text-sm font-medium text-gray-700 ml-1">
+                {/* Delivery Time and Rating */}
+                <div className="flex justify-between items-center pt-3 border-t border-gray-100/80">
+                    <div className="flex items-center bg-blue-50 px-3 py-1 rounded-full">
+                        <span className="text-blue-500 text-sm">🚀</span>
+                        <span className="text-sm font-semibold text-blue-700 ml-1">
                             {gigData.delivery_days} day{gigData.delivery_days !== 1 ? 's' : ''}
                         </span>
                     </div>
-                    {gigData.category_name && (
-                        <div className="px-2 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded-full">
-                            {gigData.category_name}
-                        </div>
-                    )}
+                    {/* Rating placeholder - can be enhanced with real data */}
+                    <div className="flex items-center">
+                        <span className="text-yellow-400 text-sm">⭐</span>
+                        <span className="text-sm font-semibold text-gray-700 ml-1">4.9</span>
+                        <span className="text-xs text-gray-500 ml-1">(127)</span>
+                    </div>
                 </div>
             </div>
             
             {/* 
                 Footer Section (15% of card height)
-                Contains pricing information and legacy heart icon
+                Contains pricing information with enhanced design
             */}
-            <div className="h-[15%] flex justify-between items-center px-4 py-3 bg-gray-50 border-t border-gray-100">
-                {/* Legacy heart icon - Consider removing if not needed */}
-                <div className="w-5 h-5">
-                    <img 
-                        src="https://placehold.co/20x20" 
-                        alt="Heart icon" 
-                        className="w-full h-full object-cover cursor-pointer transition-opacity" 
-                        onClick={(e) => {
-                            e.stopPropagation(); // Prevent card click when clicking heart
-                            // TODO: Add heart functionality here or remove if redundant
-                        }}
-                    />
+            <div className="h-[15%] flex justify-between items-center px-5 py-3 bg-gradient-to-r from-gray-50 to-blue-50/50 border-t border-gray-100/80">
+                {/* Trust indicator */}
+                <div className="flex items-center">
+                    <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                    <span className="text-xs text-gray-600 ml-2 font-medium">Verified</span>
                 </div>
+                
                 {/* Price Display */}
                 <div className="text-right">
-                    <div className="text-xs text-gray-500 uppercase tracking-wide">Starting at</div>
-                    <div className="text-lg font-bold text-gray-800">
+                    <div className="text-xs text-gray-500 uppercase tracking-wide font-medium">Starting at</div>
+                    <div className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
                         {formatPrice(gigData.price)}
                     </div>
                 </div>

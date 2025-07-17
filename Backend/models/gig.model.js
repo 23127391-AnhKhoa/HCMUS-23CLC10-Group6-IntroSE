@@ -21,30 +21,16 @@ const executeQueryWithRetry = async (queryFunction, queryName = 'unknown') => {
   try {
     const result = await queryFunction(supabase);
     
-    // If we get empty results, try with fresh connection
+    // If we get empty results, just return them (no retry needed)
     if (result.data && Array.isArray(result.data) && result.data.length === 0) {
-      const { refreshConnection } = require('../config/supabaseClient');
-      const freshClient = refreshConnection();
-      const retryResult = await queryFunction(freshClient);
-      
-      if (retryResult.data && Array.isArray(retryResult.data) && retryResult.data.length > 0) {
-        return retryResult;
-      } else {
-        return result;
-      }
+      console.log(`Query ${queryName} returned no results`);
+      return result;
     }
     
-    // If we get a count of 0, try with fresh connection
+    // If we get a count of 0, just return it (no retry needed)
     if (result.count === 0) {
-      const { refreshConnection } = require('../config/supabaseClient');
-      const freshClient = refreshConnection();
-      const retryResult = await queryFunction(freshClient);
-      
-      if (retryResult.count > 0) {
-        return retryResult;
-      } else {
-        return result;
-      }
+      console.log(`Query ${queryName} returned count of 0`);
+      return result;
     }
     
     return result;
@@ -145,6 +131,152 @@ const Gig = {
   findWithDetails: async (filters = {}) => {
     try {
       const queryFunction = async (client) => {
+        // If search is provided, implement priority-based search
+        if (filters.search) {
+          // First query: Title matches (higher priority)
+          let titleQuery = client
+            .from('Gigs')
+            .select(`
+              *,
+              User!Gigs_owner_id_fkey (
+                uuid,
+                username,
+                fullname,
+                avt_url
+              ),
+              Categories!Gigs_category_id_fkey (
+                id,
+                name,
+                description
+              )
+            `)
+            .ilike('title', `%${filters.search}%`);
+
+          // Second query: Description matches (lower priority)
+          let descQuery = client
+            .from('Gigs')
+            .select(`
+              *,
+              User!Gigs_owner_id_fkey (
+                uuid,
+                username,
+                fullname,
+                avt_url
+              ),
+              Categories!Gigs_category_id_fkey (
+                id,
+                name,
+                description
+              )
+            `)
+            .ilike('description', `%${filters.search}%`)
+            .not('title', 'ilike', `%${filters.search}%`); // Exclude title matches to avoid duplicates
+
+          // Apply common filters to both queries
+          if (filters.status) {
+            titleQuery = titleQuery.eq('status', filters.status);
+            descQuery = descQuery.eq('status', filters.status);
+          }
+          
+          if (filters.owner_id) {
+            titleQuery = titleQuery.eq('owner_id', filters.owner_id);
+            descQuery = descQuery.eq('owner_id', filters.owner_id);
+          }
+          
+          if (filters.category_id !== undefined && filters.category_id !== null && filters.category_id !== '') {
+            // Check if this is a parent category (get all subcategory IDs)
+            const { data: subcategories } = await client
+              .from('Categories')
+              .select('id')
+              .eq('parent_id', filters.category_id);
+            
+            if (subcategories && subcategories.length > 0) {
+              // If parent category has subcategories, include both parent and subcategories
+              const categoryIds = [filters.category_id, ...subcategories.map(sub => sub.id)];
+              titleQuery = titleQuery.in('category_id', categoryIds);
+              descQuery = descQuery.in('category_id', categoryIds);
+            } else {
+              // If no subcategories, just filter by the specific category
+              titleQuery = titleQuery.eq('category_id', filters.category_id);
+              descQuery = descQuery.eq('category_id', filters.category_id);
+            }
+          }
+
+          // Apply sorting to both queries - but we'll re-sort after merging
+          if (filters.sort_by && filters.sort_order) {
+            // Validate sort_by to prevent SQL injection and invalid column errors
+            const validSortColumns = ['created_at', 'updated_at', 'price', 'title', 'delivery_days'];
+            const sortColumn = validSortColumns.includes(filters.sort_by) ? filters.sort_by : 'created_at';
+            titleQuery = titleQuery.order(sortColumn, { ascending: filters.sort_order === 'asc' });
+            descQuery = descQuery.order(sortColumn, { ascending: filters.sort_order === 'asc' });
+          } else {
+            titleQuery = titleQuery.order('created_at', { ascending: false });
+            descQuery = descQuery.order('created_at', { ascending: false });
+          }
+
+          // Execute both queries
+          const [titleResult, descResult] = await Promise.all([
+            titleQuery,
+            descQuery
+          ]);
+
+          if (titleResult.error) {
+            console.error('Title search query error:', titleResult.error);
+            throw titleResult.error;
+          }
+          if (descResult.error) {
+            console.error('Description search query error:', descResult.error);
+            throw descResult.error;
+          }
+
+          // Merge results with title matches first, removing duplicates
+          const titleData = titleResult.data || [];
+          const descData = descResult.data || [];
+          const titleIds = new Set(titleData.map(gig => gig.id));
+          const uniqueDescData = descData.filter(gig => !titleIds.has(gig.id));
+          const mergedData = [...titleData, ...uniqueDescData];
+          
+          // Sort the merged results properly
+          if (filters.sort_by && filters.sort_order && filters.sort_by !== 'relevance') {
+            const validSortColumns = ['created_at', 'updated_at', 'price', 'title', 'delivery_days'];
+            const sortColumn = validSortColumns.includes(filters.sort_by) ? filters.sort_by : 'created_at';
+            const isAscending = filters.sort_order === 'asc';
+            
+            mergedData.sort((a, b) => {
+              let aValue = a[sortColumn];
+              let bValue = b[sortColumn];
+              
+              // Handle different data types
+              if (sortColumn === 'price' || sortColumn === 'delivery_days') {
+                aValue = parseFloat(aValue) || 0;
+                bValue = parseFloat(bValue) || 0;
+              } else if (sortColumn === 'created_at' || sortColumn === 'updated_at') {
+                aValue = new Date(aValue);
+                bValue = new Date(bValue);
+              } else if (sortColumn === 'title') {
+                aValue = (aValue || '').toLowerCase();
+                bValue = (bValue || '').toLowerCase();
+              }
+              
+              if (aValue < bValue) return isAscending ? -1 : 1;
+              if (aValue > bValue) return isAscending ? 1 : -1;
+              return 0;
+            });
+          }
+          // If sort_by is 'relevance' or not specified, keep the merged order (title matches first, then description matches)
+          
+          // Apply pagination to sorted merged results
+          let finalData = mergedData;
+          if (filters.limit) {
+            const from = ((filters.page || 1) - 1) * filters.limit;
+            const to = from + filters.limit;
+            finalData = mergedData.slice(from, to);
+          }
+
+          return { data: finalData, error: null };
+        }
+
+        // Regular query without search
         let query = client
           .from('Gigs')
           .select(`
@@ -171,17 +303,34 @@ const Gig = {
           query = query.eq('owner_id', filters.owner_id);
         }
         
-        if (filters.category_id) {
-          query = query.eq('category_id', filters.category_id);
-        }
-
-        if (filters.search) {
-          query = query.or(`title.ilike.%${filters.search}%,description.ilike.%${filters.search}%`);
+        if (filters.category_id !== undefined && filters.category_id !== null && filters.category_id !== '') {
+          // Check if this is a parent category (get all subcategory IDs)
+          const { data: subcategories } = await client
+            .from('Categories')
+            .select('id')
+            .eq('parent_id', filters.category_id);
+          
+          if (subcategories && subcategories.length > 0) {
+            // If parent category has subcategories, include both parent and subcategories
+            const categoryIds = [filters.category_id, ...subcategories.map(sub => sub.id)];
+            query = query.in('category_id', categoryIds);
+          } else {
+            // If no subcategories, just filter by the specific category
+            query = query.eq('category_id', filters.category_id);
+          }
         }
 
         // Apply sorting
         if (filters.sort_by && filters.sort_order) {
-          query = query.order(filters.sort_by, { ascending: filters.sort_order === 'asc' });
+          // For non-search queries, 'relevance' should fall back to newest first
+          if (filters.sort_by === 'relevance') {
+            query = query.order('created_at', { ascending: false });
+          } else {
+            // Validate sort_by to prevent SQL injection and invalid column errors
+            const validSortColumns = ['created_at', 'updated_at', 'price', 'title', 'delivery_days'];
+            const sortColumn = validSortColumns.includes(filters.sort_by) ? filters.sort_by : 'created_at';
+            query = query.order(sortColumn, { ascending: filters.sort_order === 'asc' });
+          }
         } else {
           query = query.order('created_at', { ascending: false });
         }
@@ -218,6 +367,70 @@ const Gig = {
   getCount: async (filters = {}) => {
     try {
       const queryFunction = async (client) => {
+        // If search is provided, count both title and description matches
+        if (filters.search) {
+          // Count title matches
+          let titleCountQuery = client
+            .from('Gigs')
+            .select('*', { count: 'exact', head: true })
+            .ilike('title', `%${filters.search}%`);
+
+          // Count description matches (excluding title matches to avoid duplicates)
+          let descCountQuery = client
+            .from('Gigs')
+            .select('*', { count: 'exact', head: true })
+            .ilike('description', `%${filters.search}%`)
+            .not('title', 'ilike', `%${filters.search}%`);
+
+          // Apply common filters to both queries
+          if (filters.status) {
+            titleCountQuery = titleCountQuery.eq('status', filters.status);
+            descCountQuery = descCountQuery.eq('status', filters.status);
+          }
+          
+          if (filters.owner_id) {
+            titleCountQuery = titleCountQuery.eq('owner_id', filters.owner_id);
+            descCountQuery = descCountQuery.eq('owner_id', filters.owner_id);
+          }
+          
+          if (filters.category_id !== undefined && filters.category_id !== null && filters.category_id !== '') {
+            // Check if this is a parent category (get all subcategory IDs)
+            const { data: subcategories } = await client
+              .from('Categories')
+              .select('id')
+              .eq('parent_id', filters.category_id);
+            
+            if (subcategories && subcategories.length > 0) {
+              // If parent category has subcategories, include both parent and subcategories
+              const categoryIds = [filters.category_id, ...subcategories.map(sub => sub.id)];
+              titleCountQuery = titleCountQuery.in('category_id', categoryIds);
+              descCountQuery = descCountQuery.in('category_id', categoryIds);
+            } else {
+              // If no subcategories, just filter by the specific category
+              titleCountQuery = titleCountQuery.eq('category_id', filters.category_id);
+              descCountQuery = descCountQuery.eq('category_id', filters.category_id);
+            }
+          }
+
+          // Execute both count queries
+          const [titleCountResult, descCountResult] = await Promise.all([
+            titleCountQuery,
+            descCountQuery
+          ]);
+
+          if (titleCountResult.error) {
+            throw titleCountResult.error;
+          }
+          if (descCountResult.error) {
+            throw descCountResult.error;
+          }
+
+          // Return combined count
+          const totalCount = (titleCountResult.count || 0) + (descCountResult.count || 0);
+          return { count: totalCount, error: null };
+        }
+
+        // Regular count query without search
         let query = client
           .from('Gigs')
           .select('*', { count: 'exact', head: true });
@@ -230,12 +443,21 @@ const Gig = {
           query = query.eq('owner_id', filters.owner_id);
         }
         
-        if (filters.category_id) {
-          query = query.eq('category_id', filters.category_id);
-        }
-
-        if (filters.search) {
-          query = query.or(`title.ilike.%${filters.search}%,description.ilike.%${filters.search}%`);
+        if (filters.category_id !== undefined && filters.category_id !== null && filters.category_id !== '') {
+          // Check if this is a parent category (get all subcategory IDs)
+          const { data: subcategories } = await client
+            .from('Categories')
+            .select('id')
+            .eq('parent_id', filters.category_id);
+          
+          if (subcategories && subcategories.length > 0) {
+            // If parent category has subcategories, include both parent and subcategories
+            const categoryIds = [filters.category_id, ...subcategories.map(sub => sub.id)];
+            query = query.in('category_id', categoryIds);
+          } else {
+            // If no subcategories, just filter by the specific category
+            query = query.eq('category_id', filters.category_id);
+          }
         }
 
         const result = await query;

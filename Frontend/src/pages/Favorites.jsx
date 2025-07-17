@@ -25,7 +25,7 @@ const Favorites = () => {
     const fetchFavorites = async () => {
         try {
             setLoading(true);
-            const response = await fetch(`http://localhost:8000/api/favorites/user/${authUser.uuid}`, {
+            const response = await fetch(`http://localhost:8000/api/users/favorite/${authUser.uuid}`, {
                 headers: {
                     'Authorization': `Bearer ${token}`,
                     'Content-Type': 'application/json',
@@ -52,7 +52,7 @@ const Favorites = () => {
 
     const removeFavorite = async (gigId) => {
         try {
-            const response = await fetch('http://localhost:8000/api/favorites/remove', {
+            const response = await fetch('http://localhost:8000/api/users/favorite/remove', {
                 method: 'DELETE',
                 headers: {
                     'Authorization': `Bearer ${token}`,
@@ -165,7 +165,7 @@ const Favorites = () => {
                                             <div
                                                 className="w-full h-48 bg-center bg-cover"
                                                 style={{
-                                                    backgroundImage: `url("${favorite.gig?.cover_image || 'https://placehold.co/400x300'}")`
+                                                    backgroundImage: `url("${favorite.Gigs?.cover_image || 'https://placehold.co/400x300'}")`
                                                 }}
                                             ></div>
                                             
@@ -185,14 +185,14 @@ const Favorites = () => {
                                         {/* Gig Info */}
                                         <div className="p-4">
                                             <h3 className="text-lg font-semibold text-gray-800 mb-2 line-clamp-2 hover:text-[#1dbf73] transition-colors">
-                                                {favorite.gig?.title || 'Untitled Gig'}
+                                                {favorite.Gigs?.title || 'Untitled Gig'}
                                             </h3>
                                             
                                             {/* Price */}
                                             <div className="flex items-center gap-2 mb-3">
                                                 <DollarSign className="w-4 h-4 text-[#1dbf73]" />
                                                 <span className="text-xl font-bold text-[#1dbf73]">
-                                                    ${favorite.gig?.price || 0}
+                                                    {favorite.Gigs?.price || 0}
                                                 </span>
                                             </div>
 
