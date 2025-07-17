@@ -88,6 +88,11 @@ const AuthService = {
         const userProfile = await User.findById(authUser.id); // Giả sử bạn đã đổi tên hàm thành findByUuid
         if (!userProfile) throw new Error("User profile not found in public schema.");
 
+        // Kiểm tra trạng thái tài khoản
+        if (userProfile.status !== 'active') {
+            throw new Error('Your account is not active. Please contact support.');
+        }
+
         // 3. Tạo payload cho JWT, kết hợp thông tin từ cả hai nguồn
         const payload = {
         // Lấy uuid từ userProfile (hoặc authUser.id, chúng giống nhau)
@@ -116,7 +121,9 @@ const AuthService = {
                 avatar_url: userProfile.avt_url, // Sửa tên field cho đúng với schema
                 seller_headline: userProfile.seller_headline,
                 seller_description: userProfile.seller_description,
-                seller_since: userProfile.seller_since
+                seller_since: userProfile.seller_since,
+                // Trả về thông tin từ Supabase Auth, đó là JWT cho FE vào Supabase mà dùng REALTIME SOCKET
+                token: data.session.access_token
             } // Trả về thông tin user đầy đủ hơn
         };
     },

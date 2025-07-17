@@ -8,7 +8,7 @@ import NavbarLD from '../Common/Navbar_LD';
 import LoadingOverlay from '../Common/LoadingOverlay';
 import Stepper from '../components/CreateGigButton/Stepper/Stepper';
 import GigPublishSuccess from '../components/GigPublishSuccess';
-import ApiService from '../services/apiService';
+import ApiService from '../services/CreateGigs.service';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 

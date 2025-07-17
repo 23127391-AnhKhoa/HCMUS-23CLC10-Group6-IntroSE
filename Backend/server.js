@@ -23,7 +23,6 @@ const orderRoutes = require('./routes/orders.routes');
 const transactionRoutes = require('./routes/transactions.routes');
 const adminRoutes = require('./routes/admin.routes');
 const uploadRoutes = require('./routes/upload.routes');
-const dashboardRoutes = require('./routes/dashboard.routes');
 const conversationRoutes = require('./routes/conversations.routes');
 
 // Định nghĩa các route chính
@@ -32,15 +31,12 @@ const conversationRoutes = require('./routes/conversations.routes');
 // --- USE ROUTES ---
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
-app.use('/api/transactions', transactionRoutes);
 app.use('/api/conversations', conversationRoutes);
-//app.use('/api/gigs', gigRoutes);
 app.use('/api/gigs', gigRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/transactions', transactionRoutes);
 app.use('/api/upload', uploadRoutes);
-
-app.use('/api/dashboard', dashboardRoutes); 
+app.use('/api/admin', adminRoutes); 
 //app.use('/api/admin', adminRoutes);
 // Xài cái api thì nhớ bỏ // ở đầu, ví dụ xài gigs thì bỏ //, tại bây giờ chưa định nghĩa mà để dô thì nó không được hiểu là function, nó sẽ bị lỗi
 

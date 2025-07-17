@@ -1,5 +1,4 @@
 // src/services/apiService.js
-import API_BASE_URL from '../config/api';
 
 class ApiService {
   // Helper method to get auth headers
@@ -29,8 +28,8 @@ class ApiService {
         headers['Authorization'] = `Bearer ${token}`;
       }
 
-      console.log('Uploading to:', `${API_BASE_URL}/upload`);
-      const response = await fetch(`${API_BASE_URL}/upload`, {
+      console.log('Uploading to:', `http://localhost:8000/api/upload`);
+      const response = await fetch(`http://localhost:8000/api/upload`, {
         method: 'POST',
         headers,
         body: formData,
@@ -67,8 +66,8 @@ class ApiService {
         headers['Authorization'] = `Bearer ${token}`;
       }
 
-      console.log('Uploading multiple files to:', `${API_BASE_URL}/upload/multiple`);
-      const response = await fetch(`${API_BASE_URL}/upload/multiple`, {
+      console.log('Uploading multiple files to:', `http://localhost:8000/api/upload/multiple`);
+      const response = await fetch(`http://localhost:8000/api/upload/multiple`, {
         method: 'POST',
         headers,
         body: formData,
@@ -119,8 +118,8 @@ class ApiService {
         headers['Authorization'] = `Bearer ${token}`;
       }
 
-      console.log('Uploading files with fields to:', `${API_BASE_URL}/upload/fields`);
-      const response = await fetch(`${API_BASE_URL}/upload/fields`, {
+      console.log('Uploading files with fields to:', `http://localhost:8000/apiASE_URL}/upload/fields`);
+      const response = await fetch(`http://localhost:8000/api/upload/fields`, {
         method: 'POST',
         headers,
         body: formData,
@@ -143,7 +142,7 @@ class ApiService {
   // Create gig
   static async createGig(gigData) {
     try {
-      const response = await fetch(`${API_BASE_URL}/gigs`, {
+      const response = await fetch(`http://localhost:8000/api/gigs`, {
         method: 'POST',
         headers: this.getAuthHeaders(),
         body: JSON.stringify(gigData),
@@ -166,7 +165,7 @@ class ApiService {
   static async getAllGigs(params = {}) {
     try {
       const queryString = new URLSearchParams(params).toString();
-      const url = `${API_BASE_URL}/gigs${queryString ? `?${queryString}` : ''}`;
+      const url = `http://localhost:8000/api/gigs${queryString ? `?${queryString}` : ''}`;
 
       const response = await fetch(url);
       const data = await response.json();
@@ -185,7 +184,7 @@ class ApiService {
   // Get gig by ID
   static async getGigById(id) {
     try {
-      const response = await fetch(`${API_BASE_URL}/gigs/${id}`);
+      const response = await fetch(`http://localhost:8000/api/gigs/${id}`);
       const data = await response.json();
 
       if (!response.ok) {
@@ -202,7 +201,7 @@ class ApiService {
   // Create gig media
   static async createGigMedia(gigId, mediaData) {
     try {
-      const response = await fetch(`${API_BASE_URL}/gigs/${gigId}/media`, {
+      const response = await fetch(`http://localhost:8000/api/gigs/${gigId}/media`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

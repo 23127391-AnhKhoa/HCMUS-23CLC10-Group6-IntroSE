@@ -21,9 +21,74 @@ const GigDetail = () => {
     const [showCreateOrderModal, setShowCreateOrderModal] = useState(false);
     const [orderCreated, setOrderCreated] = useState(false);
 
-    const handleFavoriteToggle = () => {
-        setIsFavorited(!isFavorited);
-        console.log('Favorite toggled for gig ID:', id);
+    // Check favorite status when component mounts and user is available
+    useEffect(() => {
+        if (authUser && id && !authLoading) {
+            checkFavoriteStatus();
+        }
+    }, [authUser, id, authLoading]);
+
+    const checkFavoriteStatus = async () => {
+        if (!authUser || !token) return;
+        
+        try {
+            const response = await fetch(`http://localhost:8000/api/favorites/check/${authUser.uuid}/${id}`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                },
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                if (data.status === 'success') {
+                    setIsFavorited(data.data.isFavorited);
+                }
+            }
+        } catch (error) {
+            console.error('Error checking favorite status:', error);
+        }
+    };
+
+    const handleFavoriteToggle = async () => {
+        if (!authUser || !token) {
+            setErrorNotification('Please log in to save favorites');
+            setTimeout(() => {
+                navigate('/login');
+            }, 1500);
+            return;
+        }
+
+        try {
+            const response = await fetch('http://localhost:8000/api/favorites/toggle', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ gig_id: id }),
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                if (data.status === 'success') {
+                    setIsFavorited(data.data.isFavorited);
+                    // Show success message
+                    setErrorNotification(
+                        data.data.action === 'added' 
+                            ? 'Added to favorites!' 
+                            : 'Removed from favorites!'
+                    );
+                    // Clear message after 2 seconds
+                    setTimeout(() => setErrorNotification(''), 2000);
+                }
+            } else {
+                throw new Error('Failed to toggle favorite');
+            }
+        } catch (error) {
+            console.error('Error toggling favorite:', error);
+            setErrorNotification('Failed to update favorites');
+        }
     };
 
     const [errorNotification, setErrorNotification] = useState('');
