@@ -1,5 +1,5 @@
 // controllers/userFavorites.controller.js
-const User = require('../models/user.model');
+const User = require('../services/userFavorite.service');
 
 class UserFavoritesController {
     // Thêm favorite

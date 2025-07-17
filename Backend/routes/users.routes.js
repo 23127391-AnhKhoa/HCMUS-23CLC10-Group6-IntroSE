@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const userController = require('../controllers/user.controller');
+const UserFavoritesController = require('../controllers/userFavorites.controller');
 const { authenticateToken } = require('../middleware/auth.middleware'); // Sử dụng middleware xác thực token
 
 // ========== Admin endpoints ==========
@@ -43,5 +44,22 @@ router.get('/:id', userController.getUserById);
 
 // GET /api/users/username/:username - Lấy user theo username
 router.get('/username/:username', userController.getUserByUsername);
+
+// =========== User Favorites endpoints ==========
+// POST /api/favorites/add - Thêm vào favorites
+router.post('/add', authenticateToken, UserFavoritesController.addFavorite);
+
+// DELETE /api/favorites/remove - Xóa khỏi favorites
+router.delete('/remove', authenticateToken, UserFavoritesController.removeFavorite);
+
+// POST /api/favorites/toggle - Toggle favorite status
+router.post('/toggle', authenticateToken, UserFavoritesController.toggleFavorite);
+
+// GET /api/favorites/user/:userId - Lấy favorites của user
+router.get('/user/:userId', authenticateToken, UserFavoritesController.getUserFavorites);
+
+// GET /api/favorites/check/:userId/:gigId - Kiểm tra favorite status
+router.get('/check/:userId/:gigId', authenticateToken, UserFavoritesController.checkFavorite);
+
 
 module.exports = router;

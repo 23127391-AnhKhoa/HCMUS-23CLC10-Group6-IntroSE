@@ -25,7 +25,7 @@ const Favorites = () => {
     const fetchFavorites = async () => {
         try {
             setLoading(true);
-            const response = await fetch(`http://localhost:8000/api/favorites/user/${authUser.uuid}`, {
+            const response = await fetch(`http://localhost:8000/api/users/user/${authUser.uuid}`, {
                 headers: {
                     'Authorization': `Bearer ${token}`,
                     'Content-Type': 'application/json',
@@ -52,7 +52,7 @@ const Favorites = () => {
 
     const removeFavorite = async (gigId) => {
         try {
-            const response = await fetch('http://localhost:8000/api/favorites/remove', {
+            const response = await fetch('http://localhost:8000/api/users/remove', {
                 method: 'DELETE',
                 headers: {
                     'Authorization': `Bearer ${token}`,
