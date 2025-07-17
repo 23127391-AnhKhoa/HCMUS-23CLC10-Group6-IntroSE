@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import ServCard from '../Common/ServCard';
 import Footer from '../Common/Footer';
@@ -11,13 +11,20 @@ const SearchPage = () => {
     const [error, setError] = useState(null);
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedCategory, setSelectedCategory] = useState('');
+    const [selectedSubcategory, setSelectedSubcategory] = useState('');
     const [priceRange, setPriceRange] = useState({ min: '', max: '' });
-    const [sortBy, setSortBy] = useState('created_at');
-    const [sortOrder, setSortOrder] = useState('desc');
+    const [sort, setSort] = useState('relevance_desc'); // Combined sort state with relevance as default
     const [categories, setCategories] = useState([]);
     const [showFilters, setShowFilters] = useState(false);
     const [totalResults, setTotalResults] = useState(0);
     const [categoryFromNavbar, setCategoryFromNavbar] = useState(false); // Track if category came from navbar
+    const [isInitialLoad, setIsInitialLoad] = useState(true); // Track initial load
+
+    // Derived values from sort state
+    const [sortBy, sortOrder] = sort.split('_');
+    
+    // Debug log to track sort state
+    console.log('[SearchPage] Current sort state:', { sort, sortBy, sortOrder });
 
     useEffect(() => {
         const queryFromUrl = searchParams.get('q');
@@ -39,6 +46,7 @@ const SearchPage = () => {
         }
         
         fetchCategories();
+        setIsInitialLoad(false);
     }, [searchParams]);
 
     // Fetch categories for filter dropdown
@@ -72,8 +80,7 @@ const SearchPage = () => {
                 search: query,
                 category: selectedCategory,
                 priceRange,
-                sortBy,
-                sortOrder
+                sort: sort
             });
 
             const params = new URLSearchParams({
@@ -83,12 +90,17 @@ const SearchPage = () => {
                 filter_by_status: 'active'
             });
 
+            console.log('[SearchPage] Sort parameters:', { sort_by: sortBy, sort_order: sortOrder });
+            console.log('[SearchPage] Current dropdown value should be:', sort);
+
             if (query?.trim()) {
                 params.append('search', query.trim());
             }
 
             if (selectedCategory) {
                 params.append('filter_by_category_id', selectedCategory);
+            } else if (selectedSubcategory) {
+                params.append('filter_by_category_id', selectedSubcategory);
             }
 
             // Note: Price filtering will be done on frontend since backend doesn't support min_price/max_price yet
@@ -149,9 +161,9 @@ const SearchPage = () => {
     // Clear filters
     const clearFilters = () => {
         setSelectedCategory('');
+        setSelectedSubcategory('');
         setPriceRange({ min: '', max: '' });
-        setSortBy('created_at');
-        setSortOrder('desc');
+        setSort('relevance_desc'); // Reset to default sort
         setError(null);
         setCategoryFromNavbar(false); // Reset navbar tracking
         searchGigs();
@@ -159,17 +171,25 @@ const SearchPage = () => {
 
     // Handle filter changes
     useEffect(() => {
-        if (searchQuery || selectedCategory) {
-            searchGigs();
-        }
-    }, [selectedCategory, sortBy, sortOrder]);
+        // Skip the initial load to avoid double search
+        if (isInitialLoad) return;
+        
+        // Always trigger search when sort parameters or categories change
+        // This ensures sorting works even when viewing "All Gigs"
+        console.log('[SearchPage] useEffect triggered for filters:', { selectedCategory, selectedSubcategory, sort });
+        searchGigs();
+    }, [selectedCategory, selectedSubcategory, sort, isInitialLoad]);
+
+    // Handle category change - reset subcategory when parent category changes
+    useEffect(() => {
+        setSelectedSubcategory('');
+    }, [selectedCategory]);
 
     // Handle price range changes with debounce
     useEffect(() => {
         const timer = setTimeout(() => {
-            if (searchQuery || selectedCategory || priceRange.min || priceRange.max) {
-                searchGigs();
-            }
+            // Always search when price range changes (even for "All Gigs")
+            searchGigs();
         }, 500); // 500ms debounce
 
         return () => clearTimeout(timer);
@@ -228,13 +248,16 @@ const SearchPage = () => {
             );
         }
 
-        if (searchResults.length === 0 && (searchQuery || selectedCategory)) {
+        if (searchResults.length === 0 && (searchQuery || selectedCategory || selectedSubcategory)) {
             const selectedCategoryObj = categories.find(cat => cat.id.toString() === selectedCategory);
+            const selectedSubcategoryObj = selectedCategoryObj?.children?.find(sub => sub.id.toString() === selectedSubcategory);
             const searchContext = searchQuery 
-                ? `"${searchQuery}"${selectedCategoryObj ? ` in ${selectedCategoryObj.name}` : ''}` 
-                : selectedCategoryObj 
-                    ? `in ${selectedCategoryObj.name}`
-                    : '';
+                ? `"${searchQuery}"${selectedSubcategoryObj ? ` in ${selectedSubcategoryObj.name}` : selectedCategoryObj ? ` in ${selectedCategoryObj.name}` : ''}` 
+                : selectedSubcategoryObj 
+                    ? `in ${selectedSubcategoryObj.name}`
+                    : selectedCategoryObj 
+                        ? `in ${selectedCategoryObj.name}`
+                        : '';
                     
             return (
                 <div className="col-span-full flex flex-col justify-center items-center py-16 px-4">
@@ -287,7 +310,10 @@ const SearchPage = () => {
                                 <h1 className="text-2xl lg:text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
                                     {(() => {
                                         const selectedCategoryObj = categories.find(cat => cat.id.toString() === selectedCategory);
-                                        if (selectedCategoryObj) {
+                                        const selectedSubcategoryObj = selectedCategoryObj?.children?.find(sub => sub.id.toString() === selectedSubcategory);
+                                        if (selectedSubcategoryObj) {
+                                            return `Gigs in ${selectedSubcategoryObj.name}`;
+                                        } else if (selectedCategoryObj) {
                                             return `Gigs in ${selectedCategoryObj.name}`;
                                         } else if (searchQuery) {
                                             return "Search Results";
@@ -299,19 +325,27 @@ const SearchPage = () => {
                                 {searchQuery && (
                                     <p className="text-gray-600 mt-2">
                                         {totalResults} result{totalResults !== 1 ? 's' : ''} for "{searchQuery}"
-                                        {selectedCategory && categories.find(cat => cat.id.toString() === selectedCategory) && 
+                                        {selectedSubcategory && categories.find(cat => cat.id.toString() === selectedCategory)?.children?.find(sub => sub.id.toString() === selectedSubcategory) && 
+                                            ` in ${categories.find(cat => cat.id.toString() === selectedCategory).children.find(sub => sub.id.toString() === selectedSubcategory).name}`
+                                        }
+                                        {!selectedSubcategory && selectedCategory && categories.find(cat => cat.id.toString() === selectedCategory) && 
                                             ` in ${categories.find(cat => cat.id.toString() === selectedCategory).name}`
                                         }
                                     </p>
                                 )}
-                                {!searchQuery && selectedCategory && categories.find(cat => cat.id.toString() === selectedCategory) && (
+                                {!searchQuery && (selectedCategory || selectedSubcategory) && (
                                     <div className="mt-2">
                                         <p className="text-gray-600">
                                             {totalResults} gig{totalResults !== 1 ? 's' : ''} found
                                         </p>
-                                        {categoryFromNavbar && categories.find(cat => cat.id.toString() === selectedCategory)?.description && (
+                                        {categoryFromNavbar && selectedCategory && !selectedSubcategory && categories.find(cat => cat.id.toString() === selectedCategory)?.description && (
                                             <p className="text-gray-500 text-sm mt-1 italic">
                                                 {categories.find(cat => cat.id.toString() === selectedCategory).description}
+                                            </p>
+                                        )}
+                                        {selectedSubcategory && categories.find(cat => cat.id.toString() === selectedCategory)?.children?.find(sub => sub.id.toString() === selectedSubcategory)?.description && (
+                                            <p className="text-gray-500 text-sm mt-1 italic">
+                                                {categories.find(cat => cat.id.toString() === selectedCategory).children.find(sub => sub.id.toString() === selectedSubcategory).description}
                                             </p>
                                         )}
                                     </div>
@@ -333,7 +367,7 @@ const SearchPage = () => {
                         {/* Filters Panel */}
                         {showFilters && (
                             <div className="mt-6 p-4 bg-gray-50 rounded-xl border">
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
                                     {/* Category Filter */}
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-2">Category</label>
@@ -341,7 +375,7 @@ const SearchPage = () => {
                                             value={selectedCategory}
                                             onChange={(e) => {
                                                 setSelectedCategory(e.target.value);
-                                                setCategoryFromNavbar(false); // Reset navbar tracking when using filter
+                                                setCategoryFromNavbar(false);
                                             }}
                                             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                         >
@@ -349,6 +383,27 @@ const SearchPage = () => {
                                             {categories.map((category) => (
                                                 <option key={category.id} value={category.id}>
                                                     {category.name}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+
+                                    {/* Subcategory Filter */}
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">Subcategory</label>
+                                        <select
+                                            value={selectedSubcategory}
+                                            onChange={(e) => {
+                                                setSelectedSubcategory(e.target.value);
+                                                setCategoryFromNavbar(false);
+                                            }}
+                                            disabled={!selectedCategory}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
+                                        >
+                                            <option value="">All Subcategories</option>
+                                            {selectedCategory && categories.find(cat => cat.id.toString() === selectedCategory)?.children?.map((subcategory) => (
+                                                <option key={subcategory.id} value={subcategory.id}>
+                                                    {subcategory.name}
                                                 </option>
                                             ))}
                                         </select>
@@ -381,14 +436,14 @@ const SearchPage = () => {
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-2">Sort By</label>
                                         <select
-                                            value={`${sortBy}_${sortOrder}`}
+                                            value={sort}
                                             onChange={(e) => {
-                                                const [by, order] = e.target.value.split('_');
-                                                setSortBy(by);
-                                                setSortOrder(order);
+                                                console.log('[SearchPage] Sort dropdown changed to:', e.target.value);
+                                                setSort(e.target.value);
                                             }}
                                             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                         >
+                                            <option value="relevance_desc">Most Relevant</option>
                                             <option value="created_at_desc">Newest</option>
                                             <option value="created_at_asc">Oldest</option>
                                             <option value="price_asc">Price: Low to High</option>

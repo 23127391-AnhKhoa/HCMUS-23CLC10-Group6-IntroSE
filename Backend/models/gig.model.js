@@ -184,14 +184,31 @@ const Gig = {
           }
           
           if (filters.category_id !== undefined && filters.category_id !== null && filters.category_id !== '') {
-            titleQuery = titleQuery.eq('category_id', filters.category_id);
-            descQuery = descQuery.eq('category_id', filters.category_id);
+            // Check if this is a parent category (get all subcategory IDs)
+            const { data: subcategories } = await client
+              .from('Categories')
+              .select('id')
+              .eq('parent_id', filters.category_id);
+            
+            if (subcategories && subcategories.length > 0) {
+              // If parent category has subcategories, include both parent and subcategories
+              const categoryIds = [filters.category_id, ...subcategories.map(sub => sub.id)];
+              titleQuery = titleQuery.in('category_id', categoryIds);
+              descQuery = descQuery.in('category_id', categoryIds);
+            } else {
+              // If no subcategories, just filter by the specific category
+              titleQuery = titleQuery.eq('category_id', filters.category_id);
+              descQuery = descQuery.eq('category_id', filters.category_id);
+            }
           }
 
-          // Apply sorting to both queries
+          // Apply sorting to both queries - but we'll re-sort after merging
           if (filters.sort_by && filters.sort_order) {
-            titleQuery = titleQuery.order(filters.sort_by, { ascending: filters.sort_order === 'asc' });
-            descQuery = descQuery.order(filters.sort_by, { ascending: filters.sort_order === 'asc' });
+            // Validate sort_by to prevent SQL injection and invalid column errors
+            const validSortColumns = ['created_at', 'updated_at', 'price', 'title', 'delivery_days'];
+            const sortColumn = validSortColumns.includes(filters.sort_by) ? filters.sort_by : 'created_at';
+            titleQuery = titleQuery.order(sortColumn, { ascending: filters.sort_order === 'asc' });
+            descQuery = descQuery.order(sortColumn, { ascending: filters.sort_order === 'asc' });
           } else {
             titleQuery = titleQuery.order('created_at', { ascending: false });
             descQuery = descQuery.order('created_at', { ascending: false });
@@ -212,10 +229,43 @@ const Gig = {
             throw descResult.error;
           }
 
-          // Merge results with title matches first
-          const mergedData = [...(titleResult.data || []), ...(descResult.data || [])];
+          // Merge results with title matches first, removing duplicates
+          const titleData = titleResult.data || [];
+          const descData = descResult.data || [];
+          const titleIds = new Set(titleData.map(gig => gig.id));
+          const uniqueDescData = descData.filter(gig => !titleIds.has(gig.id));
+          const mergedData = [...titleData, ...uniqueDescData];
           
-          // Apply pagination to merged results
+          // Sort the merged results properly
+          if (filters.sort_by && filters.sort_order && filters.sort_by !== 'relevance') {
+            const validSortColumns = ['created_at', 'updated_at', 'price', 'title', 'delivery_days'];
+            const sortColumn = validSortColumns.includes(filters.sort_by) ? filters.sort_by : 'created_at';
+            const isAscending = filters.sort_order === 'asc';
+            
+            mergedData.sort((a, b) => {
+              let aValue = a[sortColumn];
+              let bValue = b[sortColumn];
+              
+              // Handle different data types
+              if (sortColumn === 'price' || sortColumn === 'delivery_days') {
+                aValue = parseFloat(aValue) || 0;
+                bValue = parseFloat(bValue) || 0;
+              } else if (sortColumn === 'created_at' || sortColumn === 'updated_at') {
+                aValue = new Date(aValue);
+                bValue = new Date(bValue);
+              } else if (sortColumn === 'title') {
+                aValue = (aValue || '').toLowerCase();
+                bValue = (bValue || '').toLowerCase();
+              }
+              
+              if (aValue < bValue) return isAscending ? -1 : 1;
+              if (aValue > bValue) return isAscending ? 1 : -1;
+              return 0;
+            });
+          }
+          // If sort_by is 'relevance' or not specified, keep the merged order (title matches first, then description matches)
+          
+          // Apply pagination to sorted merged results
           let finalData = mergedData;
           if (filters.limit) {
             const from = ((filters.page || 1) - 1) * filters.limit;
@@ -254,12 +304,33 @@ const Gig = {
         }
         
         if (filters.category_id !== undefined && filters.category_id !== null && filters.category_id !== '') {
-          query = query.eq('category_id', filters.category_id);
+          // Check if this is a parent category (get all subcategory IDs)
+          const { data: subcategories } = await client
+            .from('Categories')
+            .select('id')
+            .eq('parent_id', filters.category_id);
+          
+          if (subcategories && subcategories.length > 0) {
+            // If parent category has subcategories, include both parent and subcategories
+            const categoryIds = [filters.category_id, ...subcategories.map(sub => sub.id)];
+            query = query.in('category_id', categoryIds);
+          } else {
+            // If no subcategories, just filter by the specific category
+            query = query.eq('category_id', filters.category_id);
+          }
         }
 
         // Apply sorting
         if (filters.sort_by && filters.sort_order) {
-          query = query.order(filters.sort_by, { ascending: filters.sort_order === 'asc' });
+          // For non-search queries, 'relevance' should fall back to newest first
+          if (filters.sort_by === 'relevance') {
+            query = query.order('created_at', { ascending: false });
+          } else {
+            // Validate sort_by to prevent SQL injection and invalid column errors
+            const validSortColumns = ['created_at', 'updated_at', 'price', 'title', 'delivery_days'];
+            const sortColumn = validSortColumns.includes(filters.sort_by) ? filters.sort_by : 'created_at';
+            query = query.order(sortColumn, { ascending: filters.sort_order === 'asc' });
+          }
         } else {
           query = query.order('created_at', { ascending: false });
         }
@@ -323,8 +394,22 @@ const Gig = {
           }
           
           if (filters.category_id !== undefined && filters.category_id !== null && filters.category_id !== '') {
-            titleCountQuery = titleCountQuery.eq('category_id', filters.category_id);
-            descCountQuery = descCountQuery.eq('category_id', filters.category_id);
+            // Check if this is a parent category (get all subcategory IDs)
+            const { data: subcategories } = await client
+              .from('Categories')
+              .select('id')
+              .eq('parent_id', filters.category_id);
+            
+            if (subcategories && subcategories.length > 0) {
+              // If parent category has subcategories, include both parent and subcategories
+              const categoryIds = [filters.category_id, ...subcategories.map(sub => sub.id)];
+              titleCountQuery = titleCountQuery.in('category_id', categoryIds);
+              descCountQuery = descCountQuery.in('category_id', categoryIds);
+            } else {
+              // If no subcategories, just filter by the specific category
+              titleCountQuery = titleCountQuery.eq('category_id', filters.category_id);
+              descCountQuery = descCountQuery.eq('category_id', filters.category_id);
+            }
           }
 
           // Execute both count queries
@@ -359,7 +444,20 @@ const Gig = {
         }
         
         if (filters.category_id !== undefined && filters.category_id !== null && filters.category_id !== '') {
-          query = query.eq('category_id', filters.category_id);
+          // Check if this is a parent category (get all subcategory IDs)
+          const { data: subcategories } = await client
+            .from('Categories')
+            .select('id')
+            .eq('parent_id', filters.category_id);
+          
+          if (subcategories && subcategories.length > 0) {
+            // If parent category has subcategories, include both parent and subcategories
+            const categoryIds = [filters.category_id, ...subcategories.map(sub => sub.id)];
+            query = query.in('category_id', categoryIds);
+          } else {
+            // If no subcategories, just filter by the specific category
+            query = query.eq('category_id', filters.category_id);
+          }
         }
 
         const result = await query;
