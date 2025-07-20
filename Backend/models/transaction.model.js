@@ -17,9 +17,12 @@ const Transaction = {
    * @returns {Promise<Object>} Created transaction record
    */
   create: async (transactionData) => {
+    // Remove fields that don't exist in database
+    const { transaction_type, status, ...dbData } = transactionData;
+    
     const { data, error } = await supabase
       .from('Transactions')
-      .insert([transactionData])
+      .insert([dbData])
       .select()
       .single();
 
@@ -37,9 +40,12 @@ const Transaction = {
    * @returns {Promise<Array>} Created transaction records
    */
   createMultiple: async (transactionDataArray) => {
+    // Remove fields that don't exist in database
+    const cleanedData = transactionDataArray.map(({ transaction_type, status, ...dbData }) => dbData);
+    
     const { data, error } = await supabase
       .from('Transactions')
-      .insert(transactionDataArray)
+      .insert(cleanedData)
       .select();
 
     if (error) {

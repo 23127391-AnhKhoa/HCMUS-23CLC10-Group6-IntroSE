@@ -91,7 +91,7 @@ const getGigById = async (req, res) => {
 const createGig = async (req, res) => {
   try {
     // Validation dữ liệu đầu vào
-    const { title, cover_image, description, price, delivery_days, category_id } = req.body;
+    const { title, cover_image, description, price, delivery_days, category_id, response_time_hours } = req.body;
     
     // Kiểm tra các trường bắt buộc
     if (!title || !cover_image || !description || !price || !delivery_days || !category_id) {
@@ -113,6 +113,14 @@ const createGig = async (req, res) => {
       return res.status(400).json({
         status: 'error',
         message: 'Delivery days must be between 1 and 365'
+      });
+    }
+
+    // Validate response_time_hours if provided
+    if (response_time_hours && (response_time_hours < 1 || response_time_hours > 168)) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Response time must be between 1 hour and 1 week (168 hours)'
       });
     }
     
@@ -140,7 +148,8 @@ const createGig = async (req, res) => {
 
     const gigData = {
       ...req.body,
-      owner_id: ownerId
+      owner_id: ownerId,
+      response_time_hours: response_time_hours || 24 // Default to 24 hours
     };
 
     const newGig = await GigService.createGig(gigData);

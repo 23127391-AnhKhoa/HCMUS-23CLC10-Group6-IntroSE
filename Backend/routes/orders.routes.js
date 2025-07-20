@@ -3,7 +3,12 @@
  * 
  * @file orders.routes.js
  * @description Defines HTTP routes for order-related operations
- * Maps HTTP endpoints to controller functions
+ * Maps HTTP endpoints to controller router.post('/:orderId/track-download', authenticateToken, OrderController.trackFileDownload);
+
+// Debug route to test signed URLs
+router.get('/:orderId/debug-urls', authenticateToken, OrderController.debugSignedUrls);
+
+module.exports = router;ctions
  * 
  * @requires express - Express.js framework
  * @requires ../controllers/order.controller - Order controller functions
@@ -121,6 +126,25 @@ router.patch('/:id/status', authenticateToken, OrderController.updateOrderStatus
 router.post('/:id/upload-delivery', authenticateToken, deliveryUpload, OrderController.uploadDelivery);
 
 /**
+ * @route GET /api/orders/:orderId/delivery-files
+ * @description Get all delivery files for an order
+ * @access Protected - Requires authentication (buyer or seller)
+ * @params {string} orderId - Order ID
+ * @returns {Object} JSON response with delivery files list
+ */
+router.get('/:orderId/delivery-files', authenticateToken, OrderController.getDeliveryFiles);
+
+/**
+ * @route GET /api/orders/:orderId/delivery/file/:fileId
+ * @description Download delivery file by file ID (MUST BE BEFORE /delivery/:filename)
+ * @access Protected - Requires authentication (buyer or seller)
+ * @params {string} orderId - Order ID
+ * @params {string} fileId - File ID
+ * @returns {Blob} File content for download
+ */
+router.get('/:orderId/delivery/file/:fileId', authenticateToken, OrderController.downloadDeliveryFile);
+
+/**
  * @route GET /api/orders/:orderId/delivery/:filename
  * @description Get signed URL for delivery file access
  * @access Protected - Requires authentication (buyer or seller)
@@ -129,15 +153,6 @@ router.post('/:id/upload-delivery', authenticateToken, deliveryUpload, OrderCont
  * @returns {Object} JSON response with signed URL
  */
 router.get('/:orderId/delivery/:filename', authenticateToken, OrderController.getDeliveryFileUrl);
-
-/**
- * @route GET /api/orders/:orderId/delivery-files
- * @description Get all delivery files for an order
- * @access Protected - Requires authentication (buyer or seller)
- * @params {string} orderId - Order ID
- * @returns {Object} JSON response with delivery files list
- */
-router.get('/:orderId/delivery-files', authenticateToken, OrderController.getDeliveryFiles);
 
 /**
  * @route DELETE /api/orders/:orderId/delivery-files/:fileId
@@ -178,6 +193,17 @@ router.post('/:id/pay', authenticateToken, OrderController.processPayment);
 router.post('/:id/request-revision', authenticateToken, OrderController.requestRevision);
 
 /**
+ * @route POST /api/orders/:id/handle-revision
+ * @description Accept or decline revision request (seller action)
+ * @access Protected - Requires authentication
+ * @params {string} id - Order ID
+ * @body {string} action - Action: 'accept' or 'decline'
+ * @body {string} [note] - Optional note from seller
+ * @returns {Object} JSON response with updated order
+ */
+router.post('/:id/handle-revision', authenticateToken, OrderController.handleRevision);
+
+/**
  * @route GET /api/orders/:id/workflow
  * @description Get order workflow status and available actions
  * @access Protected - Requires authentication
@@ -185,6 +211,15 @@ router.post('/:id/request-revision', authenticateToken, OrderController.requestR
  * @returns {Object} JSON response with workflow status
  */
 router.get('/:id/workflow', authenticateToken, OrderController.getOrderWorkflow);
+
+/**
+ * @route POST /api/orders/:orderId/track-download
+ * @description Track file download and start auto payment timer
+ * @access Protected - Requires authentication
+ * @params {string} orderId - Order ID
+ * @returns {Object} JSON response confirming download tracking
+ */
+router.post('/:orderId/track-download', authenticateToken, OrderController.trackFileDownload);
 
 module.exports = router;
 

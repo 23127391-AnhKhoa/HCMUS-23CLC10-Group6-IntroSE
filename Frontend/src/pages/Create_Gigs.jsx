@@ -1,7 +1,7 @@
 // src/pages/Create_Gigs.jsx
 import React, { useState, useEffect } from 'react';
 import OverviewCreGigs from '../components/CreateGigButton/Overview_CreGigs';
-import PricingCreGigs from '../components/CreateGigButton/Pricing_CreGigs_Fixed';
+import PricingCreGigs from '../components/CreateGigButton/Pricing_CreGigs';
 import DescriptionCreGigs from '../components/CreateGigButton/Description_CreGigs';
 import ReviewPublish from '../components/CreateGigButton/ReviewPublish';
 import NavbarLD from '../Common/Navbar_LD';
@@ -71,6 +71,7 @@ const CreateGigsPage = () => {
     price: '',
     delivery_days: 7,
     num_of_edits: 3,
+    response_time_hours: 24, // Default 24 hours for buyer response
     // Description fields
     description: '',
     faqs: [],

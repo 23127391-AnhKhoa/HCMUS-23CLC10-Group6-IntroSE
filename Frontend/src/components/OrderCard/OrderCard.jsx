@@ -16,6 +16,7 @@ import DOMPurify from 'dompurify';
 import ApiService from '../../services/apiService';
 import DeliveryFilesModal from '../DeliveryFilesModal/DeliveryFilesModal';
 import UploadDeliveryModal from '../UploadDeliveryModal/UploadDeliveryModal';
+import AutoPaymentTimer from '../AutoPaymentTimer/AutoPaymentTimer';
 import OrderStatus from '../OrderStatus/OrderStatus';
 import Toast from '../Toast/Toast';
 import { 
@@ -183,22 +184,10 @@ const OrderCard = ({
         }
     };
     
-    // Handle file download
-    const handleFileDownload = async (file) => {
-        try {
-            if (file.signed_url) {
-                const link = document.createElement('a');
-                link.href = file.signed_url;
-                link.download = file.original_name;
-                link.click();
-            } else {
-                alert('File download not available');
-            }
-        } catch (error) {
-            console.error('Error downloading file:', error);
-            alert('Failed to download file');
-        }
-    };
+    // Handle file download - REMOVED: Now handled by DeliveryFilesModal only
+    // const handleFileDownload = async (file) => {
+    //     // Download logic moved to DeliveryFilesModal to avoid duplicate calls
+    // };
     
     // Handle file upload for delivery
     const handleFileUpload = async (files) => {
@@ -376,6 +365,78 @@ const OrderCard = ({
                     icon: <CloseCircleOutlined />
                 });
             } else if (safeOrder.status === 'in_progress' || safeOrder.status === 'revision_requested') {
+                // Show specific actions for revision_requested status
+                if (safeOrder.status === 'revision_requested') {
+                    // Upload revised files button
+                    actions.push({
+                        label: 'Upload Revised Files',
+                        action: () => {
+                            if (safeOnDeliveryUpload) {
+                                safeOnDeliveryUpload(safeOrder);
+                            } else {
+                                // Fallback: prompt for file upload
+                                const fileInput = document.createElement('input');
+                                fileInput.type = 'file';
+                                fileInput.multiple = true;
+                                fileInput.accept = '*/*';
+                                fileInput.onchange = (e) => {
+                                    const files = Array.from(e.target.files);
+                                    if (files.length > 0) {
+                                        handleFileUpload(files);
+                                    }
+                                };
+                                fileInput.click();
+                            }
+                        },
+                        className: 'bg-blue-600 hover:bg-blue-700 text-white',
+                        icon: <UploadOutlined />
+                    });
+                    
+                    actions.push({
+                        label: 'Accept Revision',
+                        action: async () => {
+                            try {
+                                setProcessing(true);
+                                const response = await ApiService.handleRevision(safeOrder.id, 'accept', '');
+                                if (response.status === 'success') {
+                                    safeOnStatusUpdate(safeOrder.id, 'delivered');
+                                    alert('Revision request accepted and completed. Order is now delivered.');
+                                }
+                            } catch (error) {
+                                console.error('Error accepting revision:', error);
+                                alert('Failed to accept revision: ' + error.message);
+                            } finally {
+                                setProcessing(false);
+                            }
+                        },
+                        className: 'bg-green-600 hover:bg-green-700 text-white',
+                        icon: <CheckCircleOutlined />,
+                        disabled: processing
+                    });
+                    actions.push({
+                        label: 'Decline Revision',
+                        action: async () => {
+                            const note = prompt('Please provide a reason for declining the revision request (optional):');
+                            try {
+                                setProcessing(true);
+                                const response = await ApiService.handleRevision(safeOrder.id, 'decline', note || '');
+                                if (response.status === 'success') {
+                                    safeOnStatusUpdate(safeOrder.id, 'delivered');
+                                    alert('Revision request declined. Order status changed back to delivered.');
+                                }
+                            } catch (error) {
+                                console.error('Error declining revision:', error);
+                                alert('Failed to decline revision: ' + error.message);
+                            } finally {
+                                setProcessing(false);
+                            }
+                        },
+                        className: 'bg-red-600 hover:bg-red-700 text-white',
+                        icon: <CloseCircleOutlined />,
+                        disabled: processing
+                    });
+                }
+                
                 actions.push({
                     label: 'Upload Delivery',
                     action: () => {
@@ -589,8 +650,19 @@ const OrderCard = ({
                         </div>
                     )}
                     {safeOrder.gig_num_of_edits && (
-                        <div className="text-sm text-gray-600">
-                            <span className="font-medium">Edits:</span> {safeOrder.gig_num_of_edits}
+                        <div className="text-sm text-gray-600 flex items-center justify-between">
+                            <span>
+                                <span className="font-medium">Edits:</span> {safeOrder.gig_num_of_edits}
+                            </span>
+                            {/* Compact countdown timer */}
+                            {safeOrder.status === 'delivered' && safeOrder.auto_payment_deadline && safeOrder.download_start_time && (
+                                <AutoPaymentTimer
+                                    deadline={safeOrder.auto_payment_deadline}
+                                    userRole={userRole}
+                                    compact={true}
+                                    className="ml-2"
+                                />
+                            )}
                         </div>
                     )}
                 </div>
@@ -650,6 +722,45 @@ const OrderCard = ({
                     </div>
                 </div>
             )}
+
+            {/* Auto Payment Timer - Hiển thị sau khi buyer download lần đầu */}
+            {/* DEBUG: Log order data */}
+            {console.log('🔍 OrderCard Debug:', {
+                orderId: safeOrder.id,
+                status: safeOrder.status,
+                auto_payment_deadline: safeOrder.auto_payment_deadline,
+                download_start_time: safeOrder.download_start_time,
+                userRole: userRole
+            })}
+            {safeOrder.status === 'delivered' && 
+             safeOrder.auto_payment_deadline && 
+             safeOrder.download_start_time && (
+                <div className="bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200 rounded-lg p-4 mb-4">
+                    <div className="flex items-center mb-2">
+                        <ClockCircleOutlined className="text-orange-500 mr-2" />
+                        <span className="font-medium text-gray-800">
+                            {userRole === 'buyer' ? 'Payment Auto-Processing Timer' : 'Awaiting Payment Decision'}
+                        </span>
+                    </div>
+                    <div className="text-sm text-gray-600 mb-3">
+                        {userRole === 'buyer' 
+                            ? 'Timer started when you first downloaded the delivery files. Payment will be processed automatically if no action is taken.'
+                            : 'Buyer has downloaded the delivery files. Payment will be processed automatically if buyer takes no action.'
+                        }
+                    </div>
+                    <AutoPaymentTimer
+                        deadline={safeOrder.auto_payment_deadline}
+                        userRole={userRole}
+                        orderPrice={safeOrder.price_at_purchase}
+                        className="mb-2"
+                    />
+                    <div className="text-xs text-gray-500 mt-2">
+                        Download started: {safeOrder.download_start_time && new Date(safeOrder.download_start_time).toLocaleString()}
+                    </div>
+                </div>
+            )}
+
+
 
             {/* Order Details */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
@@ -713,34 +824,14 @@ const OrderCard = ({
                                     </div>
                                     
                                     <div className="flex items-center space-x-2">
-                                        {file.can_download ? (
-                                            <>
-                                                <button
-                                                    onClick={() => window.open(file.signed_url, '_blank')}
-                                                    className="flex items-center space-x-1 px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
-                                                >
-                                                    <EyeOutlined />
-                                                    <span>View</span>
-                                                </button>
-                                                <button
-                                                    onClick={() => {
-                                                        const link = document.createElement('a');
-                                                        link.href = file.signed_url;
-                                                        link.download = file.original_name;
-                                                        link.click();
-                                                    }}
-                                                    className="flex items-center space-x-1 px-2 py-1 text-xs bg-green-600 text-white rounded hover:bg-green-700 transition-colors"
-                                                >
-                                                    <DownloadOutlined />
-                                                    <span>Download</span>
-                                                </button>
-                                            </>
-                                        ) : (
-                                            <div className="flex items-center space-x-1 px-2 py-1 text-xs bg-gray-200 text-gray-500 rounded">
-                                                <LockOutlined />
-                                                <span>Pay to download</span>
-                                            </div>
-                                        )}
+                                        {/* View button - always available */}
+                                        <button
+                                            onClick={() => window.open(file.signed_url, '_blank')}
+                                            className="flex items-center space-x-1 px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+                                        >
+                                            <EyeOutlined />
+                                            <span>View</span>
+                                        </button>
                                         
                                         {/* Delete button - only show if order is not completed */}
                                         {safeOrder.status !== 'completed' && (
@@ -770,13 +861,18 @@ const OrderCard = ({
                         </div>
                     )}
                     
-                    {/* Download Access Notice */}
+                    {/* Download Notice - Files always available after delivery */}
                     {safeOrder.status === 'delivered' && userRole === 'buyer' && (
-                        <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                            <p className="text-sm text-yellow-800">
-                                <LockOutlined className="mr-2" />
-                                Complete payment to download delivery files
+                        <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg">
+                            <p className="text-sm text-green-800">
+                                <DownloadOutlined className="mr-2" />
+                                <strong>Files Ready!</strong> Download anytime - first download starts auto payment countdown.
                             </p>
+                            {safeOrder.auto_payment_deadline && (
+                                <p className="text-xs text-green-700 mt-1">
+                                    ⏰ Or complete payment now to skip countdown and finish immediately
+                                </p>
+                            )}
                         </div>
                     )}
                 </div>
@@ -847,7 +943,7 @@ const OrderCard = ({
                     deliveryFiles={deliveryFiles}
                     onPayment={handlePayment}
                     onRevisionRequest={handleRevisionRequest}
-                    onFileDownload={handleFileDownload}
+                    onFileDownload={onFileDownload} // Use parent's callback, not local one
                     processing={processing}
                 />
             )}

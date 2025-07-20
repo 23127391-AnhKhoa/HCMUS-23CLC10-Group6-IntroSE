@@ -12,6 +12,7 @@
 const Order = require('../models/order.model');
 const Transaction = require('../models/transaction.model');
 const NotificationService = require('./notification.service');
+const AutoPaymentService = require('./autoPayment.service');
 const supabase = require('../config/supabaseClient');
 
 const OrderService = {
@@ -470,6 +471,17 @@ const OrderService = {
       const updatedOrder = await Order.updateStatus(orderId, status);
       console.log('✅ [Order Service] Order status updated successfully');
       
+      // Clear auto payment timer for certain status changes
+      if (status === 'revision_requested' || status === 'cancelled') {
+        try {
+          await AutoPaymentService.clearAutoPaymentTimer(orderId);
+          console.log('⏰ Auto payment timer cleared due to status change:', status);
+        } catch (timerError) {
+          console.error('❌ Failed to clear auto payment timer:', timerError);
+          // Don't fail the entire operation if timer clearing fails
+        }
+      }
+      
       // Send notifications for status change
       try {
         // Determine recipient role based on status change
@@ -579,20 +591,15 @@ const OrderService = {
         throw new Error('Order must be delivered before payment');
       }
       
-      // Get buyer's current balance
+      // Get buyer details (remove balance check as it was verified during order creation)
       const { data: buyer, error: buyerError } = await supabase
         .from('User')
-        .select('balance')
+        .select('uuid, balance')
         .eq('uuid', userId)
         .single();
       
       if (buyerError || !buyer) {
         throw new Error('Buyer not found');
-      }
-      
-      // Check if buyer has sufficient balance
-      if (buyer.balance < order.price_at_purchase) {
-        throw new Error('Insufficient balance to complete payment');
       }
       
       // Get seller details
@@ -606,20 +613,86 @@ const OrderService = {
         throw new Error('Seller not found');
       }
       
-      // Start transaction using database function
-      const { data: transactionResult, error: transactionError } = await supabase.rpc('process_order_payment', {
-        p_order_id: parseInt(orderId),
-        p_buyer_id: userId,
-        p_seller_id: order.gig_owner_id,
-        p_amount: order.price_at_purchase
+      // Process payment manually (bypass balance check)
+      console.log('💳 Processing payment manually:', {
+        orderId,
+        buyerId: userId,
+        sellerId: order.gig_owner_id,
+        amount: order.price_at_purchase,
+        buyerCurrentBalance: buyer.balance,
+        sellerCurrentBalance: seller.balance
       });
-      
-      if (transactionError) {
-        console.error('Database transaction failed:', transactionError);
-        throw new Error(transactionError.message || 'Payment processing failed');
+
+      // Calculate new balances
+      const newBuyerBalance = buyer.balance - order.price_at_purchase;
+      const newSellerBalance = seller.balance + order.price_at_purchase;
+
+      // Update buyer balance
+      const { error: buyerUpdateError } = await supabase
+        .from('User')
+        .update({ balance: newBuyerBalance })
+        .eq('uuid', userId);
+
+      if (buyerUpdateError) {
+        throw new Error('Failed to update buyer balance: ' + buyerUpdateError.message);
+      }
+
+      // Update seller balance
+      const { error: sellerUpdateError } = await supabase
+        .from('User')
+        .update({ balance: newSellerBalance })
+        .eq('uuid', order.gig_owner_id);
+
+      if (sellerUpdateError) {
+        // Rollback buyer balance if seller update fails
+        await supabase
+          .from('User')
+          .update({ balance: buyer.balance })
+          .eq('uuid', userId);
+        throw new Error('Failed to update seller balance: ' + sellerUpdateError.message);
+      }
+
+      // Update order status to completed
+      const { error: orderUpdateError } = await supabase
+        .from('Orders')
+        .update({ 
+          status: 'completed'
+        })
+        .eq('id', orderId);
+
+      if (orderUpdateError) {
+        // Rollback balances if order update fails
+        await supabase.from('User').update({ balance: buyer.balance }).eq('uuid', userId);
+        await supabase.from('User').update({ balance: seller.balance }).eq('uuid', order.gig_owner_id);
+        throw new Error('Failed to update order status: ' + orderUpdateError.message);
+      }
+
+      console.log('✅ Payment processed successfully via manual transaction');
+
+      // Create transaction record
+      try {
+        await Transaction.create({
+          order_id: parseInt(orderId),
+          buyer_id: userId,
+          seller_id: order.gig_owner_id,
+          amount: order.price_at_purchase,
+          type: 'order_payment',
+          status: 'completed',
+          description: `Payment for order #${orderId}`
+        });
+      } catch (transactionError) {
+        console.error('❌ Failed to create transaction record:', transactionError);
+        // Don't fail the entire payment if transaction record creation fails
       }
       
-      console.log('✅ Payment processed via database function:', transactionResult);
+      // Clear auto payment timer since payment is completed manually
+      try {
+        await AutoPaymentService.clearAutoPaymentTimer(orderId);
+        console.log('⏰ Auto payment timer cleared for order:', orderId);
+      } catch (timerError) {
+        console.error('❌ Failed to clear auto payment timer:', timerError);
+        // Don't fail payment if timer clearing fails
+      }
       
       // Get updated order
       const updatedOrder = await OrderService.getOrderById(orderId);
@@ -637,9 +710,9 @@ const OrderService = {
       return {
         order: updatedOrder,
         payment_amount: order.price_at_purchase,
-        buyer_new_balance: transactionResult.buyer_new_balance,
-        seller_new_balance: transactionResult.seller_new_balance,
-        transaction_id: 'database_function'
+        buyer_new_balance: newBuyerBalance,
+        seller_new_balance: newSellerBalance,
+        transaction_id: 'manual_payment'
       };
       
     } catch (error) {

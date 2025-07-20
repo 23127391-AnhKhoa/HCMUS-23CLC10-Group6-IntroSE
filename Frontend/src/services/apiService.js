@@ -119,7 +119,7 @@ class ApiService {
 
   static async downloadDeliveryFile(orderId, fileId) {
     try {
-      const response = await fetch(`${API_BASE_URL}/orders/${orderId}/delivery/${fileId}`, {
+      const response = await fetch(`${API_BASE_URL}/orders/${orderId}/delivery/file/${fileId}`, {
         method: 'GET',
         headers: this.getAuthHeaders(false)
       });
@@ -161,6 +161,21 @@ class ApiService {
       return await this.handleApiResponse(response);
     } catch (error) {
       console.error('Error requesting revision:', error);
+      throw error;
+    }
+  }
+
+  static async handleRevision(orderId, action, note = '') {
+    try {
+      const response = await fetch(`${API_BASE_URL}/orders/${orderId}/handle-revision`, {
+        method: 'POST',
+        headers: this.getAuthHeaders(),
+        body: JSON.stringify({ action, note })
+      });
+      
+      return await this.handleApiResponse(response);
+    } catch (error) {
+      console.error('Error handling revision:', error);
       throw error;
     }
   }
@@ -442,6 +457,21 @@ class ApiService {
       return await this.handleApiResponse(response);
     } catch (error) {
       console.error('Error creating conversation:', error);
+      throw error;
+    }
+  }
+
+  // Track file download for auto payment timing
+  static async trackFileDownload(orderId) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/orders/${orderId}/track-download`, {
+        method: 'POST',
+        headers: this.getAuthHeaders()
+      });
+      
+      return await this.handleApiResponse(response);
+    } catch (error) {
+      console.error('Error tracking file download:', error);
       throw error;
     }
   }

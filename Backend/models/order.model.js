@@ -75,7 +75,10 @@ const Order = {
         gig_id: orderData.gig_id,
         price_at_purchase: orderData.price_at_purchase,
         requirement: orderData.requirement,
-        status: orderData.status || 'pending'
+        status: orderData.status || 'pending',
+        response_time_hours: orderData.response_time_hours || 24, // Default 24 hours
+        download_start_time: orderData.download_start_time || null,
+        auto_payment_deadline: orderData.auto_payment_deadline || null
       }])
       .select()
       .single();

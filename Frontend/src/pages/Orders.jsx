@@ -15,10 +15,12 @@
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { EyeOutlined, ClockCircleOutlined, CheckCircleOutlined, CloseCircleOutlined, ShoppingOutlined, FileTextOutlined } from '@ant-design/icons';
+import { EyeOutlined, ClockCircleOutlined, CheckCircleOutlined, CloseCircleOutlined, ShoppingOutlined, FileTextOutlined, AppstoreOutlined, UnorderedListOutlined } from '@ant-design/icons';
 import NavBar from '../Common/NavBar_Buyer';
 import Footer from '../Common/Footer';
 import OrderCard from '../components/OrderCard/OrderCard';
+import OrderOverviewCard from '../components/OrderOverviewCard/OrderOverviewCard';
+import AutoPaymentWidget from '../components/AutoPaymentWidget/AutoPaymentWidget';
 import { useAuth } from '../contexts/AuthContext';
 import ApiService from '../services/apiService';
 
@@ -36,6 +38,8 @@ const Orders = () => {
     const [error, setError] = useState(null);
     const [activeTab, setActiveTab] = useState('buyer'); // 'buyer' or 'seller'
     const [statusFilter, setStatusFilter] = useState('all');
+    const [viewMode, setViewMode] = useState('overview'); // 'overview' or 'detailed'
+    const [selectedOrderId, setSelectedOrderId] = useState(null);
 
     // Pagination state
     const [currentPage, setCurrentPage] = useState(1);
@@ -175,30 +179,25 @@ const Orders = () => {
     /**
      * Handle file download for delivered orders
      */
-    const handleFileDownload = async (order) => {
-        console.log('📥 Downloading files for order:', order.id);
+    const handleFileDownload = async (orderOrFile) => {
+        console.log('📥 File downloaded from modal - updating order data');
         
         try {
-            // Get order details to access delivery files
-            const orderDetails = await ApiService.getOrderDetails(order.id);
-            
-            if (orderDetails.delivery_files && orderDetails.delivery_files.length > 0) {
-                // In a real app, this would trigger file downloads
-                alert(`Downloading ${orderDetails.delivery_files.length} files for order #${order.id}...\n\nFiles:\n${orderDetails.delivery_files.map(file => `- ${file.name}`).join('\n')}`);
-                
-                // For each file, you could create download links
-                orderDetails.delivery_files.forEach(file => {
-                    const link = document.createElement('a');
-                    link.href = file.url;
-                    link.download = file.name;
-                    link.click();
-                });
+            // If we received an updated order object, update it in our orders list
+            if (orderOrFile && orderOrFile.id && orderOrFile.auto_payment_deadline) {
+                setOrders(prevOrders => 
+                    prevOrders.map(order => 
+                        order.id === orderOrFile.id ? { ...order, ...orderOrFile } : order
+                    )
+                );
+                console.log('Order updated with auto-payment deadline:', orderOrFile.auto_payment_deadline);
             } else {
-                alert('No delivery files found for this order.');
+                // Otherwise, refresh all orders data
+                await loadOrders();
+                console.log('Orders data refreshed after file download');
             }
         } catch (error) {
-            console.error('Error downloading files:', error);
-            alert(`Error downloading files: ${error.message}`);
+            console.error('Error updating orders after download:', error);
         }
     };
 
@@ -390,39 +389,69 @@ const Orders = () => {
                     </p>
                 </div>
 
-                {/* Tab Navigation */}
-                <div className="mb-6">
-                    <div className="flex space-x-1 bg-gray-200 p-1 rounded-lg w-fit">
-                        <button
-                            onClick={() => {
-                                setActiveTab('buyer');
-                                setCurrentPage(1);
-                            }}
-                            className={`px-4 py-2 rounded-md font-medium transition-colors ${
-                                activeTab === 'buyer'
-                                    ? 'bg-white text-blue-600 shadow-sm'
-                                    : 'text-gray-600 hover:text-gray-900'
-                            }`}
-                        >
-                            <ShoppingOutlined className="mr-2" />
-                            As Buyer
-                        </button>
-                        <button
-                            onClick={() => {
-                                setActiveTab('seller');
-                                setCurrentPage(1);
-                            }}
-                            className={`px-4 py-2 rounded-md font-medium transition-colors ${
-                                activeTab === 'seller'
-                                    ? 'bg-white text-blue-600 shadow-sm'
-                                    : 'text-gray-600 hover:text-gray-900'
-                            }`}
-                        >
-                            <EyeOutlined className="mr-2" />
-                            As Seller
-                        </button>
+                {/* Tab Navigation and View Controls */}
+                <div className="mb-6 space-y-4">
+                    {/* Tab Navigation */}
+                    <div className="flex justify-between items-center">
+                        <div className="flex space-x-1 bg-gray-200 p-1 rounded-lg w-fit">
+                            <button
+                                onClick={() => {
+                                    setActiveTab('buyer');
+                                    setCurrentPage(1);
+                                    setViewMode('overview'); // Reset to overview when switching tabs
+                                }}
+                                className={`px-4 py-2 rounded-md font-medium transition-colors ${
+                                    activeTab === 'buyer'
+                                        ? 'bg-white text-blue-600 shadow-sm'
+                                        : 'text-gray-600 hover:text-gray-900'
+                                }`}
+                            >
+                                <ShoppingOutlined className="mr-2" />
+                                As Buyer
+                            </button>
+                            <button
+                                onClick={() => {
+                                    setActiveTab('seller');
+                                    setCurrentPage(1);
+                                    setViewMode('overview'); // Reset to overview when switching tabs
+                                }}
+                                className={`px-4 py-2 rounded-md font-medium transition-colors ${
+                                    activeTab === 'seller'
+                                        ? 'bg-white text-blue-600 shadow-sm'
+                                        : 'text-gray-600 hover:text-gray-900'
+                                }`}
+                            >
+                                <EyeOutlined className="mr-2" />
+                                As Seller
+                            </button>
+                        </div>
+
+                        {/* View Mode Toggle */}
+                        <div className="flex space-x-1 bg-gray-100 rounded-lg p-1">
+                            <button
+                                onClick={() => setViewMode('overview')}
+                                className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                                    viewMode === 'overview'
+                                        ? 'bg-white text-gray-900 shadow-sm'
+                                        : 'text-gray-600 hover:text-gray-900'
+                                }`}
+                            >
+                                <AppstoreOutlined className="mr-1" />
+                                Overview
+                            </button>
+                            <button
+                                onClick={() => setViewMode('detailed')}
+                                className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                                    viewMode === 'detailed'
+                                        ? 'bg-white text-gray-900 shadow-sm'
+                                        : 'text-gray-600 hover:text-gray-900'
+                                }`}
+                            >
+                                <UnorderedListOutlined className="mr-1" />
+                                Detailed
+                            </button>
+                        </div>
                     </div>
-                </div>
 
                 {/* Status Filter */}
                 <div className="mb-6">
@@ -450,6 +479,7 @@ const Orders = () => {
                         ))}
                     </div>
                 </div>
+            </div>
 
                 {/* Error Display */}
                 {error && (
@@ -465,9 +495,9 @@ const Orders = () => {
                 )}
 
                 {/* Orders List */}
-                <div className="space-y-4">
+                <div className={viewMode === 'overview' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4' : 'space-y-4'}>
                     {orders.length === 0 ? (
-                        <div className="text-center py-12">
+                        <div className={`text-center py-12 ${viewMode === 'overview' ? 'col-span-full' : ''}`}>
                             <div className="text-gray-400 text-6xl mb-4">
                                 <ShoppingOutlined />
                             </div>
@@ -493,19 +523,33 @@ const Orders = () => {
                         <>
                             {orders.map((order) => {
                                 try {
-                                    return (                        <OrderCard
-                            key={order.id}
-                            order={order}
-                            userRole={activeTab}
-                            onStatusUpdate={handleStatusUpdate}
-                            onPaymentTrigger={handlePaymentTrigger}
-                            onFileDownload={handleFileDownload}
-                            onDeliveryUpload={handleDeliveryUpload}
-                            onMessage={handleMessage}
-                            onRevisionRequest={handleRevisionRequest}
-                            getStatusColor={getStatusColor}
-                            getStatusIcon={getStatusIcon}
-                        />
+                                    return viewMode === 'overview' ? (
+                                        <OrderOverviewCard
+                                            key={order.id}
+                                            order={order}
+                                            userRole={activeTab}
+                                            onClick={(orderId) => {
+                                                setSelectedOrderId(orderId);
+                                                setViewMode('detailed');
+                                            }}
+                                        />
+                                    ) : (
+                                        // Show detailed view for specific order or all orders
+                                        (!selectedOrderId || selectedOrderId === order.id) ? (
+                                            <OrderCard
+                                                key={order.id}
+                                                order={order}
+                                                userRole={activeTab}
+                                                onStatusUpdate={handleStatusUpdate}
+                                                onPaymentTrigger={handlePaymentTrigger}
+                                                onFileDownload={handleFileDownload}
+                                                onDeliveryUpload={handleDeliveryUpload}
+                                                onMessage={handleMessage}
+                                                onRevisionRequest={handleRevisionRequest}
+                                                getStatusColor={getStatusColor}
+                                                getStatusIcon={getStatusIcon}
+                                            />
+                                        ) : null
                                     );
                                 } catch (error) {
                                     console.error('❌ Error rendering order card:', error, 'Order data:', order);
@@ -521,6 +565,21 @@ const Orders = () => {
                         </>
                     )}
                 </div>
+
+                {/* Back to Overview Button (when in detailed view with selected order) */}
+                {viewMode === 'detailed' && selectedOrderId && (
+                    <div className="mt-6 text-center">
+                        <button
+                            onClick={() => {
+                                setSelectedOrderId(null);
+                                setViewMode('overview');
+                            }}
+                            className="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg font-medium hover:bg-gray-200 transition-colors"
+                        >
+                            ← Back to Overview
+                        </button>
+                    </div>
+                )}
 
                 {/* Pagination */}
                 {totalPages > 1 && (
@@ -561,6 +620,17 @@ const Orders = () => {
             </div>
 
             <Footer />
+
+            {/* Auto Payment Widget - Floating countdown timer */}
+            {/* Temporarily disabled for debugging */}
+            {/*
+            <AutoPaymentWidget
+                orders={orders}
+                userRole={userRole}
+                onOrderClick={(orderId) => navigate(`/orders/${orderId}`)}
+                position="bottom-right"
+            />
+            */}
         </div>
     );
 };

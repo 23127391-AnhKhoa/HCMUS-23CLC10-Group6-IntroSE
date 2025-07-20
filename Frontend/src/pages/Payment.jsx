@@ -11,9 +11,10 @@
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { CheckCircleOutlined, CreditCardOutlined, DollarOutlined, LockOutlined, ArrowLeftOutlined } from '@ant-design/icons';
+import { CheckCircleOutlined, CreditCardOutlined, DollarOutlined, LockOutlined, ArrowLeftOutlined, ClockCircleOutlined } from '@ant-design/icons';
 import NavBar from '../Common/NavBar_Buyer';
 import Footer from '../Common/Footer';
+import AutoPaymentTimer from '../components/AutoPaymentTimer/AutoPaymentTimer';
 import { useAuth } from '../contexts/AuthContext';
 
 /**
@@ -211,9 +212,35 @@ const Payment = () => {
                     </button>
                     <h1 className="text-3xl font-bold text-gray-900 mb-2">Complete Payment</h1>
                     <p className="text-gray-600">
-                        Review your order and complete the payment to finalize your purchase
+                        Complete payment now to finalize your order immediately and stop any auto-payment countdown
                     </p>
                 </div>
+
+                {/* Auto Payment Timer - Prominent display for payment urgency */}
+                {order?.status === 'delivered' && 
+                 order?.auto_payment_deadline && 
+                 order?.download_start_time && (
+                    <div className="bg-gradient-to-r from-red-50 to-orange-50 border border-red-200 rounded-lg p-6 mb-8">
+                        <div className="flex items-center mb-3">
+                            <ClockCircleOutlined className="text-red-500 mr-3 text-xl" />
+                            <div>
+                                <h3 className="text-lg font-semibold text-gray-900">Auto Payment Timer Active</h3>
+                                <p className="text-sm text-gray-600">
+                                    Complete your payment before the timer expires to avoid automatic processing
+                                </p>
+                            </div>
+                        </div>
+                        <AutoPaymentTimer
+                            deadline={order.auto_payment_deadline}
+                            userRole="buyer"
+                            orderPrice={order.price_at_purchase}
+                            className="mb-3"
+                        />
+                        <div className="text-xs text-gray-500">
+                            Timer started when you first downloaded delivery files: {new Date(order.download_start_time).toLocaleString()}
+                        </div>
+                    </div>
+                )}
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                     {/* Order Summary */}

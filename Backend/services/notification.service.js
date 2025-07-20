@@ -153,6 +153,39 @@ const NotificationService = {
   },
 
   /**
+   * Send file upload notification (files uploaded but not delivered yet)
+   * 
+   * @param {Object} order - Order object
+   * @param {number} fileCount - Number of files uploaded
+   */
+  sendFileUploadNotification: async (order, fileCount) => {
+    try {
+      console.log('📁 Sending file upload notification:', {
+        orderId: order.id,
+        fileCount,
+        status: order.status
+      });
+
+      const notification = {
+        type: 'files_uploaded',
+        title: 'Files Uploaded',
+        message: `Seller has uploaded ${fileCount} file(s) for order #${order.id}. Waiting for delivery confirmation.`,
+        recipient_id: order.client_id,
+        order_id: order.id
+      };
+
+      // Log notification (in real app, save to database)
+      console.log('📨 File Upload Notification:', notification);
+
+      return [notification];
+
+    } catch (error) {
+      console.error('❌ Error sending file upload notification:', error);
+      throw error;
+    }
+  },
+
+  /**
    * Send delivery upload notification
    * 
    * @param {Object} order - Order object

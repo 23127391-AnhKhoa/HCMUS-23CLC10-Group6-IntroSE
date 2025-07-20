@@ -67,7 +67,7 @@ const PricingCreGigs = ({ gigData, onInputChange, errors = {} }) => {
         <div className="bg-gradient-to-r from-indigo-50 to-purple-50 p-6 rounded-xl border border-indigo-200">
           <h3 className="text-xl font-semibold text-indigo-800 mb-4">Basic Package</h3>
           
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
             {/* Price */}
             <div className="space-y-2">
               <label htmlFor="price" className={labelClasses}>
@@ -118,6 +118,29 @@ const PricingCreGigs = ({ gigData, onInputChange, errors = {} }) => {
               )}
             </div>
 
+            {/* Response Time */}
+            <div className="space-y-2">
+              <label htmlFor="response_time_hours" className={labelClasses}>
+                Response Time (Hours)
+              </label>
+              <select
+                id="response_time_hours"
+                name="response_time_hours"
+                value={gigData.response_time_hours || 24}
+                onChange={(e) => onInputChange('response_time_hours', parseInt(e.target.value))}
+                className={`${inputBaseClasses} py-3`}
+              >
+                <option value={12}>12 hours</option>
+                <option value={24}>24 hours</option>
+                <option value={48}>48 hours</option>
+                <option value={72}>72 hours</option>
+                <option value={168}>1 week</option>
+              </select>
+              <p className="text-xs text-slate-500 mt-1">
+                Time allowed for buyer to respond after delivery download
+              </p>
+            </div>
+
             {/* Number of Edits */}
             <div className="space-y-2">
               <label htmlFor="num_of_edits" className={labelClasses}>
@@ -138,6 +161,29 @@ const PricingCreGigs = ({ gigData, onInputChange, errors = {} }) => {
                 <option value={10}>10 revisions (+10% each extra)</option>
                 <option value={-1}>Unlimited</option>
               </select>
+            </div>
+
+            {/* Response Time */}
+            <div className="space-y-2 md:col-span-3">
+              <label htmlFor="response_time_hours" className={labelClasses}>
+                Buyer Response Time (for delivery acceptance)
+              </label>
+              <select
+                id="response_time_hours"
+                name="response_time_hours"
+                value={gigData.response_time_hours || 24}
+                onChange={(e) => onInputChange('response_time_hours', parseInt(e.target.value))}
+                className={`${inputBaseClasses} py-3`}
+              >
+                <option value={12}>12 hours</option>
+                <option value={24}>24 hours (1 day)</option>
+                <option value={48}>48 hours (2 days)</option>
+                <option value={72}>72 hours (3 days)</option>
+                <option value={168}>1 week</option>
+              </select>
+              <p className="text-xs text-gray-600">
+                Time allowed for buyer to respond after delivery. If no response, payment will be automatically processed.
+              </p>
             </div>
           </div>
         </div>

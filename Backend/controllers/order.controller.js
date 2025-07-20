@@ -12,6 +12,7 @@ const OrderService = require('../services/order.service');
 const DeliveryFile = require('../models/deliveryFile.model');
 const FileValidation = require('../utils/fileValidation');
 const NotificationService = require('../services/notification.service');
+const AutoPaymentService = require('../services/autoPayment.service');
 const supabase = require('../config/supabaseClient');
 const path = require('path');
 
@@ -192,12 +193,28 @@ const createOrder = async (req, res) => {
       });
     }
 
+    // Get gig information to inherit response_time_hours
+    const { data: gig, error: gigError } = await supabase
+      .from('Gigs')
+      .select('response_time_hours')
+      .eq('id', gig_id)
+      .single();
+
+    if (gigError) {
+      console.log('❌ Error fetching gig:', gigError);
+      return res.status(400).json({
+        status: 'error',
+        message: 'Invalid gig ID or gig not found'
+      });
+    }
+
     const orderData = {
       client_id,
       gig_id,
       price_at_purchase,
       requirement,
-      status
+      status,
+      response_time_hours: gig.response_time_hours || 24 // Use gig's response time or default to 24
     };
 
     console.log('🔧 Processed order data:', orderData);
@@ -703,26 +720,164 @@ const uploadDelivery = async (req, res) => {
       }
     }
 
-    // Log the delivery
-    console.log(`📦 Delivery uploaded for order ${orderId}:`, {
+    // After successful file upload, do NOT change order status automatically
+    // Seller will need to manually mark as delivered after uploading all files
+    
+    // Send file upload notification (not delivery notification)
+    try {
+      const NotificationService = require('../services/notification.service');
+      await NotificationService.sendFileUploadNotification(order, deliveryFiles.length);
+    } catch (notificationError) {
+      console.error('❌ Failed to send file upload notification:', notificationError);
+      // Don't fail the entire upload if notification fails
+    }
+
+    // Log the file upload
+    console.log(`� Files uploaded for order ${orderId}:`, {
       files: deliveryFiles.length,
       message: message,
-      seller: userId
+      seller: userId,
+      order_status: order.status, // Keep current status
+      files_uploaded: deliveryFiles.map(f => f.name)
     });
 
     res.status(200).json({
       status: 'success',
-      message: 'Delivery files uploaded successfully',
+      message: 'Files uploaded successfully. Click "Mark as Delivered" when ready to submit.',
       data: {
         orderId: orderId,
         filesUploaded: deliveryFiles.length,
         deliveryMessage: message,
-        files: deliveryFiles
+        files: deliveryFiles,
+        orderStatus: order.status, // Return current status, not changed
+        nextAction: order.status === 'revision_requested' ? 'accept_revision' : 'mark_delivered'
       }
     });
 
   } catch (error) {
     console.error('Error uploading delivery:', error);
+    res.status(500).json({
+      status: 'error',
+      message: 'Internal server error',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
+/**
+ * Download delivery file by file ID
+ * 
+ * @route GET /api/orders/:orderId/delivery/:fileId
+ * @param {Object} req - Express request object
+ * @param {string} req.params.orderId - Order ID
+ * @param {string} req.params.fileId - File ID
+ * @param {Object} res - Express response object
+ * @returns {Blob} File content for download
+ */
+const downloadDeliveryFile = async (req, res) => {
+  try {
+    const { orderId, fileId } = req.params;
+    const userId = req.user.uuid;
+    
+    console.log('📥 Download delivery file request:', { orderId, fileId, userId });
+    
+    // Get order to verify user has access
+    const order = await OrderService.getOrderById(orderId);
+    if (!order) {
+      return res.status(404).json({
+        status: 'error',
+        message: 'Order not found'
+      });
+    }
+    
+    // Check if user is either the buyer or seller of this order
+    const isAuthorized = order.client_id === userId || order.gig_owner_id === userId;
+    if (!isAuthorized) {
+      return res.status(403).json({
+        status: 'error',
+        message: 'You are not authorized to download this file'
+      });
+    }
+    
+    // Get file details from database
+    const { data: fileData, error: fileError } = await supabase
+      .from('DeliveryFiles')
+      .select('*')
+      .eq('id', fileId)
+      .eq('order_id', orderId)
+      .single();
+    
+    if (fileError || !fileData) {
+      console.log('❌ File not found:', fileId, fileError);
+      return res.status(404).json({
+        status: 'error',
+        message: 'File not found'
+      });
+    }
+    
+    // 🔒 SECURITY: Check download permissions based on order status and user role
+    const canDownload = (order.status === 'delivered' || order.status === 'completed') || order.gig_owner_id === userId;
+    
+    if (!canDownload) {
+      return res.status(403).json({
+        status: 'error',
+        message: 'Files can only be downloaded after order is delivered',
+        order_status: order.status,
+        requires_delivery: true
+      });
+    }
+    
+    // 📥 TRACK DOWNLOAD: If buyer is downloading for the first time, update download_start_time
+    if (order.client_id === userId && !order.download_start_time) {
+      try {
+        // Update download start time
+        await supabase
+          .from('Orders')
+          .update({ download_start_time: new Date().toISOString() })
+          .eq('id', orderId);
+        
+        console.log('📊 Download start time recorded for order:', orderId);
+        
+        // Note: Auto payment timer should already be running from delivery upload
+        // But we can verify/restart if needed
+        const AutoPaymentService = require('../services/autoPayment.service');
+        await AutoPaymentService.startDownloadTimer(orderId);
+        
+      } catch (downloadTrackError) {
+        console.error('❌ Failed to track download start time:', downloadTrackError);
+        // Don't block download if tracking fails
+      }
+    }
+
+    // Download file from Supabase Storage
+    const { data: fileBuffer, error: downloadError } = await supabase.storage
+      .from('order-deliveries')
+      .download(fileData.storage_path);
+    
+    if (downloadError) {
+      console.error('❌ Error downloading file from storage:', downloadError);
+      return res.status(500).json({
+        status: 'error',
+        message: 'Failed to download file from storage',
+        error: downloadError.message
+      });
+    }
+    
+    // Set appropriate headers for file download
+    res.set({
+      'Content-Type': fileData.file_type || 'application/octet-stream',
+      'Content-Disposition': `attachment; filename="${fileData.original_name}"`,
+      'Content-Length': fileData.file_size
+    });
+    
+    // Convert ArrayBuffer to Buffer for Express response
+    const buffer = Buffer.from(await fileBuffer.arrayBuffer());
+    
+    console.log('✅ File downloaded successfully:', fileData.original_name);
+    res.send(buffer);
+    
+  } catch (error) {
+    console.error('❌ Error downloading delivery file:', error);
     res.status(500).json({
       status: 'error',
       message: 'Internal server error',
@@ -766,13 +921,13 @@ const getDeliveryFileUrl = async (req, res) => {
       });
     }
     
-    // 🔒 SECURITY: Only allow file download if order is completed (paid) or user is the seller
-    if (order.status !== 'completed' && order.gig_owner_id !== userId) {
+    // 🔒 SECURITY: Allow file download if order is delivered/completed or user is the seller
+    if (order.status !== 'delivered' && order.status !== 'completed' && order.gig_owner_id !== userId) {
       return res.status(403).json({
         status: 'error',
-        message: 'Files can only be downloaded after payment completion',
+        message: 'Files can only be downloaded after order is delivered',
         order_status: order.status,
-        requires_payment: true
+        requires_delivery: true
       });
     }
     
@@ -844,27 +999,35 @@ const getDeliveryFiles = async (req, res) => {
     }
     
     // Get delivery files from database
+    console.log('🔍 Looking for delivery files for order:', orderId);
     const deliveryFiles = await DeliveryFile.findByOrderId(orderId);
+    console.log('📁 Found delivery files:', { count: deliveryFiles.length, files: deliveryFiles });
     
     // Generate signed URLs for each file
     const filesWithUrls = await Promise.all(
       deliveryFiles.map(async (file) => {
         try {
-          // 🔒 SECURITY: Only generate signed URLs if order is completed or user is seller
-          const canDownload = order.status === 'completed' || order.gig_owner_id === userId;
+          // � NO FILE LOCKING: Allow downloads immediately after delivery
+          const canDownload = (order.status === 'delivered' || order.status === 'completed') || order.gig_owner_id === userId;
           
           if (!canDownload) {
             return {
               ...file,
               signed_url: null,
               can_download: false,
-              download_message: 'Payment required to download files'
+              download_message: 'Order must be delivered first'
             };
           }
           
           const { data, error } = await supabase.storage
             .from('order-deliveries')
             .createSignedUrl(file.storage_path, 3600);
+          
+          if (error) {
+            console.error('❌ Supabase signed URL error:', error);
+          } else {
+            console.log('✅ Generated signed URL for file:', file.id);
+          }
           
           return {
             ...file,
@@ -883,15 +1046,20 @@ const getDeliveryFiles = async (req, res) => {
       })
     );
     
+    console.log('📋 Final response data:', { 
+      filesCount: filesWithUrls.length, 
+      order_status: order.status,
+      can_download: (order.status === 'delivered' || order.status === 'completed') || order.gig_owner_id === userId
+    });
+
     res.status(200).json({
       status: 'success',
       data: {
         files: filesWithUrls,
         order_status: order.status,
-        can_download: order.status === 'completed' || order.gig_owner_id === userId
+        can_download: (order.status === 'delivered' || order.status === 'completed') || order.gig_owner_id === userId
       }
     });
-    
   } catch (error) {
     console.error('Error getting delivery files:', error);
     res.status(500).json({
@@ -1149,8 +1317,21 @@ const requestRevision = async (req, res) => {
       });
     }
     
-    // Update order status to revision_requested
+    // Update order status to revision_requested and set revision_request_date
     const updatedOrder = await OrderService.updateOrderStatus(orderId, 'revision_requested');
+    
+    // Set revision request date
+    try {
+      await supabase
+        .from('Orders')
+        .update({ revision_request_date: new Date().toISOString() })
+        .eq('id', orderId);
+      
+      console.log('📅 Revision request date recorded');
+    } catch (dateUpdateError) {
+      console.error('❌ Failed to update revision request date:', dateUpdateError);
+      // Don't fail the entire operation
+    }
     
     // TODO: Save revision note in database if needed
     // TODO: Send notification to seller
@@ -1165,6 +1346,112 @@ const requestRevision = async (req, res) => {
     
   } catch (error) {
     console.error('Error requesting revision:', error);
+    res.status(500).json({
+      status: 'error',
+      message: 'Internal server error',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
+/**
+ * Accept or decline revision request (seller action)
+ * 
+ * @route POST /api/orders/:id/handle-revision
+ * @param {Object} req - Express request object
+ * @param {string} req.params.id - Order ID
+ * @param {Object} req.body - Request body
+ * @param {string} req.body.action - Action: 'accept' or 'decline'
+ * @param {string} [req.body.note] - Optional note from seller
+ * @param {Object} res - Express response object
+ * @returns {Object} JSON response with updated order
+ */
+const handleRevision = async (req, res) => {
+  try {
+    const orderId = req.params.id;
+    const userId = req.user.uuid;
+    const { action, note } = req.body;
+    
+    console.log('🔄 Handle revision:', { orderId, userId, action, note });
+    
+    // Validate action
+    if (!action || !['accept', 'decline'].includes(action)) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Action must be either "accept" or "decline"'
+      });
+    }
+    
+    // Get order to verify user has access
+    const order = await OrderService.getOrderById(orderId);
+    if (!order) {
+      return res.status(404).json({
+        status: 'error',
+        message: 'Order not found'
+      });
+    }
+    
+    // Check if user is the seller (gig owner)
+    if (order.gig_owner_id !== userId) {
+      return res.status(403).json({
+        status: 'error',
+        message: 'Only the seller can handle revision requests'
+      });
+    }
+    
+    // Check order status
+    if (order.status !== 'revision_requested') {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Order must have revision requested status to handle revision'
+      });
+    }
+    
+    let newStatus;
+    let message;
+    
+    if (action === 'accept') {
+      newStatus = 'delivered';
+      message = 'Revision request accepted and completed. Order is now delivered.';
+    } else {
+      newStatus = 'delivered';
+      message = 'Revision request declined. Order status remains delivered.';
+    }
+    
+    // Update order status
+    const updatedOrder = await OrderService.updateOrderStatus(orderId, newStatus);
+    
+    // If revision was accepted, start auto payment timer and send delivery notification
+    if (action === 'accept') {
+      try {
+        // Start auto payment timer for the delivered order
+        const AutoPaymentService = require('../services/autoPayment.service');
+        await AutoPaymentService.startDownloadTimer(orderId);
+        console.log('✅ Auto payment timer started for revised order:', orderId);
+        
+        // Send delivery notification to buyer
+        const NotificationService = require('../services/notification.service');
+        await NotificationService.sendDeliveryUploadNotification(updatedOrder, 0); // 0 files as revision is handled directly
+        console.log('✅ Delivery notification sent for revision completion');
+      } catch (serviceError) {
+        console.error('❌ Failed to start auto payment or send notification:', serviceError);
+      }
+    }
+    
+    console.log('✅ Revision handled:', { orderId, action, newStatus });
+    
+    res.status(200).json({
+      status: 'success',
+      message: message,
+      data: {
+        order: updatedOrder,
+        action: action,
+        seller_note: note
+      }
+    });
+    
+  } catch (error) {
+    console.error('Error handling revision:', error);
     res.status(500).json({
       status: 'error',
       message: 'Internal server error',
@@ -1224,7 +1511,7 @@ const getOrderWorkflow = async (req, res) => {
         user_role: userRole,
         available_actions: availableActions,
         delivery_files_count: deliveryFiles.length,
-        can_download: order.status === 'completed' || userRole === 'seller'
+        can_download: order.status === 'delivered' || order.status === 'completed' || userRole === 'seller'
       }
     });
     
@@ -1381,6 +1668,151 @@ const deleteDeliveryFile = async (req, res) => {
   }
 };
 
+/**
+ * Track file download and start auto payment timer
+ * 
+ * @route POST /api/orders/:orderId/track-download
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
+const trackFileDownload = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const userId = req.user.uuid;
+    
+    console.log('📥 [Order Controller] Track file download:', { orderId, userId });
+    
+    if (!orderId || orderId === 'undefined') {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Order ID is required and cannot be undefined'
+      });
+    }
+    
+    // Get order details
+    const order = await OrderService.getOrderById(orderId);
+    if (!order) {
+      return res.status(404).json({
+        status: 'error',
+        message: 'Order not found'
+      });
+    }
+    
+    // Check if user is the buyer
+    if (order.client_id !== userId) {
+      return res.status(403).json({
+        status: 'error',
+        message: 'Only the buyer can download files'
+      });
+    }
+    
+    // Check if order is in delivered status
+    if (order.status !== 'delivered') {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Files can only be downloaded for delivered orders'
+      });
+    }
+    
+    // Start download timer if not already started
+    if (!order.download_start_time) {
+      await AutoPaymentService.startDownloadTimer(orderId);
+    }
+    
+    // Get updated order data with auto_payment_deadline
+    const updatedOrder = await OrderService.getOrderById(orderId);
+    
+    res.status(200).json({
+      status: 'success',
+      message: 'Download tracked successfully',
+      data: {
+        order: updatedOrder
+      }
+    });
+    
+  } catch (error) {
+    console.error('❌ [Order Controller] Error tracking download:', error);
+    res.status(500).json({
+      status: 'error',
+      message: 'Internal server error',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
+// Debug function to test signed URL generation
+const debugSignedUrls = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    
+    console.log('🔍 [Debug] Testing signed URLs for order:', orderId);
+    
+    // Get delivery files
+    const deliveryFiles = await DeliveryFile.findByOrderId(orderId);
+    console.log('🔍 [Debug] Found delivery files:', deliveryFiles);
+    
+    if (deliveryFiles.length === 0) {
+      return res.json({
+        status: 'error',
+        message: 'No delivery files found',
+        orderId
+      });
+    }
+    
+    const filesWithUrls = [];
+    
+    for (const file of deliveryFiles) {
+      try {
+        console.log('🔍 [Debug] Processing file:', file.file_name, 'Path:', file.file_path);
+        
+        // Generate signed URL
+        const { data: signedUrlData, error: signedUrlError } = await supabaseAdmin
+          .storage
+          .from('order-deliveries')
+          .createSignedUrl(file.file_path, 3600);
+        
+        console.log('🔍 [Debug] Signed URL result:', { signedUrlData, signedUrlError });
+        
+        if (signedUrlError) {
+          filesWithUrls.push({
+            ...file,
+            error: signedUrlError.message,
+            success: false
+          });
+        } else {
+          filesWithUrls.push({
+            ...file,
+            signed_url: signedUrlData.signedUrl,
+            success: true
+          });
+        }
+      } catch (fileError) {
+        console.error('🔍 [Debug] Error processing file:', file.file_name, fileError);
+        filesWithUrls.push({
+          ...file,
+          error: fileError.message,
+          success: false
+        });
+      }
+    }
+    
+    res.json({
+      status: 'success',
+      orderId,
+      totalFiles: deliveryFiles.length,
+      files: filesWithUrls
+    });
+    
+  } catch (error) {
+    console.error('🔍 [Debug] Error in debugSignedUrls:', error);
+    res.status(500).json({
+      status: 'error',
+      message: error.message,
+      orderId: req.params.orderId
+    });
+  }
+};
+
 module.exports = {
   getAllOrders,
   getOrderById,
@@ -1391,11 +1823,15 @@ module.exports = {
   getOwnerOrders,
   updateOrderStatus,
   uploadDelivery,
+  downloadDeliveryFile,
   getDeliveryFileUrl,
   getDeliveryFiles,
   markAsDelivered,
   deleteDeliveryFile,
   processPayment,
   requestRevision,
-  getOrderWorkflow
+  handleRevision,
+  getOrderWorkflow,
+  trackFileDownload,
+  debugSignedUrls
 };
