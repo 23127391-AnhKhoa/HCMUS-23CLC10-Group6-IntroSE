@@ -376,7 +376,7 @@ const getClientOrders = async (req, res) => {
  * @param {Object} res - Express response object
  * @returns {Object} JSON response with owner orders
  */
-const getOwnerOrders = async (req, res) => {
+const   getOwnerOrders = async (req, res) => {
   try {
     const { ownerId } = req.params;
     const { 
