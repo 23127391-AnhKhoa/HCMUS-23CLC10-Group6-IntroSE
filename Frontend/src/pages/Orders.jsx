@@ -13,7 +13,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { EyeOutlined, ClockCircleOutlined, CheckCircleOutlined, CloseCircleOutlined, ShoppingOutlined } from '@ant-design/icons';
-import NavBar from '../Common/NavBar_Buyer';
+import NavBar_Buyer from '../Common/NavBar_Buyer';
+import NavBar_Seller from '../Common/NavBar_Seller';
 import Footer from '../Common/Footer';
 import OrderCard from '../components/OrderCard/OrderCard';
 import { useAuth } from '../contexts/AuthContext';
@@ -224,10 +225,11 @@ const Orders = () => {
         { key: 'cancelled', label: 'Cancelled', count: 0 }
     ];
 
+    
     if (authLoading || loading) {
         return (
             <div className="min-h-screen bg-gray-50" style={{ fontFamily: 'Inter, "Noto Sans", sans-serif' }}>
-                <NavBar />
+                
                 <div className="flex-1 flex items-center justify-center py-32">
                     <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-500"></div>
                 </div>
@@ -235,6 +237,7 @@ const Orders = () => {
             </div>
         );
     }
+    const navBarComponent = authUser.role === 'seller' ? <NavBar_Seller /> : <NavBar_Buyer />;
 
     // If not authenticated, the useEffect will redirect
     if (!authUser || !token) {
@@ -243,7 +246,7 @@ const Orders = () => {
 
     return (
         <div className="min-h-screen bg-gray-50" style={{ fontFamily: 'Inter, "Noto Sans", sans-serif' }}>
-            <NavBar />
+            {navBarComponent}
             
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pt-32">
                 {/* Header */}
