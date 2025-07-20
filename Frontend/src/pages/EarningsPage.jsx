@@ -99,88 +99,7 @@ const EarningsPage = () => {
     }
   };
 
-  const calculateEarnings = (orders) => {
-    const now = new Date();
-    const thisMonth = now.getMonth();
-    const thisYear = now.getFullYear();
-    const lastMonth = thisMonth === 0 ? 11 : thisMonth - 1;
-    const lastMonthYear = thisMonth === 0 ? thisYear - 1 : thisYear;
-    
-    const startOfWeek = new Date(now);
-    startOfWeek.setDate(now.getDate() - now.getDay());
-
-    let totalEarnings = 0;
-    let thisMonthEarnings = 0;
-    let lastMonthEarnings = 0;
-    let thisWeekEarnings = 0;
-    let availableForWithdraw = 0;
-    let pendingEarnings = 0;
-
-    // Calculate monthly earnings for chart
-    const monthlyData = {};
-    
-    orders.forEach(order => {
-      if (order.seller_id === authUser?.id) {
-        const orderDate = new Date(order.created_at);
-        const orderMonth = orderDate.getMonth();
-        const orderYear = orderDate.getFullYear();
-        const price = parseFloat(order.price_at_purchase) || 0;
-
-        // Monthly data for chart
-        const monthKey = `${orderYear}-${orderMonth}`;
-        monthlyData[monthKey] = (monthlyData[monthKey] || 0) + price;
-
-        // Total earnings (all completed orders)
-        if (order.status === 'completed') {
-          totalEarnings += price;
-          availableForWithdraw += price * 0.9; // Assuming 10% platform fee
-        }
-
-        // Pending earnings
-        if (order.status === 'in_progress' || order.status === 'pending') {
-          pendingEarnings += price;
-        }
-
-        // This month
-        if (orderMonth === thisMonth && orderYear === thisYear && order.status === 'completed') {
-          thisMonthEarnings += price;
-        }
-
-        // Last month
-        if (orderMonth === lastMonth && orderYear === lastMonthYear && order.status === 'completed') {
-          lastMonthEarnings += price;
-        }
-
-        // This week
-        if (orderDate >= startOfWeek && order.status === 'completed') {
-          thisWeekEarnings += price;
-        }
-      }
-    });
-
-    // Convert monthly data to array for chart
-    const monthlyArray = Object.entries(monthlyData)
-      .map(([key, value]) => {
-        const [year, month] = key.split('-');
-        return {
-          month: new Date(year, month).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
-          earnings: value
-        };
-      })
-      .sort((a, b) => new Date(a.month) - new Date(b.month))
-      .slice(-12); // Last 12 months
-
-    setEarnings({
-      totalEarnings,
-      thisMonth: thisMonthEarnings,
-      lastMonth: lastMonthEarnings,
-      thisWeek: thisWeekEarnings,
-      availableForWithdraw,
-      pending: pendingEarnings
-    });
-
-    setMonthlyEarnings(monthlyArray);
-  };
+  // ...existing code...
 
   const getGrowthPercentage = (current, previous) => {
     if (previous === 0) return current > 0 ? 100 : 0;
@@ -192,33 +111,25 @@ const EarningsPage = () => {
       title: 'Total Earnings',
       value: `$${earnings.totalEarnings.toFixed(2)}`,
       icon: DollarSign,
-      color: 'bg-green-500',
-      change: '+12.5%',
-      positive: true
+      color: 'bg-green-500'
     },
     {
       title: 'This Month',
       value: `$${earnings.thisMonth.toFixed(2)}`,
       icon: Calendar,
-      color: 'bg-blue-500',
-      change: `${getGrowthPercentage(earnings.thisMonth, earnings.lastMonth) >= 0 ? '+' : ''}${getGrowthPercentage(earnings.thisMonth, earnings.lastMonth)}%`,
-      positive: getGrowthPercentage(earnings.thisMonth, earnings.lastMonth) >= 0
+      color: 'bg-blue-500'
     },
     {
       title: 'Available to Withdraw',
       value: `$${earnings.availableForWithdraw.toFixed(2)}`,
       icon: CheckCircle,
-      color: 'bg-purple-500',
-      change: '',
-      positive: true
+      color: 'bg-purple-500'
     },
     {
       title: 'Pending Earnings',
       value: `$${earnings.pending.toFixed(2)}`,
       icon: Clock,
-      color: 'bg-orange-500',
-      change: '',
-      positive: true
+      color: 'bg-orange-500'
     }
   ];
 
@@ -256,11 +167,7 @@ const EarningsPage = () => {
                   <div>
                     <p className="text-sm font-medium text-gray-600">{stat.title}</p>
                     <p className="text-2xl font-bold text-gray-900 mt-1">{stat.value}</p>
-                    {stat.change && (
-                      <p className={`text-sm mt-1 ${stat.positive ? 'text-green-600' : 'text-red-600'}`}>
-                        {stat.change} from last month
-                      </p>
-                    )}
+                    {/* Removed growth/change text */}
                   </div>
                   <div className={`${stat.color} p-3 rounded-lg`}>
                     <stat.icon className="h-6 w-6 text-white" />
@@ -331,8 +238,11 @@ const EarningsPage = () => {
                            'Deposit'}
                         </p>
                         <p className="text-xs text-gray-500">
-                          {new Date(transaction.created_at).toLocaleDateString()}
+                          {transaction.created_at ? new Date(transaction.created_at).toLocaleDateString() : ''}
                         </p>
+                        {transaction.description && (
+                          <p className="text-xs text-gray-400">{transaction.description}</p>
+                        )}
                       </div>
                       <span className={`text-sm font-semibold ${
                         transaction.transaction_type === 'withdrawal' ? 'text-red-600' : 'text-green-600'
