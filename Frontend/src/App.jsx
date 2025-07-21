@@ -32,13 +32,10 @@ function App() {
             {/* Route for the introduction page */}
             <Route path="/" element={<Introduction />} />
 
-            {/* Route for login page */}
-            <Route path="/login" element={<LoginPage />} />
-
             <Route path="admin/AdminDashboard" element={<AdminDashboard />} />
-            
-            {/* Route for signup page */}
-            <Route path="/signup" element={<SignupPage />} />
+            {/* Route for authentication page */}
+            <Route path="/auth" element={<AuthPage />} />
+
             <Route path="/admin/servicemanagement" element={<ServicesManagement />} />
             {/*ROUTE FOR CREATE GIGS*/}
             <Route path="/create-gig" element={<CreateGigsPage />} />
