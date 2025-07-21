@@ -22,7 +22,7 @@ import DepositPage from './pages/DepositPage';
 import WithdrawPage from './pages/WithdrawPage';
 import Favorites from './pages/Favorites';
 import SearchPage from './pages/SearchPage';
-
+import ServicesManagement from './pages/Admin/ServiceManagement';
 function App() {
   return (
     <AuthProvider>
@@ -43,7 +43,7 @@ function App() {
             
             {/* Route for signup page */}
             <Route path="/signup" element={<SignupPage />} />
-
+            <Route path="/admin/servicemanagement" element={<ServicesManagement />} />
             {/*ROUTE FOR CREATE GIGS*/}
             <Route path="/create-gig" element={<CreateGigsPage />} />
             
