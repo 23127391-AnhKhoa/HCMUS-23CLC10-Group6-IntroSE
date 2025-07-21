@@ -421,18 +421,12 @@ const GigService = {
         sum + parseFloat(order.price_at_purchase || 0), 0
       );
 
-      // Mock data for impressions and clicks (would need separate tracking in real app)
-      const impressions = Math.floor(Math.random() * 2000) + 500;
-      const clicks = Math.floor(Math.random() * 500) + 100;
-
+      // Only return necessary statistics
       const statistics = {
-        impressions,
-        clicks,
         orders: totalOrders,
         cancellations: cancelledOrders.length,
         earnings: Math.round(totalEarnings * 100) / 100,
-        completedOrders: completedOrders.length,
-        conversionRate: clicks > 0 ? ((totalOrders / clicks) * 100).toFixed(2) : 0
+        completedOrders: completedOrders.length
       };
 
       console.log('✅ [Gig Service] Statistics calculated:', statistics);
