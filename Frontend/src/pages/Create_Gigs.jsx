@@ -287,7 +287,7 @@ const CreateGigsPage = () => {
         num_of_edits: parseInt(gigData.num_of_edits),
         category_id: getCategoryIdFromName(gigData.category),
         owner_id: gigData.owner_id,
-        status: 'active'
+        status: 'pending'
       };
 
       console.log('Publishing gig with payload:', gigPayload);
