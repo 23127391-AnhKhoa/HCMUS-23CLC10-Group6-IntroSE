@@ -9,8 +9,6 @@ const API_CONFIG = {
   // Endpoints
   ENDPOINTS: {
     // Auth endpoints
-    LOGIN: '/auth/login',
-    REGISTER: '/auth/register',
     
     // User endpoints
     USERS: '/users',

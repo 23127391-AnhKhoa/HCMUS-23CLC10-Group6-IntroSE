@@ -13,7 +13,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import PropTypes from 'prop-types';
 import DOMPurify from 'dompurify';
-import ApiService from '../../services/apiService';
+import ApiService from '../../services/CreateGigs.service';
 import DeliveryFilesModal from '../DeliveryFilesModal/DeliveryFilesModal';
 import UploadDeliveryModal from '../UploadDeliveryModal/UploadDeliveryModal';
 import AutoPaymentTimer from '../AutoPaymentTimer/AutoPaymentTimer';
