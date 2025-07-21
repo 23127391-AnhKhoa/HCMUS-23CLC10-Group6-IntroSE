@@ -50,7 +50,7 @@ const Orders = () => {
         
         if (!authLoading && (!authUser || !token)) {
             console.log('❌ No authentication, redirecting to login');
-            navigate('/login');
+            navigate('/auth');
             return;
         }
     }, [authUser, token, authLoading, navigate]);
@@ -278,6 +278,7 @@ const Orders = () => {
                             onClick={() => {
                                 setActiveTab('seller');
                                 setCurrentPage(1);
+                                // hàm đổi mode
                             }}
                             className={`px-4 py-2 rounded-md font-medium transition-colors ${
                                 activeTab === 'seller'

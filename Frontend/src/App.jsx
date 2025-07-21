@@ -1,9 +1,8 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
-import LoginPage from './pages/LoginPage';
+import AuthPage from './pages/AuthPage';
 import Introduction from './pages/Introduction';
-import SignupPage from './pages/SignupPage'; // New placeholder for signup
 import CreateGigsPage from './pages/Create_Gigs';
 import AdminDashboard from './pages/Admin/AdminDashboard';
 import ExplorePage from './pages/ExplorePage';
@@ -30,19 +29,14 @@ function App() {
         
         <div className="App">
           <Routes>
-            {/* Route for news page */}
-            
-
             {/* Route for the introduction page */}
             <Route path="/" element={<Introduction />} />
 
-            {/* Route for login page */}
-            <Route path="/login" element={<LoginPage />} />
+            {/* Route for the authentication page */}
+            <Route path="/auth" element={<AuthPage />} />
 
-            <Route path="admin/AdminDashboard" element={<AdminDashboard />} />
-            
-            {/* Route for signup page */}
-            <Route path="/signup" element={<SignupPage />} />
+            {/* Route for the admin dashboard */}
+            <Route path="/admin/AdminDashboard" element={<AdminDashboard />} />
 
             {/*ROUTE FOR CREATE GIGS*/}
             <Route path="/create-gig" element={<CreateGigsPage />} />
@@ -52,6 +46,7 @@ function App() {
             <Route path="/search" element={<SearchPage />} />
 
             <Route path="/admin/Usermanagement" element={<UserManagement />} />
+
             <Route path="/gig/:id" element={<GigDetail />} />
 
             <Route path="/profile_buyer" element={<ProfileBuyer />} />

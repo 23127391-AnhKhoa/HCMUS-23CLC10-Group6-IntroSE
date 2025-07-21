@@ -25,7 +25,7 @@ const BecomeSellerPage = () => {
       const token = localStorage.getItem('token');
       if (!token) {
       message.error('You must be logged in to become a seller');
-      navigate('/login');
+      navigate('/auth'); // Chuyển hướng đến trang đăng nhập
       return;
       }
       

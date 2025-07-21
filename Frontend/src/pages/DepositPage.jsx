@@ -51,7 +51,7 @@ const DepositPage = () => {
       
       if (!token) {
         message.error('You must be logged in to deposit');
-        navigate('/login');
+        navigate('/auth');
         return;
       }
 

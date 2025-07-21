@@ -64,7 +64,7 @@ const SellerInfo = () => {
                     {/* Seller Profile Card */}
                     <div className="bg-white rounded-xl shadow-lg overflow-hidden mb-6">
                         {/* Banner and Profile Picture Section */}
-                        <div className="relative h-48 bg-gradient-to-r from-blue-500 to-indigo-600">
+                        <div className="relative h-48 bg-gradient-to-r from-blue-500 to-pink-600">
                             <div className="absolute -bottom-12 left-8">
                                 <div className="h-24 w-24 rounded-full border-4 border-white bg-white overflow-hidden shadow-lg">
                                     <img 
@@ -86,13 +86,6 @@ const SellerInfo = () => {
                                     {sellerDetails.seller_headline && (
                                         <p className="text-gray-700 mt-2 italic">{sellerDetails.seller_headline}</p>
                                     )}
-                                </div>
-                                <div className="flex space-x-3">
-                                    <button 
-                                        className="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-md transition duration-150 ease-in-out"
-                                    >
-                                        Add to Favorites
-                                    </button>
                                 </div>
                             </div>
 

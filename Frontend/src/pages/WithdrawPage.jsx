@@ -21,7 +21,7 @@ const WithdrawPage = () => {
       
       if (!token) {
         message.error('You must be logged in to withdraw');
-        navigate('/login');
+        navigate('/auth');
         return;
       }
 
