@@ -24,6 +24,33 @@ const updateUserByUuid = async (uuid, updateData) => {
     return data;
 };
 
+// New function for updating user profile (allows more fields)
+const updateUserProfile = async (uuid, updateData) => {
+    const allowedProfileUpdates = [
+        'fullname', 'username', 'bio', 'skills', 'hourlyRate', 
+        'avt_url', 'seller_headline', 'seller_description'
+    ];
+    
+    const finalUpdateData = {};
+    for (const key of allowedProfileUpdates) {
+        if (updateData[key] !== undefined) {
+            finalUpdateData[key] = updateData[key];
+        }
+    }
+
+    if (Object.keys(finalUpdateData).length === 0) {
+        throw new Error("No valid profile fields to update.");
+    }
+
+    console.log('Updating profile with data:', finalUpdateData);
+    const data = await User.updateByUuid(uuid, finalUpdateData);
+    return {
+        status: 'success',
+        message: 'Profile updated successfully',
+        data: data
+    };
+};
+
 const deleteUserByUuid = async (uuid) => {
     // Dữ liệu cần cập nhật
     const dataToUpdate = { status: 'inactive' };
@@ -295,6 +322,7 @@ const getUserByUsername = async (username) => {
 module.exports = {
     fetchAllUsers,
     updateUserByUuid,
+    updateUserProfile,
     deleteUserByUuid,
     getUserById,
     getUserByUsername,

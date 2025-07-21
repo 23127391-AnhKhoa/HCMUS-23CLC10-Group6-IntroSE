@@ -3,6 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import NavBarSeller from '../Common/NavBar_Seller';
 import Footer from '../Common/Footer';
+import AvatarUpload from '../components/AvatarUpload';
 
 const ProfileSeller = () => {
   const { authUser, token } = useAuth();
@@ -27,7 +28,8 @@ const ProfileSeller = () => {
     email: '',
     bio: '',
     skills: '',
-    hourlyRate: ''
+    hourlyRate: '',
+    avt_url: ''
   });
 
   useEffect(() => {
@@ -53,7 +55,8 @@ const ProfileSeller = () => {
           email: data.data.email || authUser?.email || '',
           bio: data.data.bio || '',
           skills: data.data.skills || '',
-          hourlyRate: data.data.hourlyRate || ''
+          hourlyRate: data.data.hourlyRate || '',
+          avt_url: data.data.avatar_url || ''
         });
       } catch (err) {
         setError(err.message);
@@ -154,6 +157,18 @@ const ProfileSeller = () => {
     }));
   };
 
+  const handleAvatarChange = (avatarUrl) => {
+    setFormData(prev => ({
+      ...prev,
+      avt_url: avatarUrl
+    }));
+    // Also update the profile state to reflect changes immediately
+    setProfile(prev => ({
+      ...prev,
+      avatar_url: avatarUrl
+    }));
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
@@ -218,11 +233,11 @@ const ProfileSeller = () => {
               <h2 className="text-sm font-semibold text-gray-800 mb-2">My Profile</h2>
               
               <div className="text-center mb-2">
-                <div className="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center mx-auto mb-2">
-                  <span className="text-base font-bold text-white">
-                    {profile?.fullname?.charAt(0).toUpperCase() || authUser?.email?.charAt(0).toUpperCase()}
-                  </span>
-                </div>
+                <AvatarUpload 
+                  currentAvatar={profile?.avatar_url || formData.avt_url}
+                  onAvatarChange={handleAvatarChange}
+                  size="medium"
+                />
                 
                 <div>
                   <h3 className="text-base font-semibold text-gray-800">{profile?.fullname || 'Seller'}</h3>
@@ -351,6 +366,16 @@ const ProfileSeller = () => {
             <h2 className="text-lg font-semibold text-gray-800 mb-4">Edit Profile</h2>
             
             <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="flex flex-col items-center mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-3">Profile Avatar</label>
+                <AvatarUpload 
+                  currentAvatar={formData.avt_url}
+                  onAvatarChange={handleAvatarChange}
+                  size="xlarge"
+                />
+                <p className="text-xs text-gray-500 mt-2">Click to upload a new avatar</p>
+              </div>
+              
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
