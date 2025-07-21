@@ -21,7 +21,7 @@ import DepositPage from './pages/DepositPage';
 import WithdrawPage from './pages/WithdrawPage';
 import Favorites from './pages/Favorites';
 import SearchPage from './pages/SearchPage';
-
+import ServicesManagement from './pages/Admin/ServiceManagement';
 function App() {
   return (
     <AuthProvider>
@@ -32,12 +32,14 @@ function App() {
             {/* Route for the introduction page */}
             <Route path="/" element={<Introduction />} />
 
-            {/* Route for the authentication page */}
-            <Route path="/auth" element={<AuthPage />} />
+            {/* Route for login page */}
+            <Route path="/login" element={<LoginPage />} />
 
-            {/* Route for the admin dashboard */}
-            <Route path="/admin/AdminDashboard" element={<AdminDashboard />} />
-
+            <Route path="admin/AdminDashboard" element={<AdminDashboard />} />
+            
+            {/* Route for signup page */}
+            <Route path="/signup" element={<SignupPage />} />
+            <Route path="/admin/servicemanagement" element={<ServicesManagement />} />
             {/*ROUTE FOR CREATE GIGS*/}
             <Route path="/create-gig" element={<CreateGigsPage />} />
             

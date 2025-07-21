@@ -83,9 +83,9 @@ const ManageGigs = () => {
       case 'active':
         return gig.status === 'active';
       case 'paused':
-        return gig.status === 'paused' || gig.status === 'inactive';
-      case 'drafts':
-        return gig.status === 'draft';
+        return gig.status === 'paused' ;
+      case 'denied':
+        return gig.status === 'denied';
       default:
         return true;
     }
@@ -193,20 +193,18 @@ const ManageGigs = () => {
   return (
     <>
       <NavBar_Seller />
-      <div className="min-h-screen bg-gray-50 py-8">
+      <div className="min-h-screen bg-gray-50 pt-24 py-8"> {/* Add pt-24 for NavBar spacing */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900">Manage Gigs</h1>
           <p className="text-gray-600 mt-2">Monitor and manage your gig performance</p>
         </div>
-
         {/* Tabs */}
         <div className="mb-6">
           <div className="border-b border-gray-200">
             <nav className="-mb-px flex space-x-8">
-              {['active', 'paused', 'drafts'].map((tab) => (
+              {['active', 'paused', 'denied'].map((tab) => (
                 <button
                   key={tab}
                   onClick={() => handleTabChange(tab)}
@@ -222,7 +220,6 @@ const ManageGigs = () => {
             </nav>
           </div>
         </div>
-
         {/* Gigs Table */}
         <div className="bg-white shadow-sm rounded-lg overflow-hidden">
           <div className="overflow-x-auto">
@@ -231,12 +228,6 @@ const ManageGigs = () => {
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Gig
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Impressions
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Clicks
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Orders
@@ -255,7 +246,7 @@ const ManageGigs = () => {
               <tbody className="bg-white divide-y divide-gray-200">
                 {filteredGigs.length === 0 ? (
                   <tr>
-                    <td colSpan="7" className="px-6 py-4 text-center text-gray-500">
+                    <td colSpan="5" className="px-6 py-4 text-center text-gray-500">
                       No {activeTab} gigs found
                     </td>
                   </tr>
@@ -265,27 +256,30 @@ const ManageGigs = () => {
                     return (
                       <tr key={gig.id} className="hover:bg-gray-50">
                         <td className="px-6 py-4">
-                          <div className="flex items-start space-x-3">
-                            <img
-                              src={gig.cover_image || 'https://via.placeholder.com/60x60'}
-                              alt={gig.title}
-                              className="w-15 h-15 rounded-lg object-cover flex-shrink-0"
-                            />
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium text-gray-900 truncate">
-                                {gig.title}
-                              </p>
-                              <p className="text-sm text-gray-500 mt-1">
-                                ${gig.price}
-                              </p>
+                          <div className="flex flex-col items-start space-y-2">
+                            <div className="flex items-center space-x-3">
+                              <img
+                                src={gig.cover_image || 'https://via.placeholder.com/60x60'}
+                                alt={gig.title}
+                                className="w-16 h-16 rounded-lg object-cover flex-shrink-0"
+                              />
+                              <div className="flex-1 min-w-0">
+                                <button
+                                  className="text-sm font-medium text-green-700 hover:underline text-left"
+                                  onClick={() => navigate(`/gig/${gig.id}`)}
+                                  style={{ background: 'none', border: 'none', padding: 0, margin: 0, cursor: 'pointer' }}
+                                >
+                                  {gig.title}
+                                </button>
+                                <p className="text-sm text-gray-500 mt-1">
+                                  ${gig.price}
+                                </p>
+                              </div>
                             </div>
+                            <p className="text-xs text-gray-600 mt-2">
+                              {gig.description || 'No description provided.'}
+                            </p>
                           </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {stats.impressions?.toLocaleString() || 'N/A'}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {stats.clicks?.toLocaleString() || 'N/A'}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                           {stats.orders || 0}
@@ -330,19 +324,12 @@ const ManageGigs = () => {
             </table>
           </div>
         </div>
-
         {/* Summary Stats */}
         {filteredGigs.length > 0 && (
-          <div className="mt-8 grid grid-cols-1 md:grid-cols-4 gap-6">
+          <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6"> {/* Remove Impressions summary */}
             <div className="bg-white p-6 rounded-lg shadow-sm">
               <h3 className="text-lg font-medium text-gray-900">Total Gigs</h3>
               <p className="text-3xl font-bold text-green-600 mt-2">{filteredGigs.length}</p>
-            </div>
-            <div className="bg-white p-6 rounded-lg shadow-sm">
-              <h3 className="text-lg font-medium text-gray-900">Total Impressions</h3>
-              <p className="text-3xl font-bold text-blue-600 mt-2">
-                {filteredGigs.reduce((sum, gig) => sum + (getGigStats(gig).impressions || 0), 0).toLocaleString()}
-              </p>
             </div>
             <div className="bg-white p-6 rounded-lg shadow-sm">
               <h3 className="text-lg font-medium text-gray-900">Total Orders</h3>
@@ -358,7 +345,6 @@ const ManageGigs = () => {
             </div>
           </div>
         )}
-
         {/* Create New Gig Button */}
         <div className="mt-8 text-center">
           <button
