@@ -192,7 +192,7 @@ const AdminDashboard = () => {
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
-        const response = await fetch('/api/dashboard/stats');
+        const response = await fetch('/api/admin/stats');
         if (!response.ok) {
           throw new Error('Failed to fetch dashboard data');
         }

@@ -42,16 +42,21 @@ const orderRoutes = require('./routes/orders.routes');
 const transactionRoutes = require('./routes/transactions.routes');
 const adminRoutes = require('./routes/admin.routes');
 const uploadRoutes = require('./routes/upload.routes');
-const dashboardRoutes = require('./routes/dashboard.routes');
 const conversationRoutes = require('./routes/conversations.routes');
+const categoriesRoutes = require('./routes/categories.routes');
 
 // API routes
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
+<<<<<<< HEAD
+=======
+app.use('/api/conversations', conversationRoutes);
+>>>>>>> dev
 app.use('/api/gigs', gigRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/transactions', transactionRoutes);
 app.use('/api/upload', uploadRoutes);
+<<<<<<< HEAD
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/conversations', conversationRoutes);
 //app.use('/api/admin', adminRoutes); // Uncomment when needed
@@ -64,6 +69,12 @@ app.get('/health', (req, res) => {
     environment: process.env.NODE_ENV || 'development'
   });
 });
+=======
+app.use('/api/admin', adminRoutes);
+app.use('/api/categories', categoriesRoutes); 
+//app.use('/api/admin', adminRoutes);
+// Xài cái api thì nhớ bỏ // ở đầu, ví dụ xài gigs thì bỏ //, tại bây giờ chưa định nghĩa mà để dô thì nó không được hiểu là function, nó sẽ bị lỗi
+>>>>>>> dev
 
 // Error handling middleware
 app.use((err, req, res, next) => {

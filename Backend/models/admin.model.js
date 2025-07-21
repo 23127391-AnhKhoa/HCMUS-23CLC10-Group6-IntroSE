@@ -1,4 +1,4 @@
-// models/dashboard.model.js
+// models/admin.model.js
 const supabase = require('../config/supabaseClient');
 
 const getStartOfToday = () => {
@@ -14,7 +14,7 @@ const getStartOfMonth = () => {
     return now.toISOString();
 }
 
-const DashboardModel = {
+const AdminModel = {
     /**
      * Lấy dữ liệu cho 4 thẻ thống kê đầu trang.
      */
@@ -141,4 +141,4 @@ const DashboardModel = {
     }
 };
 
-module.exports = DashboardModel;
+module.exports = AdminModel;

@@ -320,65 +320,64 @@ const OrderService = {
     }
   },
 
-  /**
-   * Get orders for a specific client
-   * 
-   * @param {string} clientId - Client UUID
-   * @param {Object} options - Query options
-   * @returns {Promise<Array>} Array of client orders
-   */
-  getClientOrders: async (clientId, options = {}) => {
-    try {
-      console.log('👤 [Order Service] getClientOrders called for client:', clientId);
-      console.log('🔧 Options:', options);
-      
-      const orders = await Order.findByClientId(clientId, options);
-      console.log('✅ [Order Service] Found', orders?.length || 0, 'orders for client');
-      
-      // Flatten the nested data for easier frontend consumption
-      const flattenedOrders = orders.map(order => ({
-        id: order.id,
-        client_id: order.client_id,
-        gig_id: order.gig_id,
-        price_at_purchase: order.price_at_purchase,
-        requirement: order.requirement,
-        status: order.status,
-        created_at: order.created_at,
-        completed_at: order.completed_at,
-        // Client information (current user)
-        client_username: order.User?.username,
-        client_fullname: order.User?.fullname,
-        client_name: order.User?.fullname || order.User?.username || 'Unknown Client',
-        client_avatar: order.User?.avt_url || 'https://placehold.co/300x300',
-        // Gig information with detailed fields
-        gig_title: order.Gigs?.title,
-        gig_cover_image: order.Gigs?.cover_image,
-        gig_description: order.Gigs?.description,
-        gig_price: order.Gigs?.price,
-        gig_delivery_days: order.Gigs?.delivery_days,
-        gig_num_of_edits: order.Gigs?.num_of_edits,
-        gig_status: order.Gigs?.status,
-        gig_owner_id: order.Gigs?.owner_id,
-        gig_category_id: order.Gigs?.category_id,
-        gig_created_at: order.Gigs?.created_at,
-        gig_updated_at: order.Gigs?.updated_at,
-        // Gig owner information (seller)
-        gig_owner_username: order.Gigs?.User?.username,
-        gig_owner_fullname: order.Gigs?.User?.fullname,
-        gig_owner_name: order.Gigs?.User?.fullname || order.Gigs?.User?.username || 'Unknown Seller',
-        gig_owner_avatar: order.Gigs?.User?.avt_url || 'https://placehold.co/300x300'
-      }));
+/**
+ * Get orders for a specific client
+ * 
+ * @param {string} clientId - Client UUID
+ * @param {Object} options - Query options
+ * @returns {Promise<Array>} Array of client orders
+ */
+getClientOrders: async (clientId, options = {}) => {
+  try {
+    console.log('👤 [Order Service] getClientOrders called for client:', clientId);
+    console.log('🔧 Options:', options);
+    
+    const orders = await Order.findByClientId(clientId, options);
+    console.log('✅ [Order Service] Found', orders?.length || 0, 'orders for client');
+    
+    // Flatten the nested data for easier frontend consumption
+    const flattenedOrders = orders.map(order => ({
+      id: order.id,
+      client_id: order.client_id,
+      gig_id: order.gig_id,
+      price_at_purchase: order.price_at_purchase,
+      requirement: order.requirement,
+      status: order.status,
+      created_at: order.created_at,
+      completed_at: order.completed_at,
+      // Client information
+      client_username: order.User?.username,
+      client_fullname: order.User?.fullname,
+      client_name: order.User?.fullname || order.User?.username || 'Unknown Client',
+      client_avatar: order.User?.avt_url || 'https://placehold.co/300x300',
+      // Gig information with detailed fields
+      gig_title: order.Gigs?.title,
+      gig_cover_image: order.Gigs?.cover_image,
+      gig_description: order.Gigs?.description,
+      gig_price: order.Gigs?.price,
+      gig_delivery_days: order.Gigs?.delivery_days,
+      gig_num_of_edits: order.Gigs?.num_of_edits,
+      gig_status: order.Gigs?.status,
+      gig_owner_id: order.Gigs?.owner_id,
+      gig_category_id: order.Gigs?.category_id,
+      gig_created_at: order.Gigs?.created_at,
+      gig_updated_at: order.Gigs?.updated_at,
+      // Gig owner information
+      gig_owner_username: order.Gigs?.User?.username,
+      gig_owner_fullname: order.Gigs?.User?.fullname,
+      gig_owner_name: order.Gigs?.User?.fullname || order.Gigs?.User?.username || 'Unknown Seller',
+      gig_owner_avatar: order.Gigs?.User?.avt_url || 'https://placehold.co/300x300'
+    }));
 
-      console.log('✅ [Order Service] Flattened client orders:', flattenedOrders?.length || 0);
-      console.log('🔍 Sample order:', flattenedOrders[0]);
-      
-      return flattenedOrders;
-    } catch (error) {
-      console.error('💥 [Order Service] Error in getClientOrders:', error);
-      console.error('Stack trace:', error.stack);
-      throw new Error(`Error fetching client orders: ${error.message}`);
-    }
-  },
+    console.log('✅ [Order Service] Flattened client orders:', flattenedOrders?.length || 0);
+    
+    return flattenedOrders;
+  } catch (error) {
+    console.error('💥 [Order Service] Error in getClientOrders:', error);
+    console.error('Stack trace:', error.stack);
+    throw new Error(`Error fetching client orders: ${error.message}`);
+  }
+},
 
   /**
    * Get orders for gigs owned by a specific user
@@ -777,6 +776,196 @@ const OrderService = {
     } catch (error) {
       console.error('❌ [Order Service] Error in getOrderStatistics:', error);
       throw error;
+    }
+  },
+
+  /**
+   * Get recent orders for a seller (for earnings page)
+   * 
+   * @param {string} sellerId - Seller UUID
+   * @param {number} [limit=10] - Number of recent orders to fetch
+   * @returns {Promise<Array>} Array of recent orders with gig details
+   */
+  getSellerRecentOrders: async (sellerId, limit = 10) => {
+    try {
+      console.log('🔍 [Order Service] getSellerRecentOrders called for seller:', sellerId);
+      
+      // Get recent orders for seller's gigs using Supabase query
+      const { data: orders, error } = await supabase
+        .from('Orders')
+        .select(`
+          id,
+          price_at_purchase,
+          status,
+          requirement,
+          created_at,
+          completed_at,
+          Gigs!Orders_gig_id_fkey (
+            id,
+            title,
+            owner_id
+          )
+        `)
+        .eq('Gigs.owner_id', sellerId)
+        .order('created_at', { ascending: false })
+        .limit(limit);
+
+      if (error) {
+        throw new Error(`Error fetching recent orders: ${error.message}`);
+      }
+
+      // Transform data for frontend
+      const recentOrders = orders.map(order => ({
+        id: order.id,
+        gig_title: order.Gigs?.title || 'Unknown Gig',
+        price_at_purchase: parseFloat(order.price_at_purchase),
+        status: order.status,
+        requirement: order.requirement,
+        created_at: order.created_at,
+        completed_at: order.completed_at
+      }));
+
+      console.log('✅ [Order Service] Found', recentOrders.length, 'recent orders for seller');
+      return recentOrders;
+    } catch (error) {
+      console.error('💥 [Order Service] Error in getSellerRecentOrders:', error);
+      throw new Error(`Error fetching seller recent orders: ${error.message}`);
+    }
+  },
+
+  /**
+   * Get seller earnings statistics (for earnings page)
+   * 
+   * @param {string} sellerId - Seller UUID  
+   * @param {string} [period='allTime'] - Time period filter
+   * @returns {Promise<Object>} Earnings statistics object
+   */
+  getSellerEarningsStats: async (sellerId, period = 'allTime') => {
+    try {
+      console.log('📊 [Order Service] getSellerEarningsStats called for seller:', sellerId, 'period:', period);
+      
+      // Calculate date range based on period
+      const now = new Date();
+      let startDate = null;
+      
+      switch(period) {
+        case 'thisMonth':
+          startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+          break;
+        case 'lastMonth':
+          startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+          const endDate = new Date(now.getFullYear(), now.getMonth(), 0);
+          break;
+        case 'thisYear':
+          startDate = new Date(now.getFullYear(), 0, 1);
+          break;
+        default: // allTime
+          startDate = null;
+      }
+
+      // Build query for orders
+      let ordersQuery = supabase
+        .from('Orders')
+        .select(`
+          id,
+          price_at_purchase,
+          status,
+          created_at,
+          completed_at,
+          Gigs!Orders_gig_id_fkey (
+            id,
+            title,
+            owner_id
+          )
+        `)
+        .eq('Gigs.owner_id', sellerId);
+
+      if (startDate) {
+        ordersQuery = ordersQuery.gte('created_at', startDate.toISOString());
+      }
+
+      const { data: orders, error: ordersError } = await ordersQuery;
+      if (ordersError) throw ordersError;
+
+      // Calculate statistics
+      const completedOrders = orders.filter(order => order.status === 'completed');
+      const totalEarnings = completedOrders.reduce((sum, order) => sum + parseFloat(order.price_at_purchase), 0);
+      const averageOrderValue = completedOrders.length > 0 ? totalEarnings / completedOrders.length : 0;
+      
+      const pendingOrders = orders.filter(order => ['pending', 'in_progress'].includes(order.status));
+      const pendingEarnings = pendingOrders.reduce((sum, order) => sum + parseFloat(order.price_at_purchase), 0);
+
+      // Get seller balance
+      const { data: user, error: userError } = await supabase
+        .from('User')
+        .select('balance')
+        .eq('uuid', sellerId)
+        .single();
+      
+      if (userError) throw userError;
+
+      // Get active gigs count
+      const { data: activeGigs, error: gigsError } = await supabase
+        .from('Gigs')
+        .select('id')
+        .eq('owner_id', sellerId)
+        .eq('status', 'active');
+      
+      if (gigsError) throw gigsError;
+
+      // Get withdrawal transactions
+      const { data: transactions, error: transError } = await supabase
+        .from('Transactions')
+        .select('amount')
+        .eq('user_id', sellerId)
+        .ilike('description', '%withdraw%');
+      
+      const totalWithdrawn = transactions 
+        ? transactions.reduce((sum, trans) => sum + Math.abs(parseFloat(trans.amount)), 0)
+        : 0;
+
+      // Calculate monthly breakdown
+      const monthlyStats = {};
+      completedOrders.forEach(order => {
+        const date = new Date(order.completed_at || order.created_at);
+        const monthKey = `${date.getFullYear()}-${date.getMonth()}`;
+        const monthName = date.toLocaleDateString('en-US', { month: 'short' });
+        const year = date.getFullYear();
+        
+        if (!monthlyStats[monthKey]) {
+          monthlyStats[monthKey] = {
+            month: monthName,
+            year: year,
+            earnings: 0,
+            orders: 0
+          };
+        }
+        
+        monthlyStats[monthKey].earnings += parseFloat(order.price_at_purchase);
+        monthlyStats[monthKey].orders += 1;
+      });
+
+      const monthlyBreakdown = Object.values(monthlyStats)
+        .sort((a, b) => new Date(a.year, a.month) - new Date(b.year, b.month))
+        .slice(-12); // Last 12 months
+
+      const earningsStats = {
+        totalEarnings,
+        completedOrders: completedOrders.length,
+        averageOrderValue,
+        pendingEarnings,
+        availableBalance: parseFloat(user.balance || 0),
+        totalWithdrawn,
+        activeGigs: activeGigs.length,
+        completionRate: orders.length > 0 ? (completedOrders.length / orders.length) * 100 : 0,
+        monthlyBreakdown
+      };
+
+      console.log('✅ [Order Service] Earnings stats calculated:', earningsStats);
+      return earningsStats;
+    } catch (error) {
+      console.error('💥 [Order Service] Error in getSellerEarningsStats:', error);
+      throw new Error(`Error fetching seller earnings stats: ${error.message}`);
     }
   }
 };

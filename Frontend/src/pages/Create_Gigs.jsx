@@ -8,7 +8,7 @@ import NavbarLD from '../Common/Navbar_LD';
 import LoadingOverlay from '../Common/LoadingOverlay';
 import Stepper from '../components/CreateGigButton/Stepper/Stepper';
 import GigPublishSuccess from '../components/GigPublishSuccess';
-import ApiService from '../services/apiService';
+import ApiService from '../services/CreateGigs.service';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
@@ -56,6 +56,7 @@ const CreateGigsPage = () => {
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [publishedGigData, setPublishedGigData] = useState(null);
   const [isPublishing, setIsPublishing] = useState(false); // Track publishing state
+  const [categories, setCategories] = useState([]); // Store categories from API
 
   const [gigData, setGigData] = useState({
     // Overview fields
@@ -169,7 +170,30 @@ const CreateGigsPage = () => {
     return Object.keys(stepErrors).length === 0;
   };
 
-  // Check if user is authenticated
+  // Fetch categories from API
+  const fetchCategories = async () => {
+    try {
+      console.log('[CreateGigs] Fetching categories...');
+      const response = await fetch('http://localhost:8000/api/categories');
+      if (response.ok) {
+        const data = await response.json();
+        if (data.status === 'success') {
+          setCategories(data.data || []);
+          console.log('[CreateGigs] Categories loaded successfully:', data.data?.length || 0, 'categories');
+          console.log('[CreateGigs] Sample category structure:', data.data?.[0]);
+        } else {
+          console.warn('[CreateGigs] Categories API returned non-success status:', data.status);
+        }
+      } else {
+        console.warn('[CreateGigs] Categories API response not ok:', response.status);
+      }
+    } catch (err) {
+      console.error('[CreateGigs] Error fetching categories:', err);
+      // Don't set error state as categories are optional for now
+    }
+  };
+
+  // Check if user is authenticated and fetch categories
   useEffect(() => {
     if (!authUser) {
       navigate('/login', { 
@@ -181,6 +205,9 @@ const CreateGigsPage = () => {
     } else {
       setGigData(prev => ({ ...prev, owner_id: authUser.uuid }));
     }
+    
+    // Fetch categories when component mounts
+    fetchCategories();
   }, [authUser, navigate]);
 
   const handleInputChange = (fieldName, value) => {
@@ -278,6 +305,12 @@ const CreateGigsPage = () => {
       const totalPrice = calculateTotalPrice();
       console.log('Publishing gig with calculated total price:', totalPrice);
       
+      // Get the correct category ID
+      const categoryId = getSelectedCategoryId();
+      if (!categoryId) {
+        throw new Error('Please select a valid category');
+      }
+      
       const gigPayload = {
         title: gigData.gigTitle,
         cover_image: gigData.cover_image,
@@ -285,7 +318,7 @@ const CreateGigsPage = () => {
         price: totalPrice, // Use calculated total price instead of base price
         delivery_days: parseInt(gigData.delivery_days),
         num_of_edits: parseInt(gigData.num_of_edits),
-        category_id: getCategoryIdFromName(gigData.category),
+        category_id: categoryId, // Use the new category ID logic
         owner_id: gigData.owner_id,
         status: 'pending'
       };
@@ -372,16 +405,49 @@ const CreateGigsPage = () => {
     }
   };
 
-  // Helper function to map category names to IDs
+  // Helper function to map category names to IDs using the fetched categories
   const getCategoryIdFromName = (categoryName) => {
-    const categoryMap = {
-      'dev': 1,
-      'design': 2,
-      'writing': 3,
-      'marketing': 4,
-      'business': 5
-    };
-    return categoryMap[categoryName] || 1;
+    if (!categoryName || !categories.length) {
+      console.warn('[CreateGigs] No category name or categories not loaded yet');
+      return null;
+    }
+
+    // First try to find in parent categories
+    const parentCategory = categories.find(cat => 
+      cat.name.toLowerCase() === categoryName.toLowerCase() && cat.parent_id === null
+    );
+    
+    if (parentCategory) {
+      return parentCategory.id;
+    }
+
+    // Then try to find in subcategories
+    for (const parentCat of categories) {
+      if (parentCat.children && parentCat.children.length > 0) {
+        const subcategory = parentCat.children.find(subCat => 
+          subCat.name.toLowerCase() === categoryName.toLowerCase()
+        );
+        if (subcategory) {
+          return subcategory.id;
+        }
+      }
+    }
+
+    console.warn('[CreateGigs] Category not found:', categoryName);
+    return null;
+  };
+
+  // Helper function to get category ID from the selected subcategory (if any) or category
+  const getSelectedCategoryId = () => {
+    // If subcategory is selected, use subcategory ID
+    if (gigData.subcategory) {
+      return getCategoryIdFromName(gigData.subcategory);
+    }
+    // Otherwise use main category ID
+    if (gigData.category) {
+      return getCategoryIdFromName(gigData.category);
+    }
+    return null;
   };
 
   const goBackOneStep = () => {
@@ -465,6 +531,7 @@ const CreateGigsPage = () => {
                 onCategoryChange={handleCategoryChange}
                 onUpdateTagsArray={handleUpdateTagsArray}
                 errors={errors}
+                categories={categories} // Pass categories to components
                 onPublish={currentStepDetails.name === 'Publish' ? publishGig : undefined}
                 isPublishing={currentStepDetails.name === 'Publish' ? isPublishing : false}
                 isLoading={currentStepDetails.name === 'Publish' ? isLoading : false}

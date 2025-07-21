@@ -37,6 +37,11 @@ const LoginPage = () => {
 
       // 5. Xử lý khi đăng nhập thành công
       // Gọi hàm login từ context để lưu thông tin vào state toàn cục và localStorage
+      await supabase.auth.setSession({
+        access_token: data.token,
+        refresh_token: '' // nếu backend không trả về refresh_token
+      });
+
       login(data.user, data.token);
 
       // 6. Điều hướng dựa trên role
@@ -47,7 +52,7 @@ const LoginPage = () => {
         navigate('/explore'); // Chuyển đến trang chính cho user
       }
       else if (data.user.role === 'seller') {
-        navigate('/Profile_Seller'); // Chuyển đến trang seller
+        navigate('/profile_seller'); // Chuyển đến trang seller
       }
 
     } catch (err) {
