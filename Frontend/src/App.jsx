@@ -23,6 +23,8 @@ import WithdrawPage from './pages/WithdrawPage';
 import Favorites from './pages/Favorites';
 import SearchPage from './pages/SearchPage';
 import ServicesManagement from './pages/Admin/ServiceManagement';
+import GigDetailContent from './pages/Admin/AdminGigContent';
+import AdminSellerInfor from './pages/Admin/AdminSellerInfor'; // Updated import for AdminSellerInfo
 function App() {
   return (
     <AuthProvider>
@@ -53,9 +55,11 @@ function App() {
 
             <Route path="/admin/Usermanagement" element={<UserManagement />} />
             <Route path="/gig/:id" element={<GigDetail />} />
+            <Route path="/admin/gig/:id" element={<GigDetailContent />} />
 
+            {/* Profile routes */}
             <Route path="/profile_buyer" element={<ProfileBuyer />} />
-
+            
             <Route path="/profile_seller" element={<ProfileSeller />} />
 
             <Route path="/dashboard" element={<ProfileSeller />} />
@@ -77,7 +81,9 @@ function App() {
             <Route path="/inbox" element={<InboxPage />} />
 
             <Route path="/messages" element={<InboxPage />} />
+            <Route path="/admin/seller/:sellerId" element={<AdminSellerInfor />} />
 
+            {/* Admin routes */}
             <Route path="/SellerInfo/:sellerId" element={<SellerInfo />} />
 
             <Route path="/favorites" element={<Favorites />} />
