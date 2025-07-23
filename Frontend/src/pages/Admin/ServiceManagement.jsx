@@ -10,7 +10,7 @@ const Sidebar = () => (
     <div className="w-64 bg-white h-screen flex flex-col justify-between p-4 shadow-lg">
       <div>
         <div className="flex items-center space-x-2 mb-10 p-2">
-          <img src="https://i.pravatar.cc/150?u=freeland-logo" alt="Logo" className="w-10 h-10 rounded-full" />
+          <img src="/logo.svg" alt="Logo" className="w-10 h-10 rounded-full" />
           <span className="font-bold text-xl text-gray-800">FREELAND</span>
         </div>
         <nav className="flex flex-col space-y-2">

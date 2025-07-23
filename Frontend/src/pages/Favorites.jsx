@@ -15,7 +15,7 @@ const Favorites = () => {
     useEffect(() => {
         if (!authLoading) {
             if (!authUser) {
-                navigate('/login');
+                navigate('/auth');
                 return;
             }
             fetchFavorites();

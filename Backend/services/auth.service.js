@@ -129,6 +129,34 @@ const AuthService = {
     },
     regenerateToken: (payload) => {
         return jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '1d' });
+    },
+
+    // Logic xử lý gửi lại OTP
+    handleResendOTP: async (email) => {
+        // Kiểm tra xem email có trong otpStore không (có nghĩa là đã register nhưng chưa verify)
+        const storedData = otpStore.get(email);
+        
+        if (!storedData) {
+            throw new Error('No pending registration found for this email. Please register again.');
+        }
+
+        // Tạo OTP mới
+        const newOTP = Math.floor(100000 + Math.random() * 900000).toString();
+        
+        // Gửi email với OTP mới
+        await mailService.sendOTPEmail(email, newOTP);
+        
+        // Cập nhật OTP và thời gian hết hạn trong store
+        otpStore.set(email, {
+            ...storedData,
+            otp: newOTP,
+            expires: Date.now() + 5 * 60 * 1000 // Reset thời gian hết hạn về 5 phút
+        });
+
+        return { 
+            message: 'New OTP sent to your email successfully.',
+            email: email
+        };
     }
 };
 
