@@ -25,6 +25,7 @@ const AdminModel = {
         const { data: salesData, error: salesError } = await supabase
             .from('Transactions')
             .select('amount')
+            .eq('type', 'payment')  
             .gte('created_at', today);
         if (salesError) throw salesError;
         const totalSales = salesData.reduce((sum, transaction) => sum + transaction.amount, 0);
@@ -138,6 +139,33 @@ const AdminModel = {
             discount: 'N/A', // Schema không có trường discount
             sold: g.sold_count
         }));
+    },
+
+    /**
+     * Tạo log mới trong bảng AdminLog
+     */
+    createAdminLog: async (logData) => {
+        const { actor_id, actor_role, target_id, target_type, action_type, description } = logData;
+        
+        const { data, error } = await supabase
+            .from('AdminLog')
+            .insert([{
+                actor_id,
+                actor_role,
+                target_id,
+                target_type,
+                action_type,
+                description
+            }])
+            .select()
+            .single();
+
+        if (error) {
+            console.error('Error inserting admin log:', error);
+            throw error;
+        }
+
+        return data;
     }
 };
 

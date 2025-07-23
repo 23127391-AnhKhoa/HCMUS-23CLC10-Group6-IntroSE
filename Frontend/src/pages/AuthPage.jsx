@@ -61,6 +61,19 @@ const AuthPage = () => {
     setActiveTab('login'); // quay lại login
     setStep('register');
   };
+
+  const handleResendOTP = async (email) => {
+    const response = await fetch('http://localhost:8000/api/auth/resend-otp', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+    });
+
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.message);
+
+    return data;
+  };
   return (
     <div className="relative w-full h-screen">
       <BackgroundVideo />
@@ -119,7 +132,11 @@ const AuthPage = () => {
             {activeTab === 'signup' && (
               step === 'register'
                 ? <SignupForm onRegister={handleRegister} />
-                : <OTPForm email={emailForVerification} onVerify={handleVerify} />
+                : <OTPForm 
+                    email={emailForVerification} 
+                    onVerify={handleVerify}
+                    onResendOTP={handleResendOTP}
+                  />
             )}
           </div>
         </div>

@@ -17,11 +17,11 @@ import SellerInfo from './pages/SellerInfo';
 import Footer from './Common/Footer';
 import BecomeSellerPage from './pages/BecomeSeller';
 import UserManagement from './pages/Admin/UserManagement';
-import DepositPage from './pages/DepositPage';
-import WithdrawPage from './pages/WithdrawPage';
+import WalletPage from './pages/WalletPage';
 import Favorites from './pages/Favorites';
 import SearchPage from './pages/SearchPage';
 import ServicesManagement from './pages/Admin/ServiceManagement';
+import ReportUserPage from './pages/ReportUserPage';
 function App() {
   return (
     <AuthProvider>
@@ -64,9 +64,11 @@ function App() {
 
             <Route path="/become-seller" element={<BecomeSellerPage />} />
 
-            <Route path="/deposit" element={<DepositPage />} />
+            <Route path="/deposit" element={<WalletPage />} />
 
-            <Route path="/withdraw" element={<WithdrawPage />} />
+            <Route path="/withdraw" element={<WalletPage />} />
+
+            <Route path="/wallet" element={<WalletPage />} />
 
             <Route path="/inbox" element={<InboxPage />} />
 
@@ -75,6 +77,8 @@ function App() {
             <Route path="/SellerInfo/:sellerId" element={<SellerInfo />} />
 
             <Route path="/favorites" element={<Favorites />} />
+
+            <Route path="/report-user" element={<ReportUserPage />} />
 
             {/* 404 Route for unmatched paths */}
             <Route path="*" element={

@@ -10,4 +10,7 @@ router.post('/deposit', authenticateToken, transactionController.deposit);
 // Route để rút tiền
 router.post('/withdraw', authenticateToken, transactionController.withdraw);
 
+// Route để lấy lịch sử giao dịch theo user ID
+router.get('/history', authenticateToken, transactionController.getTransactionHistory);
+
 module.exports = router;
