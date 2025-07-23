@@ -109,7 +109,7 @@ const ServCard = ({ gig, isPreview = false }) => {
         e.stopPropagation(); // Prevent card click event from firing
         
         if (!authUser || !token) {
-            navigate('/login');
+            navigate('/auth');
             return;
         }
 

@@ -4,8 +4,6 @@ import { Input, Avatar, Badge, Tooltip, Dropdown, Menu } from 'antd';
 import { SearchOutlined, MessageOutlined, BellOutlined, HeartOutlined, UserOutlined } from '@ant-design/icons';
 import { useAuth } from '../contexts/AuthContext'; // Đảm bảo đường dẫn đúng
 
-import FreelandLogo from '../assets/logo.svg'; // Import logo của bạn
-
 // Component con cho dropdown menu của categories
 const CategoryMenu = ({ category }) => {
   const navigate = useNavigate();
@@ -142,7 +140,7 @@ const Navbar = () => {
       const token = localStorage.getItem('token');
       
       if (!token) {
-        navigate('/login');
+        navigate('/auth');
         return;
       }
 
@@ -182,7 +180,7 @@ const Navbar = () => {
 
   const handleLogout = () => {
     logout();
-    navigate('/login');
+    navigate('/auth');
   };
 
   // Menu cho avatar người dùng
@@ -238,7 +236,7 @@ const Navbar = () => {
           {/* Phần bên trái: Logo và Search */}
           <div className="flex items-center flex-grow">
             <Link to="/explore" className="flex items-center mr-6">
-              <img src={FreelandLogo} alt="FREELAND Logo" className="h-8 w-auto" />
+              <img src="/logo.svg" alt="FREELAND Logo" className="h-4 w-auto" />
             </Link>
             <div className="w-full max-w-lg">
               <Input
@@ -320,7 +318,7 @@ const Navbar = () => {
             ) : (
               // Nếu chưa đăng nhập
               <>
-                <Link to="/login" className="font-medium hover:text-blue-600">Log In</Link>
+                <Link to="/auth" className="font-medium hover:text-blue-600">Log In</Link>
                 <Link to="/signup">
                   <button className="px-4 py-2 border border-blue-600 text-blue-600 rounded-md font-medium hover:bg-blue-600 hover:text-white transition-colors">
                     Sign Up

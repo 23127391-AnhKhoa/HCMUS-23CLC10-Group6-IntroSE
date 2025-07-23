@@ -42,78 +42,79 @@ const GigService = {
 
   // Get all gigs with pagination and filtering
   getAllGigs: async (options) => {
+    // Sửa đổi ở đây: Bỏ giá trị mặc định của filter_by_status
     const {
-      page = 1,
-      limit = 10,
-      sort_by = 'created_at',
-      sort_order = 'desc',
-      filter_by_category_id,
-      filter_by_owner_id,
-      filter_by_status = 'active',
-      search
+        page = 1,
+        limit = 10,
+        sort_by = 'created_at',
+        sort_order = 'desc',
+        filter_by_category_id,
+        filter_by_owner_id,
+        filter_by_status, // <-- ĐÃ XÓA GIÁ TRỊ MẶC ĐỊNH '= 'active''
+        search
     } = options;
 
     try {
-      // Prepare filters
-      const filters = {
-        page: parseInt(page),
-        limit: parseInt(limit),
-        sort_by,
-        sort_order,
-        status: filter_by_status
-      };
+        // Prepare filters
+        const filters = {
+            page: parseInt(page),
+            limit: parseInt(limit),
+            sort_by,
+            sort_order,
+        };
 
-      if (filter_by_category_id) {
-        filters.category_id = parseInt(filter_by_category_id);
-      }
+        // Sửa đổi ở đây: Chỉ thêm các filter vào nếu chúng tồn tại
+        if (filter_by_category_id) {
+            filters.category_id = parseInt(filter_by_category_id);
+        }
+        if (filter_by_owner_id) {
+            filters.owner_id = filter_by_owner_id;
+        }
+        if (filter_by_status) { // <-- CHỈ LỌC STATUS NẾU CÓ YÊU CẦU
+            filters.status = filter_by_status;
+        }
+        if (search) {
+            filters.search = search;
+        }
 
-      if (filter_by_owner_id) {
-        filters.owner_id = filter_by_owner_id;
-      }
+        // Get gigs with details
+        const gigs = await Gig.findWithDetails(filters);
+        
+        // Get total count
+        const total = await Gig.getCount(filters);
 
-      if (search) {
-        filters.search = search;
-      }
+        // Phần còn lại của hàm giữ nguyên...
+        const flattenedGigs = gigs.map(gig => ({
+            id: gig.id,
+            owner_id: gig.owner_id,
+            status: gig.status,
+            title: gig.title,
+            cover_image: gig.cover_image,
+            description: gig.description,
+            price: gig.price,
+            delivery_days: gig.delivery_days,
+            num_of_edits: gig.num_of_edits,
+            created_at: gig.created_at,
+            updated_at: gig.updated_at,
+            category_id: gig.category_id,
+            // Owner information
+            owner_username: gig.User?.username,
+            owner_fullname: gig.User?.fullname,
+            owner_avatar: gig.User?.avt_url || 'https://placehold.co/300x300',
+            // Category information
+            category_name: gig.Categories?.name,
+            category_description: gig.Categories?.description
+        }));
 
-      // Get gigs with details
-      const gigs = await Gig.findWithDetails(filters);
-      
-      // Get total count
-      const total = await Gig.getCount(filters);
-
-      // Flatten the nested data for easier frontend consumption
-      const flattenedGigs = gigs.map(gig => ({
-        id: gig.id,
-        owner_id: gig.owner_id,
-        status: gig.status,
-        title: gig.title,
-        cover_image: gig.cover_image,
-        description: gig.description,
-        price: gig.price,
-        delivery_days: gig.delivery_days,
-        num_of_edits: gig.num_of_edits,
-        created_at: gig.created_at,
-        updated_at: gig.updated_at,
-        category_id: gig.category_id,
-        // Owner information
-        owner_username: gig.User?.username,
-        owner_fullname: gig.User?.fullname,
-        owner_avatar: gig.User?.avt_url || 'https://placehold.co/300x300', // Use actual avt_url with fallback
-        // Category information
-        category_name: gig.Categories?.name,
-        category_description: gig.Categories?.description
-      }));
-
-      return {
-        gigs: flattenedGigs,
-        total: total || 0
-      };
+        return {
+            gigs: flattenedGigs,
+            total: total || 0
+        };
     } catch (error) {
-      console.error('Error in getAllGigs:', error);
-      throw new Error(`Error fetching gigs: ${error.message}`);
+        console.error('Error in getAllGigs:', error);
+        throw new Error(`Error fetching gigs: ${error.message}`);
     }
-  },
-
+},
   // Get a single gig by ID with retry logic
   getGigById: async (gigId) => {
     try {
@@ -421,18 +422,12 @@ const GigService = {
         sum + parseFloat(order.price_at_purchase || 0), 0
       );
 
-      // Mock data for impressions and clicks (would need separate tracking in real app)
-      const impressions = Math.floor(Math.random() * 2000) + 500;
-      const clicks = Math.floor(Math.random() * 500) + 100;
-
+      // Only return necessary statistics
       const statistics = {
-        impressions,
-        clicks,
         orders: totalOrders,
         cancellations: cancelledOrders.length,
         earnings: Math.round(totalEarnings * 100) / 100,
-        completedOrders: completedOrders.length,
-        conversionRate: clicks > 0 ? ((totalOrders / clicks) * 100).toFixed(2) : 0
+        completedOrders: completedOrders.length
       };
 
       console.log('✅ [Gig Service] Statistics calculated:', statistics);

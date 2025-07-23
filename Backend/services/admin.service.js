@@ -20,6 +20,17 @@ const fetchAllAdminData = async () => {
     };
 };
 
+const createAdminLog = async (logData) => {
+    try {
+        const result = await AdminModel.createAdminLog(logData);
+        return result;
+    } catch (error) {
+        console.error('Error in createAdminLog service:', error);
+        throw error;
+    }
+};
+
 module.exports = {
     fetchAllAdminData,
+    createAdminLog,
 };

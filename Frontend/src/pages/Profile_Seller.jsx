@@ -3,6 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import NavBarSeller from '../Common/NavBar_Seller';
 import Footer from '../Common/Footer';
+import AvatarUpload from '../components/AvatarUpload';
 
 const ProfileSeller = () => {
   const { authUser, token } = useAuth();
@@ -15,7 +16,7 @@ const ProfileSeller = () => {
   const [ordersLoading, setOrdersLoading] = useState(true);
   const [stats, setStats] = useState({
     totalEarnings: 0,
-    completedOrders: 0,
+    totalOrders: 0,
     activeOrders: 0,
     rating: 0,
     responseRate: 0,
@@ -27,7 +28,8 @@ const ProfileSeller = () => {
     email: '',
     bio: '',
     skills: '',
-    hourlyRate: ''
+    hourlyRate: '',
+    avt_url: ''
   });
 
   useEffect(() => {
@@ -53,7 +55,8 @@ const ProfileSeller = () => {
           email: data.data.email || authUser?.email || '',
           bio: data.data.bio || '',
           skills: data.data.skills || '',
-          hourlyRate: data.data.hourlyRate || ''
+          hourlyRate: data.data.hourlyRate || '',
+          avt_url: data.data.avatar_url || ''
         });
       } catch (err) {
         setError(err.message);
@@ -67,7 +70,7 @@ const ProfileSeller = () => {
         setOrdersLoading(true);
         if (!token) throw new Error('No token found');
 
-        const response = await fetch('http://localhost:8000/api/orders', {
+        const response = await fetch(`http://localhost:8000/api/orders/owner/${authUser.uuid}`, {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json',
@@ -78,9 +81,9 @@ const ProfileSeller = () => {
         const data = await response.json();
         console.log('Orders Data:', data);
         
-        // Filter for active orders (in progress, pending, etc.)
+        // Filter for active orders (only in_progress)
         const activeOrdersData = data.data?.filter(order => 
-          ['in_progress', 'pending', 'accepted'].includes(order.status?.toLowerCase())
+          order.status?.toLowerCase() === 'in_progress'
         ) || [];
         
         setActiveOrders(activeOrdersData);
@@ -115,35 +118,12 @@ const ProfileSeller = () => {
           earningsData = earningsResult.data || earningsData;
         }
 
-        /*// Fetch seller's gigs for ratings calculation
-        let avgRating = 0;
-        try {
-          const gigsResponse = await fetch(`http://localhost:8000/api/gigs/seller/${authUser.uuid}`, {
-            headers: {
-              'Authorization': `Bearer ${token}`,
-              'Content-Type': 'application/json',
-            },
-          });
-
-          if (gigsResponse.ok) {
-            const gigsResult = await gigsResponse.json();
-            const gigsData = gigsResult.data || [];
-            
-            if (gigsData.length > 0) {
-              const ratingsSum = gigsData.reduce((sum, gig) => sum + (parseFloat(gig.rating) || 0), 0);
-              avgRating = Math.round((ratingsSum / gigsData.length) * 10) / 10;
-            }
-          }
-        } catch (gigError) {
-          console.error('Failed to fetch gigs for rating:', gigError);
-        }*/
-
         // Update stats with real data
         setStats({
           totalEarnings: earningsData.totalEarnings || 0,
-          completedOrders: earningsData.totalOrders || 0,
+          totalOrders: earningsData.totalOrders || 0,
           activeOrders: activeOrders.length,
-          rating: avgRating || 0,
+          rating: 0, // Placeholder, as rating fetch is commented out
           responseRate: 95, // This would come from messaging/response data
           deliveryTime: '2-3 days' // This would be calculated from order completion times
         });
@@ -174,6 +154,18 @@ const ProfileSeller = () => {
     setFormData(prev => ({
       ...prev,
       [name]: value
+    }));
+  };
+
+  const handleAvatarChange = (avatarUrl) => {
+    setFormData(prev => ({
+      ...prev,
+      avt_url: avatarUrl
+    }));
+    // Also update the profile state to reflect changes immediately
+    setProfile(prev => ({
+      ...prev,
+      avatar_url: avatarUrl
     }));
   };
 
@@ -241,11 +233,11 @@ const ProfileSeller = () => {
               <h2 className="text-sm font-semibold text-gray-800 mb-2">My Profile</h2>
               
               <div className="text-center mb-2">
-                <div className="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center mx-auto mb-2">
-                  <span className="text-base font-bold text-white">
-                    {profile?.fullname?.charAt(0).toUpperCase() || authUser?.email?.charAt(0).toUpperCase()}
-                  </span>
-                </div>
+                <AvatarUpload 
+                  currentAvatar={profile?.avatar_url || formData.avt_url}
+                  onAvatarChange={handleAvatarChange}
+                  size="medium"
+                />
                 
                 <div>
                   <h3 className="text-base font-semibold text-gray-800">{profile?.fullname || 'Seller'}</h3>
@@ -278,7 +270,7 @@ const ProfileSeller = () => {
                 </div>
                 <div className="bg-blue-50 p-2 rounded-lg text-center border border-blue-100">
                   <h4 className="font-semibold text-blue-800 text-xs mb-1">Orders</h4>
-                  <p className="text-xs font-bold text-blue-600">{stats.completedOrders}</p>
+                  <p className="text-xs font-bold text-blue-600">{stats.totalOrders}</p>
                 </div>
                 <div className="bg-orange-50 p-2 rounded-lg text-center border border-orange-100">
                   <h4 className="font-semibold text-orange-800 text-xs mb-1">Active</h4>
@@ -342,14 +334,8 @@ const ProfileSeller = () => {
                       </div>
                       
                       <div className="flex items-center justify-between">
-                        <span className={`px-2 py-1 rounded text-xs font-medium ${
-                          order.status?.toLowerCase() === 'in_progress' || order.status?.toLowerCase() === 'accepted'
-                            ? 'bg-blue-100 text-blue-800' 
-                            : order.status?.toLowerCase() === 'pending'
-                            ? 'bg-yellow-100 text-yellow-800'
-                            : 'bg-gray-100 text-gray-800'
-                        }`}>
-                          {order.status || 'In Progress'}
+                        <span className="px-2 py-1 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                          In Progress
                         </span>
                         <button className="text-blue-600 hover:text-blue-800 text-xs font-medium hover:underline">
                           View Details
@@ -380,6 +366,16 @@ const ProfileSeller = () => {
             <h2 className="text-lg font-semibold text-gray-800 mb-4">Edit Profile</h2>
             
             <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="flex flex-col items-center mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-3">Profile Avatar</label>
+                <AvatarUpload 
+                  currentAvatar={formData.avt_url}
+                  onAvatarChange={handleAvatarChange}
+                  size="xlarge"
+                />
+                <p className="text-xs text-gray-500 mt-2">Click to upload a new avatar</p>
+              </div>
+              
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Full Name</label>

@@ -4,6 +4,7 @@ import { Avatar, Button, Input, message } from 'antd';
 import Footer from '../Common/Footer';
 import NavBar from '../Common/NavBar_Buyer';
 import { useAuth } from '../contexts/AuthContext';
+import AvatarUpload from '../components/AvatarUpload';
 
 const ProfileBuyer = () => {
   const navigate = useNavigate();
@@ -13,11 +14,21 @@ const ProfileBuyer = () => {
     avatarUrl: '',
     balance: 0.00,
     status: 'Inactive',
+    fullname: '',
+    email: '',
+    bio: '',
+    avt_url: ''
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [editing, setEditing] = useState(false);
-  const [editedData, setEditedData] = useState({});
+  const [isEditing, setIsEditing] = useState(false);
+  const [formData, setFormData] = useState({
+    fullname: '',
+    username: '',
+    email: '',
+    bio: '',
+    avt_url: ''
+  });
   const [recommendedGigs, setRecommendedGigs] = useState([]);
   const [gigsLoading, setGigsLoading] = useState(true);
 
@@ -43,8 +54,18 @@ const ProfileBuyer = () => {
           avatarUrl: data.data.avatar_url || '',
           balance: data.data.balance || 0.00,
           status: data.data.status || 'Inactive',
+          fullname: data.data.fullname || '',
+          email: data.data.email || authUser?.email || '',
+          bio: data.data.bio || '',
+          avt_url: data.data.avatar_url || ''
         });
-        setEditedData({ ...data.data });
+        setFormData({
+          fullname: data.data.fullname || '',
+          username: data.data.username || '',
+          email: data.data.email || authUser?.email || '',
+          bio: data.data.bio || '',
+          avt_url: data.data.avatar_url || ''
+        });
       } catch (err) {
         setError(err.message);
         console.error('Fetch error:', err);
@@ -112,11 +133,22 @@ const ProfileBuyer = () => {
     fetchRecommendedGigs();
   }, [authUser, token]);
 
-  const handleEdit = () => {
-    setEditing(true);
+  const toggleEdit = () => {
+    if (isEditing) {
+      // Reset form data when canceling edit
+      setFormData({
+        fullname: profileData.fullname || '',
+        username: profileData.username || '',
+        email: profileData.email || authUser?.email || '',
+        bio: profileData.bio || '',
+        avt_url: profileData.avt_url || ''
+      });
+    }
+    setIsEditing(!isEditing);
   };
 
-  const handleSave = async () => {
+  const handleSubmit = async (e) => {
+    e.preventDefault();
     try {
       setLoading(true);
       if (!token) throw new Error('No token found');
@@ -128,9 +160,10 @@ const ProfileBuyer = () => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          username: editedData.username,
-          email: editedData.email,
-          avatar_url: editedData.avatar_url,
+          username: formData.username,
+          fullname: formData.fullname,
+          bio: formData.bio,
+          avt_url: formData.avt_url,
         }),
       });
 
@@ -141,9 +174,12 @@ const ProfileBuyer = () => {
       setProfileData({
         ...profileData,
         username: data.data.username,
+        fullname: data.data.fullname,
+        bio: data.data.bio,
         avatarUrl: data.data.avatar_url,
+        avt_url: data.data.avatar_url,
       });
-      setEditing(false);
+      setIsEditing(false);
       message.success('Profile updated successfully');
     } catch (err) {
       setError(err.message);
@@ -153,14 +189,14 @@ const ProfileBuyer = () => {
     }
   };
 
-  const handleCancel = () => {
-    setEditedData({ ...profileData });
-    setEditing(false);
-  };
-
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setEditedData((prev) => ({ ...prev, [name]: value }));
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleAvatarChange = (avatarUrl) => {
+    setFormData((prev) => ({ ...prev, avt_url: avatarUrl }));
+    setProfileData((prev) => ({ ...prev, avt_url: avatarUrl, avatarUrl: avatarUrl }));
   };
 
   if (loading) return (
@@ -187,7 +223,7 @@ const ProfileBuyer = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       <NavBar />
-      
+
       <div className="container mx-auto px-4 py-8 pt-24">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           
@@ -198,47 +234,32 @@ const ProfileBuyer = () => {
               <h2 className="text-sm font-semibold text-gray-800 mb-2">My Profile</h2>
               
               <div className="text-center mb-2">
-                <Avatar
-                  size={48}
-                  src={editing ? editedData.avatar_url || 'https://via.placeholder.com/48' : profileData.avatarUrl || 'https://via.placeholder.com/48'}
-                  className="ring-2 ring-blue-100 mb-2"
-                />
-                
-                {editing ? (
-                  <div className="space-y-2">
-                    <Input
-                      name="username"
-                      value={editedData.username}
-                      onChange={handleChange}
-                      placeholder="Username"
-                      className="w-full"
-                      size="small"
-                    />
-                    <Input
-                      name="avatar_url"
-                      value={editedData.avatar_url}
-                      onChange={handleChange}
-                      placeholder="Avatar URL"
-                      className="w-full"
-                      size="small"
-                    />
-                    <div className="flex space-x-2">
-                      <Button type="primary" onClick={handleSave} loading={loading} size="small" className="flex-1">
-                        Save
-                      </Button>
-                      <Button onClick={handleCancel} size="small" className="flex-1">Cancel</Button>
+                  <div className="flex flex-col items-center">
+                    <div className="mb-3">
+                      <img
+                        src={profileData.avatarUrl || 'https://via.placeholder.com/48'}
+                        alt="Avatar"
+                        className="w-12 h-12 rounded-full object-cover border-2 border-blue-100"
+                        onError={(e) => {
+                          console.log('Avatar image failed to load:', e.target.src);
+                          e.target.src = 'https://via.placeholder.com/48';
+                        }}
+                      />
                     </div>
-                  </div>
-                ) : (
-                  <div>
-                    <h3 className="text-base font-semibold text-gray-800">{profileData.username}</h3>
+                    <h3 className="text-base font-semibold text-gray-800">{profileData.fullname || profileData.username}</h3>
+                    <p className="text-sm text-gray-600">@{profileData.username}</p>
                     <p className="text-sm text-gray-600">Buyer</p>
+                    {profileData.bio && (
+                      <p className="text-xs text-gray-500 text-center mt-1">{profileData.bio}</p>
+                    )}
                     <p className="text-xs text-gray-500 mb-2">{authUser?.email}</p>
-                    <Button type="primary" onClick={handleEdit} size="small">
-                      Edit Profile
-                    </Button>
+                  <button
+                    onClick={toggleEdit}
+                    className="px-3 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
+                  >
+                    {isEditing ? 'Cancel' : 'Edit Profile'}
+                  </button>
                   </div>
-                )}
               </div>
 
               <div className="space-y-2">
@@ -320,6 +341,90 @@ const ProfileBuyer = () => {
             </div>
           </div>
         </div>
+
+        {/* Edit Profile Form */}
+        {isEditing && (
+          <div className="mt-8 bg-white rounded-lg shadow-lg p-6 border border-gray-100">
+            <h2 className="text-lg font-semibold text-gray-800 mb-4">Edit Profile</h2>
+            
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="flex flex-col items-center mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-3">Profile Avatar</label>
+                <AvatarUpload 
+                  currentAvatar={formData.avt_url}
+                  onAvatarChange={handleAvatarChange}
+                  size="xlarge"
+                />
+                <p className="text-xs text-gray-500 mt-2">Click to upload a new avatar</p>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
+                  <input
+                    type="text"
+                    name="fullname"
+                    value={formData.fullname}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Username</label>
+                  <input
+                    type="text"
+                    name="username"
+                    value={formData.username}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    required
+                  />
+                </div>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
+                <input
+                  type="email"
+                  name="email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  required
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Bio</label>
+                <textarea
+                  name="bio"
+                  value={formData.bio}
+                  onChange={handleChange}
+                  rows={3}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                  placeholder="Tell us about yourself..."
+                />
+              </div>
+              
+              <div className="flex space-x-3 pt-4">
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors"
+                >
+                  Save Changes
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsEditing(false)}
+                  className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg font-medium hover:bg-gray-300 transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
       </div>
 
       <Footer />

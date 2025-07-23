@@ -323,7 +323,10 @@ const updateProfile = async (req, res) => {
         delete updateData.balance;
         delete updateData.email; // Email updates might need separate verification
         
-        const result = await UserService.updateUserByUuid(userUuid, updateData);
+        // Log what we're updating for debugging
+        console.log('Updating user profile:', userUuid, updateData);
+        
+        const result = await UserService.updateUserProfile(userUuid, updateData);
         
         if (result.status === 'error') {
             return res.status(400).json(result);

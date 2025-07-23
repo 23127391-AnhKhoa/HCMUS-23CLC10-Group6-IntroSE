@@ -1,214 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import DOMPurify from 'dompurify';
-import { HeartFilled } from '@ant-design/icons';
-import NavBar from '../Common/NavBar_Buyer';
-import Footer from '../Common/Footer';
-import CreateOrderModal from '../components/CreateOrderModal/CreateOrderModal';
-import { useAuth } from '../contexts/AuthContext';
 
-const GigDetail = () => {
+const GigDetailContent = () => {
     const { id } = useParams();
-    const navigate = useNavigate();
-    const { token, authUser, isLoading: authLoading } = useAuth();
     const [gig, setGig] = useState(null);
     const [sellerDetails, setSellerDetails] = useState(null);
     const [gigMedia, setGigMedia] = useState([]);
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
-    const [isFavorited, setIsFavorited] = useState(false);
-    const [showCreateOrderModal, setShowCreateOrderModal] = useState(false);
-    const [orderCreated, setOrderCreated] = useState(false);
-
-    // Check favorite status when component mounts and user is available
-    useEffect(() => {
-        if (authUser && id && !authLoading) {
-            checkFavoriteStatus();
-        }
-    }, [authUser, id, authLoading]);
-
-    const checkFavoriteStatus = async () => {
-        if (!authUser || !token) return;
-        
-        try {
-            const response = await fetch(`http://localhost:8000/api/users/favorite/check/${authUser.uuid}/${id}`, {
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json',
-                },
-            });
-
-            if (response.ok) {
-                const data = await response.json();
-                if (data.status === 'success') {
-                    setIsFavorited(data.data.isFavorited);
-                }
-            }
-        } catch (error) {
-            console.error('Error checking favorite status:', error);
-        }
-    };
-
-    const handleFavoriteToggle = async () => {
-        if (!authUser || !token) {
-            setErrorNotification('Please log in to save favorites');
-            setTimeout(() => {
-                navigate('/auth');
-            }, 1500);
-            return;
-        }
-
-        try {
-            const response = await fetch('http://localhost:8000/api/users/favorite/toggle', {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ gig_id: id }),
-            });
-
-            if (response.ok) {
-                const data = await response.json();
-                if (data.status === 'success') {
-                    setIsFavorited(data.data.isFavorited);
-                    // Show success message
-                    setErrorNotification(
-                        data.data.action === 'added' 
-                            ? 'Added to favorites!' 
-                            : 'Removed from favorites!'
-                    );
-                    // Clear message after 2 seconds
-                    setTimeout(() => setErrorNotification(''), 2000);
-                }
-            } else {
-                throw new Error('Failed to toggle favorite');
-            }
-        } catch (error) {
-            console.error('Error toggling favorite:', error);
-            setErrorNotification('Failed to update favorites');
-        }
-    };
-
-    const [errorNotification, setErrorNotification] = useState('');
-    
-    const handleCreateOrder = () => {
-        if (!authUser) {
-            setErrorNotification('Please log in to create an order');
-            setTimeout(() => {
-                navigate('/auth');
-            }, 1500);
-            return;
-        }
-        
-        // Check if user is trying to order their own gig
-        if (gig && gig.owner_id === authUser.uuid) {
-            setErrorNotification('You cannot order your own gig');
-            return;
-        }
-        
-        setShowCreateOrderModal(true);
-    };
-
-    const handleOrderSubmit = async (orderData) => {
-        if (!authUser || !token) {
-            setErrorNotification('Please log in to create an order');
-            setTimeout(() => {
-                navigate('/auth');
-            }, 1500);
-            return { success: false, error: 'Authentication required' };
-        }
-
-        try {
-            console.log('📝 Creating order from gig detail:', orderData);
-            
-            // Create order with client info and modal data
-            const orderPayload = {
-                client_id: authUser.uuid,
-                gig_id: orderData.gig_id || gig.id, // Use the gig_id from form or fallback to current gig
-                price_at_purchase: orderData.price_at_purchase || Number(gig.price),
-                requirement: orderData.requirements || `Order for: ${gig.title}`,
-                status: orderData.status || 'pending'
-                // Note: delivery_deadline will be calculated when seller confirms the order
-            };
-            
-            console.log('📦 Order payload:', orderPayload);
-            console.log('👤 Auth user:', authUser);
-            console.log('🎫 Token:', token ? 'Present' : 'Missing');
-            console.log('🔍 Payload validation:', {
-                client_id: !!orderPayload.client_id,
-                gig_id: !!orderPayload.gig_id,
-                price_at_purchase: typeof orderPayload.price_at_purchase === 'number' && orderPayload.price_at_purchase > 0,
-                requirement: !!orderPayload.requirement,
-                status: !!orderPayload.status
-            });
-            
-            const response = await fetch('http://localhost:8000/api/orders', {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(orderPayload)
-            });
-
-            console.log('📡 Response status:', response.status);
-            console.log('📡 Response headers:', Object.fromEntries(response.headers.entries()));
-
-            if (!response.ok) {
-                const errorText = await response.text();
-                console.error('❌ Response error details:', {
-                    status: response.status,
-                    statusText: response.statusText,
-                    body: errorText
-                });
-                
-                let errorMessage = `Failed to create order: ${response.status}`;
-                try {
-                    const errorData = JSON.parse(errorText);
-                    errorMessage = errorData.message || errorMessage;
-                } catch (parseError) {
-                    errorMessage = errorText || errorMessage;
-                }
-                
-                throw new Error(errorMessage);
-            }
-
-            const data = await response.json();
-            
-            if (data.status === 'success') {
-                // Indicate success
-                setOrderCreated(true);
-            } else {
-                throw new Error(data.message || 'Failed to create order');
-            }
-        } catch (err) {
-            console.error('❌ Error creating order:', err);
-            // Return error object instead of showing alert
-            return {
-                success: false,
-                error: err.message
-            };
-        }
-        
-        // If we get here, the order was created successfully
-        return { success: true };
-    };
 
     useEffect(() => {
         fetchGigDetail();
     }, [id]);
-
-    // Auto-dismiss error notification after 5 seconds
-    useEffect(() => {
-        if (errorNotification) {
-            const timer = setTimeout(() => {
-                setErrorNotification('');
-            }, 5000);
-            return () => clearTimeout(timer);
-        }
-    }, [errorNotification]);
 
     const fetchGigDetail = async () => {
         try {
@@ -335,7 +140,7 @@ const GigDetail = () => {
         setCurrentImageIndex(index);
     };
 
-    if (loading || authLoading) {
+    if (loading) {
         return (
             <div className="relative flex size-full min-h-screen flex-col bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100" style={{fontFamily: 'Inter, "Noto Sans", sans-serif'}}>
                 {/* Background Elements */}
@@ -343,17 +148,13 @@ const GigDetail = () => {
                     <div className="absolute top-20 left-10 w-80 h-80 bg-blue-100/20 rounded-full blur-3xl animate-pulse"></div>
                     <div className="absolute top-40 right-20 w-96 h-96 bg-indigo-100/15 rounded-full blur-3xl animate-pulse delay-1000"></div>
                 </div>
-                <div className="relative z-10">
-                    <NavBar />
-                    <div className="flex-1 flex items-center justify-center min-h-screen">
-                        <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-8">
-                            <div className="flex flex-col items-center">
-                                <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-200 border-t-blue-600 mb-4"></div>
-                                <p className="text-gray-600 font-medium">Loading gig details...</p>
-                            </div>
+                <div className="relative z-10 flex-1 flex items-center justify-center min-h-screen">
+                    <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-8">
+                        <div className="flex flex-col items-center">
+                            <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-200 border-t-blue-600 mb-4"></div>
+                            <p className="text-gray-600 font-medium">Loading gig details...</p>
                         </div>
                     </div>
-                    <Footer />
                 </div>
             </div>
         );
@@ -367,34 +168,22 @@ const GigDetail = () => {
                     <div className="absolute top-20 left-10 w-80 h-80 bg-blue-100/20 rounded-full blur-3xl animate-pulse"></div>
                     <div className="absolute top-40 right-20 w-96 h-96 bg-indigo-100/15 rounded-full blur-3xl animate-pulse delay-1000"></div>
                 </div>
-                <div className="relative z-10">
-                    <NavBar />
-                    <div className="flex-1 flex items-center justify-center min-h-screen">
-                        <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-8 max-w-md text-center">
-                            <div className="w-16 h-16 bg-gradient-to-br from-red-400 to-red-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                                <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L4.268 18.5c-.77.833.192 2.5 1.732 2.5z" />
-                                </svg>
-                            </div>
-                            <h1 className="text-2xl font-bold text-red-600 mb-4">Error Loading Gig</h1>
-                            <p className="text-gray-600 mb-6 bg-red-50 p-4 rounded-xl">{error}</p>
-                            <div className="flex gap-3 justify-center">
-                                <button 
-                                    onClick={fetchGigDetail}
-                                    className="px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-2xl hover:from-blue-600 hover:to-blue-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 font-medium"
-                                >
-                                    Retry
-                                </button>
-                                <button 
-                                    onClick={() => navigate(-1)}
-                                    className="px-6 py-3 bg-white border border-gray-300 text-gray-700 rounded-2xl hover:bg-gray-50 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 font-medium"
-                                >
-                                    Go Back
-                                </button>
-                            </div>
+                <div className="relative z-10 flex-1 flex items-center justify-center min-h-screen">
+                    <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-8 max-w-md text-center">
+                        <div className="w-16 h-16 bg-gradient-to-br from-red-400 to-red-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L4.268 18.5c-.77.833.192 2.5 1.732 2.5z" />
+                            </svg>
                         </div>
+                        <h1 className="text-2xl font-bold text-red-600 mb-4">Error Loading Gig</h1>
+                        <p className="text-gray-600 mb-6 bg-red-50 p-4 rounded-xl">{error}</p>
+                        <button 
+                            onClick={fetchGigDetail}
+                            className="px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-2xl hover:from-blue-600 hover:to-blue-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 font-medium"
+                        >
+                            Retry
+                        </button>
                     </div>
-                    <Footer />
                 </div>
             </div>
         );
@@ -408,26 +197,16 @@ const GigDetail = () => {
                     <div className="absolute top-20 left-10 w-80 h-80 bg-blue-100/20 rounded-full blur-3xl animate-pulse"></div>
                     <div className="absolute top-40 right-20 w-96 h-96 bg-indigo-100/15 rounded-full blur-3xl animate-pulse delay-1000"></div>
                 </div>
-                <div className="relative z-10">
-                    <NavBar />
-                    <div className="flex-1 flex items-center justify-center min-h-screen">
-                        <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-8 max-w-md text-center">
-                            <div className="w-16 h-16 bg-gradient-to-br from-gray-400 to-gray-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                                <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                                </svg>
-                            </div>
-                            <h1 className="text-2xl font-bold text-gray-600 mb-4">Gig Not Found</h1>
-                            <p className="text-gray-500 mb-6">The service you're looking for doesn't exist or has been removed.</p>
-                            <button 
-                                onClick={() => navigate(-1)}
-                                className="px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-2xl hover:from-blue-600 hover:to-blue-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 font-medium"
-                            >
-                                Go Back
-                            </button>
+                <div className="relative z-10 flex-1 flex items-center justify-center min-h-screen">
+                    <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-8 max-w-md text-center">
+                        <div className="w-16 h-16 bg-gradient-to-br from-gray-400 to-gray-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                            </svg>
                         </div>
+                        <h1 className="text-2xl font-bold text-gray-600 mb-4">Gig Not Found</h1>
+                        <p className="text-gray-500 mb-6">The service you're looking for doesn't exist or has been removed.</p>
                     </div>
-                    <Footer />
                 </div>
             </div>
         );
@@ -443,59 +222,13 @@ const GigDetail = () => {
             </div>
             
             <div className="layout-container flex h-full grow flex-col relative z-10">
-                <NavBar />
-                
-                {/* Error notification */}
-                {errorNotification && (
-                    <div className="fixed top-20 left-1/2 transform -translate-x-1/2 z-50 px-6 py-3 bg-white/90 backdrop-blur-sm border border-red-200 text-red-600 rounded-2xl shadow-xl flex items-center">
-                        <span className="mr-2"></span>
-                        <span className="font-medium">{errorNotification}</span>
-                        <button 
-                            onClick={() => setErrorNotification('')}
-                            className="ml-4 text-red-400 hover:text-red-600 focus:outline-none transition-colors duration-200"
-                        >
-                            ×
-                        </button>
-                    </div>
-                )}
-                
-                <div className="px-6 lg:px-40 flex flex-1 justify-center py-5 pt-28">
+                <div className="px-6 lg:px-40 flex flex-1 justify-center py-5 pt-8">
                     <div className="layout-content-container flex flex-col max-w-[960px] flex-1">
-                        {/* Breadcrumb */}
-                        <div className="flex flex-wrap gap-2 p-6 mb-6">
-                            <button 
-                                onClick={() => navigate(-1)}
-                                className="text-blue-600 text-base font-medium leading-normal hover:text-purple-600 transition-colors duration-200"
-                            >
-                                {gig.category_name || 'Graphics & Design'}
-                            </button>
-                            <span className="text-gray-400 text-base font-medium leading-normal">/</span>
-                            <span className="text-gray-700 text-base font-medium leading-normal">
-                                {gig.title?.substring(0, 50) || 'Service Details'}
-                                {gig.title?.length > 50 ? '...' : ''}
-                            </span>
-                        </div>
-
-                        {/* Title & Favorite Button */}
-                        <div className="flex justify-between items-start p-6 mb-6">
-                            <h2 className="text-gray-800 tracking-light text-[28px] font-bold leading-tight text-left flex-1 pr-4 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                        {/* Title */}
+                        <div className="p-6 mb-6">
+                            <h2 className="text-gray-800 tracking-light text-[28px] font-bold leading-tight text-left bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
                                 {gig.title}
                             </h2>
-                            <div className="flex gap-3 items-center">
-                                <button
-                                    onClick={handleFavoriteToggle}
-                                    className="p-3 rounded-full bg-white/60 backdrop-blur-sm border border-white/30 hover:bg-white/80 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
-                                    aria-label="Toggle Favorite"
-                                >
-                                    <HeartFilled
-                                        style={{
-                                            fontSize: '28px',
-                                            color: isFavorited ? '#1dbf73' : '#a9a9a9',
-                                        }}
-                                    />
-                                </button>
-
-                            </div>
                         </div>
 
                         {/* Image Slider */}
@@ -640,7 +373,7 @@ const GigDetail = () => {
                             ></div>
                         </div>
 
-                        {/* Pricing - Single Package */}
+                        {/* Pricing - Display Only */}
                         <div className="p-6 mb-6">
                             <h2 className="text-gray-800 text-[22px] font-bold leading-tight tracking-[-0.015em] pb-4 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
                                 Pricing
@@ -657,26 +390,6 @@ const GigDetail = () => {
                                                 <span className="text-gray-600 text-base font-bold leading-tight">one-time</span>
                                             </p>
                                         </div>
-                                        {/* Only show order button if user is not the owner */}
-                                        {authUser && gig.owner_id !== authUser.uuid ? (
-                                            <button 
-                                                onClick={handleCreateOrder}
-                                                className="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-2xl h-12 px-6 bg-gradient-to-r from-green-500 to-emerald-600 text-white text-sm font-bold leading-normal tracking-[0.015em] hover:from-green-600 hover:to-emerald-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
-                                            >
-                                                <span className="truncate">Continue (${gig.price})</span>
-                                            </button>
-                                        ) : authUser && gig.owner_id === authUser.uuid ? (
-                                            <div className="flex min-w-[84px] max-w-[480px] items-center justify-center overflow-hidden rounded-2xl h-12 px-6 bg-gray-300 text-gray-600 text-sm font-bold leading-normal tracking-[0.015em] cursor-not-allowed border-2 border-gray-200">
-                                                <span className="truncate">This is your gig</span>
-                                            </div>
-                                        ) : (
-                                            <button 
-                                                onClick={() => navigate('/auth')}
-                                                className="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-2xl h-12 px-6 bg-gradient-to-r from-blue-500 to-purple-600 text-white text-sm font-bold leading-normal tracking-[0.015em] hover:from-blue-600 hover:to-purple-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
-                                            >
-                                                <span className="truncate">Login to Order</span>
-                                            </button>
-                                        )}
                                     </div>
                                 </div>
                             </div>
@@ -710,14 +423,6 @@ const GigDetail = () => {
                                                 Member since {new Date(sellerDetails.seller_since).getFullYear()}
                                             </p>
                                         )}
-                                        <div className="flex gap-3 items-center">
-                                            <button 
-                                                className="flex cursor-pointer items-center justify-center overflow-hidden rounded-2xl h-10 px-6 bg-gradient-to-r from-blue-500 to-blue-600 text-white text-sm font-bold leading-normal tracking-[0.015em] hover:from-blue-600 hover:to-blue-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
-                                                onClick={() => navigate(`/SellerInfo/${sellerDetails?.uuid || gig.owner_id}`)}
-                                            >
-                                                <span className="truncate">Contact Seller</span>
-                                            </button>
-                                        </div>
                                     </div>
                                 </div>
                                 <div 
@@ -734,27 +439,9 @@ const GigDetail = () => {
                         </div>
                     </div>
                 </div>
-                
-                <Footer />
             </div>
-
-            {/* Create Order Modal */}
-            {showCreateOrderModal && (
-                <CreateOrderModal
-                    gig={gig}
-                    onClose={() => {
-                        setShowCreateOrderModal(false);
-                        setOrderCreated(false);
-                        // Navigate to orders page if an order was created
-                        if (orderCreated) {
-                            navigate('/orders');
-                        }
-                    }}
-                    onSubmit={handleOrderSubmit}
-                />
-            )}
         </div>
     );
 };
 
-export default GigDetail;
+export default GigDetailContent;
