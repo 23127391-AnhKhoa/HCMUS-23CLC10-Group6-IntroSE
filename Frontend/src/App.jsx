@@ -21,12 +21,9 @@ import WalletPage from './pages/WalletPage';
 import Favorites from './pages/Favorites';
 import SearchPage from './pages/SearchPage';
 import ServicesManagement from './pages/Admin/ServiceManagement';
-<<<<<<< HEAD
 import GigDetailContent from './pages/Admin/AdminGigContent';
 import AdminSellerInfor from './pages/Admin/AdminSellerInfor'; // Updated import for AdminSellerInfo
-=======
 import ReportUserPage from './pages/ReportUserPage';
->>>>>>> UX_upgrade
 function App() {
   return (
     <AuthProvider>
