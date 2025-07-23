@@ -1,8 +1,32 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import Navbar from '../Common/Navbar_LD';
 import LoginForm from '../components/AuthPage/LoginForm'; // tách riêng login
 import SignupForm from '../components/AuthPage/SignupForm'; // có onRegister prop
 import OTPForm from '../components/AuthPage/OTPForm'; // có onVerify prop
+
+function BackgroundVideo() {
+  const videoRef = useRef(null);
+
+  useEffect(() => {
+    if (videoRef.current) {
+      videoRef.current.playbackRate = 0.5; // Phát chậm lại
+    }
+  }, []);
+
+  return (
+    <video
+      ref={videoRef}
+      autoPlay
+      muted
+      loop
+      playsInline
+      preload="auto"
+      className="fixed top-0 left-0 w-full h-full object-cover z-0"
+    >
+      <source src="/background_gradient.webm" type="video/webm" />
+    </video>
+  );
+}
 
 const AuthPage = () => {
   const [activeTab, setActiveTab] = useState('login');
@@ -37,20 +61,10 @@ const AuthPage = () => {
     setActiveTab('login'); // quay lại login
     setStep('register');
   };
-
   return (
     <div className="relative w-full h-screen">
-      <video
-          autoPlay
-          muted
-          loop
-          playsInline
-          preload="auto"
-          className="fixed top-0 left-0 w-full h-full object-cover z-0"
-        >
-          <source src="/background.webm" type="video/webm" />\
-        </video>
-
+      <BackgroundVideo />
+        
         <div className="relative pt-16 flex items-center justify-center min-h-screen p-4">
           <div className="max-w-md w-full bg-white/40 backdrop-blur-md p-8 rounded-3xl shadow-xl border border-white/20">
           {/* Header with logo/title */}

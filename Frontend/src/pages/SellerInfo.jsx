@@ -2,7 +2,72 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import Navbar from '../Common/NavBar_Buyer';
 import { useAuth } from '../contexts/AuthContext';
+const ReportForm = () => {
+  const [formData, setFormData] = useState({
+    type: '',
+    description: '',
+  });
 
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    console.log('📤 Report submitted:', formData);
+    // TODO: Gửi API tại đây
+    alert('Report sent!');
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-100 flex items-center justify-center px-4">
+      <div className="max-w-md w-full bg-white rounded-xl shadow-md p-6 space-y-6">
+        <h2 className="text-xl font-bold text-gray-800 text-center">Report Form</h2>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Type */}
+          <div>
+            <label htmlFor="type" className="block text-sm font-medium text-gray-700">Type</label>
+            <input
+              type="text"
+              id="type"
+              name="type"
+              value={formData.type}
+              onChange={handleChange}
+              required
+              className="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="e.g. Spam, Inappropriate, Scam..."
+            />
+          </div>
+
+          {/* Description */}
+          <div>
+            <label htmlFor="description" className="block text-sm font-medium text-gray-700">Description</label>
+            <textarea
+              id="description"
+              name="description"
+              rows="4"
+              value={formData.description}
+              onChange={handleChange}
+              required
+              className="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Describe the issue..."
+            ></textarea>
+          </div>
+
+          {/* Submit Button */}
+          <button
+            type="submit"
+            className="w-full bg-red-500 text-white font-semibold py-2 rounded-lg hover:bg-red-600 transition"
+          >
+            Submit Report
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+};
 const SellerInfo = () => {
     const { sellerId } = useParams();
     const [sellerDetails, setSellerDetails] = useState(null);
@@ -65,6 +130,13 @@ const SellerInfo = () => {
                     <div className="bg-white rounded-xl shadow-lg overflow-hidden mb-6">
                         {/* Banner and Profile Picture Section */}
                         <div className="relative h-48 bg-gradient-to-r from-blue-500 to-pink-600">
+                            {/* Nút Report */}
+                            <button
+                                onClick={() => <ReportForm />}
+                                className="absolute -bottom-12 right-4 bg-red-600 hover:bg-red-300 text-white border border-red-200 px-3 py-1 text-sm font-medium rounded-md shadow transition duration-200"
+                            >
+                                Report
+                            </button>
                             <div className="absolute -bottom-12 left-8">
                                 <div className="h-24 w-24 rounded-full border-4 border-white bg-white overflow-hidden shadow-lg">
                                     <img 
@@ -74,7 +146,7 @@ const SellerInfo = () => {
                                         onError={(e) => {e.target.src = "https://placehold.co/150x150"}}
                                     />
                                 </div>
-                            </div>
+                            </div>  
                         </div>
                         
                         {/* Seller Info Section */}
