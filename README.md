@@ -12,3 +12,4 @@ This is a private repository for **Group 6, Class 23CLC10, HCMUS**.
 *   **Backend:** Node.js, Express.js
 *   **Database:** Supabase
 *   **API:** JavaScript
+*   *
