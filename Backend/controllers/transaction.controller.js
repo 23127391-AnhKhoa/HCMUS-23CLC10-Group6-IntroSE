@@ -2,7 +2,7 @@
 const User = require('../models/user.model');
 const Transaction = require('../models/transaction.model');
 const jwt = require('jsonwebtoken');
-
+const TransactionModel = require('../models/transactions.model');
 /**
  * JWT Token Generation Best Practices:
  * 
@@ -35,14 +35,6 @@ const TransactionController = {
       if (!amount || amount <= 0) {
         return res.status(400).json({
           message: 'Amount must be greater than 0'
-        });
-      }
-
-      // Kiểm tra amount có trong các gói cho phép không (5, 10, 20)
-      const allowedAmounts = [5, 10, 20];
-      if (!allowedAmounts.includes(Number(amount))) {
-        return res.status(400).json({
-          message: 'Invalid amount. Only $5, $10, and $20 packages are allowed.'
         });
       }
 
@@ -79,6 +71,16 @@ const TransactionController = {
         seller_description: updatedUser.seller_description,
         seller_since: updatedUser.seller_since
       };
+
+      // ✅ Ghi vào bảng Transactions
+      const { error: insertError } = await TransactionModel.create({
+        user_id: userUuid,
+        amount: parseFloat(amount),
+        description: 'Deposit to account',
+        type: 'deposit',
+      });
+
+      if (insertError) throw insertError;
 
       res.json({
         message: `Successfully deposited $${amount}`,
@@ -155,6 +157,19 @@ const TransactionController = {
         seller_since: updatedUser.seller_since
       };
 
+      // ✅ Ghi vào bảng Transactions
+      const { error: insertError } = await TransactionModel.create({
+        user_id: userUuid,
+        amount: parseFloat(amount),
+        description: 'Withdraw from account',
+        type: 'withdraw',
+      });
+
+      if (insertError) throw insertError;
+
+
+      if (insertError) throw insertError;
+
       res.json({
         message: `Successfully withdrew $${amount}`,
         user: updatedUserData,
@@ -169,6 +184,83 @@ const TransactionController = {
       });
     } catch (error) {
       console.error('Error in withdraw:', error);
+      res.status(500).json({
+        message: 'Internal server error',
+        error: error.message
+      });
+    }
+  },
+
+  // API để lấy lịch sử giao dịch theo user ID
+  getTransactionHistory: async (req, res) => {
+    try {
+      const userUuid = req.user.uuid;
+      const { page = 1, limit = 20, type = 'all' } = req.query;
+
+      // Validation
+      const pageNum = parseInt(page);
+      const limitNum = parseInt(limit);
+      
+      if (pageNum < 1 || limitNum < 1 || limitNum > 100) {
+        return res.status(400).json({
+          message: 'Invalid pagination parameters'
+        });
+      }
+
+      // Build filter
+      let typeFilter = {};
+      if (type !== 'all') {
+        if (!['deposit', 'withdraw'].includes(type)) {
+          return res.status(400).json({
+            message: 'Type must be "deposit", "withdraw", or "all"'
+          });
+        }
+        typeFilter.type = type;
+      }
+
+      // Get transaction history with pagination
+      const { data: transactions, error } = await TransactionModel.getByUserId(
+        userUuid, 
+        { 
+          ...typeFilter,
+          page: pageNum,
+          limit: limitNum
+        }
+      );
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      // Get total count for pagination
+      const { data: totalCount, error: countError } = await TransactionModel.getTotalCount(
+        userUuid, 
+        typeFilter
+      );
+
+      if (countError) {
+        throw new Error(countError.message);
+      }
+
+      const totalPages = Math.ceil(totalCount / limitNum);
+
+      res.json({
+        message: 'Transaction history retrieved successfully',
+        data: {
+          transactions: transactions || [],
+          pagination: {
+            currentPage: pageNum,
+            totalPages,
+            totalItems: totalCount,
+            itemsPerPage: limitNum,
+            hasNextPage: pageNum < totalPages,
+            hasPrevPage: pageNum > 1
+          }
+        }
+      });
+
+    } catch (error) {
+      console.error('Error in getTransactionHistory:', error);
       res.status(500).json({
         message: 'Internal server error',
         error: error.message

@@ -1,6 +1,6 @@
 // src/components/MediaUpload/MediaUpload.jsx
 import React, { useState, useRef } from 'react';
-import ApiService from '../../services/apiService';
+import ApiService from '../../services/CreateGigs.service';
 
 const MediaUpload = ({ onFileUpload, onUploadError, acceptedTypes = "image/*,video/*" }) => {
   const [isUploading, setIsUploading] = useState(false);

@@ -26,24 +26,11 @@ if (!supabaseUrl || !supabaseKey) {
   return;
 }
 
-// Create client with enhanced connection options for WebSocket stability
 const supabase = createClient(supabaseUrl, supabaseKey, {
   auth: {
-    persistSession: true,
-    autoRefreshToken: true,
+    persistSession: false,  // Backend không cần session
+    autoRefreshToken: false,
     detectSessionInUrl: false
-  },
-  realtime: {
-    params: {
-      eventsPerSecond: 10
-    },
-    heartbeat: {
-      interval: 5000, // Send heartbeat every 5 seconds
-      timeout: 10000  // Wait 10 seconds before considering connection dropped
-    }
-  },
-  db: {
-    schema: 'public'
   },
   global: {
     headers: {
@@ -219,7 +206,3 @@ const createChannel = (channelName) => {
 
 // Export client and helper functions
 module.exports = supabase;
-module.exports.refreshConnection = refreshConnection;
-module.exports.testConnection = testConnection;
-module.exports.testRealtimeConnection = testRealtimeConnection;
-module.exports.createChannel = createChannel;

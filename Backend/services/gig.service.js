@@ -42,78 +42,79 @@ const GigService = {
 
   // Get all gigs with pagination and filtering
   getAllGigs: async (options) => {
+    // Sửa đổi ở đây: Bỏ giá trị mặc định của filter_by_status
     const {
-      page = 1,
-      limit = 10,
-      sort_by = 'created_at',
-      sort_order = 'desc',
-      filter_by_category_id,
-      filter_by_owner_id,
-      filter_by_status = 'active',
-      search
+        page = 1,
+        limit = 10,
+        sort_by = 'created_at',
+        sort_order = 'desc',
+        filter_by_category_id,
+        filter_by_owner_id,
+        filter_by_status, // <-- ĐÃ XÓA GIÁ TRỊ MẶC ĐỊNH '= 'active''
+        search
     } = options;
 
     try {
-      // Prepare filters
-      const filters = {
-        page: parseInt(page),
-        limit: parseInt(limit),
-        sort_by,
-        sort_order,
-        status: filter_by_status
-      };
+        // Prepare filters
+        const filters = {
+            page: parseInt(page),
+            limit: parseInt(limit),
+            sort_by,
+            sort_order,
+        };
 
-      if (filter_by_category_id) {
-        filters.category_id = parseInt(filter_by_category_id);
-      }
+        // Sửa đổi ở đây: Chỉ thêm các filter vào nếu chúng tồn tại
+        if (filter_by_category_id) {
+            filters.category_id = parseInt(filter_by_category_id);
+        }
+        if (filter_by_owner_id) {
+            filters.owner_id = filter_by_owner_id;
+        }
+        if (filter_by_status) { // <-- CHỈ LỌC STATUS NẾU CÓ YÊU CẦU
+            filters.status = filter_by_status;
+        }
+        if (search) {
+            filters.search = search;
+        }
 
-      if (filter_by_owner_id) {
-        filters.owner_id = filter_by_owner_id;
-      }
+        // Get gigs with details
+        const gigs = await Gig.findWithDetails(filters);
+        
+        // Get total count
+        const total = await Gig.getCount(filters);
 
-      if (search) {
-        filters.search = search;
-      }
+        // Phần còn lại của hàm giữ nguyên...
+        const flattenedGigs = gigs.map(gig => ({
+            id: gig.id,
+            owner_id: gig.owner_id,
+            status: gig.status,
+            title: gig.title,
+            cover_image: gig.cover_image,
+            description: gig.description,
+            price: gig.price,
+            delivery_days: gig.delivery_days,
+            num_of_edits: gig.num_of_edits,
+            created_at: gig.created_at,
+            updated_at: gig.updated_at,
+            category_id: gig.category_id,
+            // Owner information
+            owner_username: gig.User?.username,
+            owner_fullname: gig.User?.fullname,
+            owner_avatar: gig.User?.avt_url || 'https://placehold.co/300x300',
+            // Category information
+            category_name: gig.Categories?.name,
+            category_description: gig.Categories?.description
+        }));
 
-      // Get gigs with details
-      const gigs = await Gig.findWithDetails(filters);
-      
-      // Get total count
-      const total = await Gig.getCount(filters);
-
-      // Flatten the nested data for easier frontend consumption
-      const flattenedGigs = gigs.map(gig => ({
-        id: gig.id,
-        owner_id: gig.owner_id,
-        status: gig.status,
-        title: gig.title,
-        cover_image: gig.cover_image,
-        description: gig.description,
-        price: gig.price,
-        delivery_days: gig.delivery_days,
-        num_of_edits: gig.num_of_edits,
-        created_at: gig.created_at,
-        updated_at: gig.updated_at,
-        category_id: gig.category_id,
-        // Owner information
-        owner_username: gig.User?.username,
-        owner_fullname: gig.User?.fullname,
-        owner_avatar: gig.User?.avt_url || 'https://placehold.co/300x300', // Use actual avt_url with fallback
-        // Category information
-        category_name: gig.Categories?.name,
-        category_description: gig.Categories?.description
-      }));
-
-      return {
-        gigs: flattenedGigs,
-        total: total || 0
-      };
+        return {
+            gigs: flattenedGigs,
+            total: total || 0
+        };
     } catch (error) {
-      console.error('Error in getAllGigs:', error);
-      throw new Error(`Error fetching gigs: ${error.message}`);
+        console.error('Error in getAllGigs:', error);
+        throw new Error(`Error fetching gigs: ${error.message}`);
     }
-  },
-
+},
   // Get a single gig by ID with retry logic
   getGigById: async (gigId) => {
     try {
@@ -149,19 +150,14 @@ const GigService = {
       try {
         result = await queryFunction(supabase);
         
-        // If we get null/empty result, try with fresh connection
+        // If we get null/empty result, just return it
         if (!result.data) {
-          const { refreshConnection } = require('../config/supabaseClient');
-          const freshClient = refreshConnection();
-          result = await queryFunction(freshClient);
+          console.log('No gig found with the given criteria');
         }
         
       } catch (error) {
-        console.error('Error in getGigById query, retrying with fresh connection:', error);
-        // Retry with fresh connection
-        const { refreshConnection } = require('../config/supabaseClient');
-        const freshClient = refreshConnection();
-        result = await queryFunction(freshClient);
+        console.error('Error in getGigById query:', error);
+        throw error; // Re-throw the error instead of trying to refresh connection
       }
 
       const gigWithDetails = result.data;
@@ -301,6 +297,176 @@ const GigService = {
       return gigs;
     } catch (error) {
       throw new Error(`Error fetching owner gigs: ${error.message}`);
+    }
+  },
+
+  // THÊM MỚI: Smart recommendation algorithm
+  getRecommendedGigs: async (options) => {
+    const { limit = 3 } = options;
+    
+    try {
+      // 1. Query gigs với JOIN user data - SỬA TÊN BẢNG VÀ FOREIGN KEY
+      const { data: gigs, error } = await supabase
+        .from('Gigs')
+        .select(`
+          *,
+          User!Gigs_owner_id_fkey (
+            username,
+            fullname,
+            avt_url
+          )
+        `)
+        .eq('status', 'active')
+        .order('created_at', { ascending: false })
+        .limit(20); // Lấy 20 candidates
+
+      if (error) {
+        throw new Error(`Supabase query error: ${error.message}`);
+      }
+
+      if (!gigs || gigs.length === 0) {
+        return [];
+      }
+
+      // 2. Smart scoring algorithm
+      const scoredGigs = gigs.map(gig => {
+        let score = 0;
+        
+        // Rating factor (40% weight)
+        const rating = gig.rating || 4.0;
+        score += rating * 0.4;
+        
+        // Price factor (20% weight)
+        const price = gig.price || 0;
+        if (price >= 20 && price <= 200) {
+          score += 0.2;
+        } else if (price < 20) {
+          score += 0.1;
+        }
+        
+        // Recency factor (20% weight)
+        const daysSinceCreation = (Date.now() - new Date(gig.created_at)) / (1000 * 60 * 60 * 24);
+        if (daysSinceCreation <= 7) {
+          score += 0.2;
+        } else if (daysSinceCreation <= 30) {
+          score += 0.1;
+        }
+        
+        // Title quality factor (10% weight)
+        if (gig.title && gig.title.length > 30) {
+          score += 0.1;
+        }
+        
+        // Description factor (10% weight)
+        if (gig.description && gig.description.length > 50) {
+          score += 0.1;
+        }
+        
+        return {
+          ...gig,
+          recommendation_score: score,
+          seller_name: gig.User?.username || gig.User?.fullname || 'Seller'
+        };
+      });
+
+      // 3. Sort và randomize để đa dạng
+      const recommended = scoredGigs
+        .sort((a, b) => b.recommendation_score - a.recommendation_score)
+        .slice(0, limit * 2) // Double candidates
+        .sort(() => Math.random() - 0.5) // Shuffle
+        .slice(0, limit); // Final selection
+
+      // 4. Clean response format
+      return recommended.map(gig => ({
+        gig_id: gig.id,
+        title: gig.title,
+        description: gig.description,
+        price: gig.price,
+        rating: gig.rating || 4.0,
+        seller_name: gig.seller_name,
+        created_at: gig.created_at,
+        recommendation_score: gig.recommendation_score
+      }));
+      
+    } catch (error) {
+      throw new Error(`Error fetching recommended gigs: ${error.message}`);
+    }
+  },
+
+  /**
+   * Get gig statistics for manage gigs page
+   * 
+   * @param {string} gigId - Gig ID
+   * @returns {Promise<Object>} Gig statistics
+   */
+  getGigStatistics: async (gigId) => {
+    try {
+      console.log('📊 [Gig Service] getGigStatistics called for gig:', gigId);
+
+      // Get orders for this gig from Orders table
+      const { data: orders, error: ordersError } = await supabase
+        .from('Orders')
+        .select('id, status, price_at_purchase, created_at, completed_at')
+        .eq('gig_id', gigId);
+
+      if (ordersError) {
+        throw new Error(`Error fetching orders: ${ordersError.message}`);
+      }
+
+      // Calculate statistics
+      const totalOrders = orders?.length || 0;
+      const completedOrders = orders?.filter(order => order.status === 'completed') || [];
+      const cancelledOrders = orders?.filter(order => order.status === 'cancelled') || [];
+      
+      const totalEarnings = completedOrders.reduce((sum, order) => 
+        sum + parseFloat(order.price_at_purchase || 0), 0
+      );
+
+      // Only return necessary statistics
+      const statistics = {
+        orders: totalOrders,
+        cancellations: cancelledOrders.length,
+        earnings: Math.round(totalEarnings * 100) / 100,
+        completedOrders: completedOrders.length
+      };
+
+      console.log('✅ [Gig Service] Statistics calculated:', statistics);
+      return statistics;
+    } catch (error) {
+      console.error('💥 [Gig Service] Error in getGigStatistics:', error);
+      throw new Error(`Error fetching gig statistics: ${error.message}`);
+    }
+  },
+
+  /**
+   * Get all gigs with statistics for a seller
+   * 
+   * @param {string} sellerId - Seller UUID
+   * @returns {Promise<Array>} Array of gigs with statistics
+   */
+  getSellerGigsWithStats: async (sellerId) => {
+    try {
+      console.log('📊 [Gig Service] getSellerGigsWithStats called for seller:', sellerId);
+
+      // Get all gigs for this seller
+      const gigs = await GigService.getGigsByOwnerId(sellerId);
+      
+      // Get statistics for each gig
+      const gigsWithStats = await Promise.all(
+        gigs.map(async (gig) => {
+          const stats = await GigService.getGigStatistics(gig.id);
+          return {
+            ...gig,
+            statistics: stats
+          };
+        })
+      );
+
+      console.log('✅ [Gig Service] Gigs with stats fetched:', gigsWithStats.length);
+      return gigsWithStats;
+    } catch (error) {
+      console.error('💥 [Gig Service] Error in getSellerGigsWithStats:', error);
+      throw new Error(`Error fetching seller gigs with stats: ${error.message}`);
     }
   }
 };
