@@ -22,6 +22,7 @@ import Favorites from './pages/Favorites';
 import SearchPage from './pages/SearchPage';
 import ServicesManagement from './pages/Admin/ServiceManagement';
 import ReportUserPage from './pages/ReportUserPage';
+import ReportGigPage from './pages/ReportGigPage'; // Assuming you have a ReportGigPage component
 function App() {
   return (
     <AuthProvider>
@@ -79,6 +80,8 @@ function App() {
             <Route path="/favorites" element={<Favorites />} />
 
             <Route path="/report-user" element={<ReportUserPage />} />
+
+            <Route path="/report-gig" element={<ReportGigPage />} />
 
             {/* 404 Route for unmatched paths */}
             <Route path="*" element={

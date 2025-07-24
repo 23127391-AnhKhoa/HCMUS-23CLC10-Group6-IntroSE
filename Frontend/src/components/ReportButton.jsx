@@ -5,7 +5,7 @@ import { ExclamationCircleOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 
 const ReportButton = ({ 
-  userId, 
+  Id, 
   size = 'small', 
   type = 'default',
   className = '',
@@ -14,12 +14,12 @@ const ReportButton = ({
   const navigate = useNavigate();
 
   const handleReport = () => {
-    if (userId) {
+    if (type === 'report-user') {
       // Nếu có userId, chuyển đến trang report với pre-filled data
-      navigate('/report-user', { state: { targetUserId: userId } });
-    } else {
+      navigate('/report-user', { state: { targetUserId: Id } });
+    } else if (type === 'report-gig') {
       // Nếu không có userId, chỉ chuyển đến trang report
-      navigate('/report-user');
+      navigate('/report-gig', { state: { targetGigId: Id } });
     }
   };
 

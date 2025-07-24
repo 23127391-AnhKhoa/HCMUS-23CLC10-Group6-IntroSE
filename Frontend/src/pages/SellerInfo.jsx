@@ -183,7 +183,8 @@ const SellerInfo = () => {
 
                                         <div className="absolute top-0 right-0">
                                         <ReportButton 
-                                            userId={sellerDetails.uuid}
+                                            Id={sellerDetails.uuid}
+                                            type = 'report-user'
                                             className="bg-red-600 hover:bg-red-300 text-white border border-red-200 px-3 py-1 text-sm font-medium rounded-md shadow transition duration-200"
                                         >
                                             Report
