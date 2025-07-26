@@ -12,11 +12,12 @@ const ProfileSeller = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
-  const [activeOrders, setActiveOrders] = useState([]);
+  const [inProgressOrders, setActiveOrders] = useState([]);
+  const [pendingOrders, setPendingOrders] = useState([]);
   const [ordersLoading, setOrdersLoading] = useState(true);
   const [stats, setStats] = useState({
     totalEarnings: 0,
-    totalOrders: 0,
+    pendingOrders: 0,
     activeOrders: 0,
     rating: 0,
     responseRate: 0,
@@ -29,7 +30,6 @@ const ProfileSeller = () => {
     bio: '',
     skills: '',
     hourlyRate: '',
-    avt_url: ''
   });
 
   useEffect(() => {
@@ -55,8 +55,7 @@ const ProfileSeller = () => {
           email: data.data.email || authUser?.email || '',
           bio: data.data.bio || '',
           skills: data.data.skills || '',
-          hourlyRate: data.data.hourlyRate || '',
-          avt_url: data.data.avatar_url || ''
+          hourlyRate: data.data.hourlyRate || ''
         });
       } catch (err) {
         setError(err.message);
@@ -86,10 +85,17 @@ const ProfileSeller = () => {
           order.status?.toLowerCase() === 'in_progress'
         ) || [];
         
+        // Filter for pending orders
+        const pendingOrdersData = data.data?.filter(order => 
+          order.status?.toLowerCase() === 'pending'
+        ) || [];
+        
         setActiveOrders(activeOrdersData);
+        setPendingOrders(pendingOrdersData);
       } catch (err) {
-        console.error('Failed to fetch active orders:', err);
+        console.error('Failed to fetch orders:', err);
         setActiveOrders([]);
+        setPendingOrders([]);
       } finally {
         setOrdersLoading(false);
       }
@@ -121,8 +127,8 @@ const ProfileSeller = () => {
         // Update stats with real data
         setStats({
           totalEarnings: earningsData.totalEarnings || 0,
-          totalOrders: earningsData.totalOrders || 0,
-          activeOrders: activeOrders.length,
+          pendingOrders: pendingOrders.length,
+          activeOrders: inProgressOrders.length,
           rating: 0, // Placeholder, as rating fetch is commented out
           responseRate: 95, // This would come from messaging/response data
           deliveryTime: '2-3 days' // This would be calculated from order completion times
@@ -141,13 +147,14 @@ const ProfileSeller = () => {
     }
   }, [authUser, token]);
 
-  // Update activeOrders count in stats when activeOrders changes
+  // Update activeOrders and pendingOrders count in stats when they change
   useEffect(() => {
     setStats(prevStats => ({
       ...prevStats,
-      activeOrders: activeOrders.length
+      activeOrders: inProgressOrders.length,
+      pendingOrders: pendingOrders.length
     }));
-  }, [activeOrders]);
+  }, [inProgressOrders, pendingOrders]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -269,11 +276,11 @@ const ProfileSeller = () => {
                   <p className="text-sm font-bold text-green-600">${stats.totalEarnings}</p>
                 </div>
                 <div className="bg-blue-50 p-2 rounded-lg text-center border border-blue-100">
-                  <h4 className="font-semibold text-blue-800 text-xs mb-1">Orders</h4>
-                  <p className="text-xs font-bold text-blue-600">{stats.totalOrders}</p>
+                  <h4 className="font-semibold text-blue-800 text-xs mb-1">Pending Orders</h4>
+                  <p className="text-xs font-bold text-blue-600">{stats.pendingOrders}</p>
                 </div>
                 <div className="bg-orange-50 p-2 rounded-lg text-center border border-orange-100">
-                  <h4 className="font-semibold text-orange-800 text-xs mb-1">Active</h4>
+                  <h4 className="font-semibold text-orange-800 text-xs mb-1">Progress order</h4>
                   <p className="text-xs font-bold text-orange-600">{stats.activeOrders}</p>
                 </div>
               </div>
@@ -298,7 +305,7 @@ const ProfileSeller = () => {
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-base font-semibold text-gray-800">Active Orders</h3>
                 <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-sm font-medium">
-                  {ordersLoading ? '...' : activeOrders.length}
+                  {ordersLoading ? '...' : inProgressOrders.length}
                 </span>
               </div>
               
@@ -315,9 +322,9 @@ const ProfileSeller = () => {
                     </div>
                   ))}
                 </div>
-              ) : activeOrders.length > 0 ? (
+              ) : inProgressOrders.length > 0 ? (
                 <div className="space-y-3">
-                  {activeOrders.map(order => (
+                  {inProgressOrders.map(order => (
                     <div key={order.order_id} className="border border-gray-200 rounded-lg p-3 hover:shadow-md hover:border-gray-300 transition-all">
                       <div className="flex items-start justify-between mb-2">
                         <h4 className="font-medium text-sm text-gray-800 line-clamp-1 flex-1">
