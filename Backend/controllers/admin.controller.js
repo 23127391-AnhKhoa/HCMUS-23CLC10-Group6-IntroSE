@@ -16,7 +16,7 @@ const createAdminLog = async (req, res) => {
     try {
         const { target_id, target_type, action_type, description } = req.body;
         const actor_id = req.user.uuid; // Lấy từ token
-        const actor_role = req.user.role; // Lấy từ token hoặc default
+        const actor_role = req.user.role; // Lấy từ token
 
         // Validation
         if (!target_id || !target_type || !action_type || !description) {
