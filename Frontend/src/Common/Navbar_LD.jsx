@@ -83,11 +83,11 @@ const Navbar = () => {
   };
 
   const handleLoginClick = () => {
-    navigate('/login');
+    navigate('/auth');
   };
 
   const handleSignupClick = () => {
-    navigate('/signup');
+    navigate('/auth');
   };
 
     const handleCreateGigsClick = () => {

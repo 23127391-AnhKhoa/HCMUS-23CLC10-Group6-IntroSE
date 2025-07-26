@@ -3,7 +3,7 @@ import { FiHome, FiList, FiTrendingUp, FiUsers, FiSettings, FiHelpCircle, FiBell
 import { Link, useNavigate } from 'react-router-dom';
 import { Dropdown, Menu, Avatar } from 'antd';
 import { UserOutlined } from '@ant-design/icons';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from "../../contexts/AuthContext";
 
 // --- Components ---
 
@@ -21,7 +21,7 @@ const Sidebar = () => (
         <a href="#" className="flex items-center p-3 text-gray-600 hover:bg-gray-100 rounded-lg transition-smooth">
           <FiList className="mr-3" /> Orders
         </a>
-        <a href="#" className="flex items-center p-3 text-gray-600 hover:bg-gray-100 rounded-lg transition-smooth">
+        <a href="/admin/servicemanagement" className="flex items-center p-3 text-gray-600 hover:bg-gray-100 rounded-lg transition-smooth">
           <FiTrendingUp className="mr-3" /> Services Management
         </a>
         <a href="#" className="flex items-center p-3 text-gray-600 hover:bg-gray-100 rounded-lg transition-smooth">

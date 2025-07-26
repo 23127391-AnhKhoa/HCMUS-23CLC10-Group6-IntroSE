@@ -25,7 +25,7 @@ const BecomeSellerPage = () => {
       const token = localStorage.getItem('token');
       if (!token) {
       message.error('You must be logged in to become a seller');
-      navigate('/login');
+      navigate('/auth'); // Chuyển hướng đến trang đăng nhập
       return;
       }
       
@@ -67,7 +67,7 @@ const BecomeSellerPage = () => {
     message.success('Profile completed! Redirecting...');
     
     // 5. Chuyển hướng trực tiếp đến trang Profile_Seller
-    navigate('/Profile_Seller');
+    navigate('/profile_seller');
 
     // Không cần setLoading(false) nữa vì đã chuyển trang
   };
