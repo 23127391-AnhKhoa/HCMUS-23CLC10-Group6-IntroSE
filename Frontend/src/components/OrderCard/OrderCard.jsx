@@ -13,7 +13,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import PropTypes from 'prop-types';
 import DOMPurify from 'dompurify';
-import ApiService from '../../services/apiService';
+import ApiService from '../../config/api.js'; // ĐÚNG
 import DeliveryFilesModal from '../DeliveryFilesModal/DeliveryFilesModal';
 import UploadDeliveryModal from '../UploadDeliveryModal/UploadDeliveryModal';
 import AutoPaymentTimer from '../AutoPaymentTimer/AutoPaymentTimer';
@@ -367,31 +367,6 @@ const OrderCard = ({
             } else if (safeOrder.status === 'in_progress' || safeOrder.status === 'revision_requested') {
                 // Show specific actions for revision_requested status
                 if (safeOrder.status === 'revision_requested') {
-                    // Upload revised files button
-                    actions.push({
-                        label: 'Upload Revised Files',
-                        action: () => {
-                            if (safeOnDeliveryUpload) {
-                                safeOnDeliveryUpload(safeOrder);
-                            } else {
-                                // Fallback: prompt for file upload
-                                const fileInput = document.createElement('input');
-                                fileInput.type = 'file';
-                                fileInput.multiple = true;
-                                fileInput.accept = '*/*';
-                                fileInput.onchange = (e) => {
-                                    const files = Array.from(e.target.files);
-                                    if (files.length > 0) {
-                                        handleFileUpload(files);
-                                    }
-                                };
-                                fileInput.click();
-                            }
-                        },
-                        className: 'bg-blue-600 hover:bg-blue-700 text-white',
-                        icon: <UploadOutlined />
-                    });
-                    
                     actions.push({
                         label: 'Accept Revision',
                         action: async () => {
@@ -399,8 +374,8 @@ const OrderCard = ({
                                 setProcessing(true);
                                 const response = await ApiService.handleRevision(safeOrder.id, 'accept', '');
                                 if (response.status === 'success') {
-                                    safeOnStatusUpdate(safeOrder.id, 'delivered');
-                                    alert('Revision request accepted and completed. Order is now delivered.');
+                                    safeOnStatusUpdate(safeOrder.id, 'in_progress');
+                                    alert('Revision request accepted. You can now work on the changes.');
                                 }
                             } catch (error) {
                                 console.error('Error accepting revision:', error);

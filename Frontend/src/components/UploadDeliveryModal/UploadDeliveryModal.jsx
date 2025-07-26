@@ -12,7 +12,7 @@ import {
     CloseOutlined,
     LoadingOutlined
 } from '@ant-design/icons';
-import ApiService from '../../services/apiService';
+import ApiService from '../../config/api.js'; // ĐÚNG
 
 const UploadDeliveryModal = ({ 
     isOpen, 

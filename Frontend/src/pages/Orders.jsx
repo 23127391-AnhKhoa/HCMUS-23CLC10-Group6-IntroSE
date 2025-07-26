@@ -15,15 +15,15 @@
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { EyeOutlined, ClockCircleOutlined, CheckCircleOutlined, CloseCircleOutlined, ShoppingOutlined, FileTextOutlined, AppstoreOutlined, UnorderedListOutlined } from '@ant-design/icons';
 import NavBar_Buyer from '../Common/NavBar_Buyer';
 import NavBar_Seller from '../Common/NavBar_Seller';
+import { EyeOutlined, ClockCircleOutlined, CheckCircleOutlined, CloseCircleOutlined, ShoppingOutlined, FileTextOutlined, AppstoreOutlined, UnorderedListOutlined } from '@ant-design/icons';
 import Footer from '../Common/Footer';
 import OrderCard from '../components/OrderCard/OrderCard';
 import OrderOverviewCard from '../components/OrderOverviewCard/OrderOverviewCard';
 import AutoPaymentWidget from '../components/AutoPaymentWidget/AutoPaymentWidget';
 import { useAuth } from '../contexts/AuthContext';
-import ApiService from '../services/apiService';
+import ApiService from '../config/api.js';
 
 /**
  * Orders component for managing user orders
