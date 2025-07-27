@@ -79,14 +79,21 @@ const User = {
   searchUsers: async (query) => {
     const { data, error } = await supabase
       .from('User')
-      .select('uuid, fullname, username, avt_url, role, status')
+      .select('uuid, fullname, username, avt_url, role, status, seller_headline')
       .or(`fullname.ilike.%${query}%,username.ilike.%${query}%`)
       .eq('status', 'active')
       .order('fullname')
       .limit(20);
 
     if (error) throw error;
-    return data || [];
+    
+    // Map avt_url to avatar for frontend compatibility
+    const users = (data || []).map(user => ({
+      ...user,
+      avatar: user.avt_url
+    }));
+    
+    return { status: 'success', data: users };
   },
 
   // === USER FAVORITES FUNCTIONS ===

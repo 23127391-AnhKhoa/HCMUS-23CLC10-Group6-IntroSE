@@ -696,12 +696,18 @@ const GigDetail = () => {
                                         }}
                                     ></div>
                                     <div className="flex flex-col justify-center flex-1">
-                                        <p className="text-gray-800 text-[22px] font-bold leading-tight tracking-[-0.015em] mb-1">
+                                        <button 
+                                            onClick={() => navigate(`/SellerInfo/${sellerDetails?.uuid || gig.owner_id}`)}
+                                            className="text-gray-800 text-[22px] font-bold leading-tight tracking-[-0.015em] mb-1 hover:text-blue-700 transition-colors duration-200 text-left"
+                                        >
                                             {sellerDetails?.fullname || gig.owner_fullname || 'Professional Seller'}
-                                        </p>
-                                        <p className="text-blue-600 text-base font-medium leading-normal mb-1">
+                                        </button>
+                                        <button 
+                                            onClick={() => navigate(`/SellerInfo/${sellerDetails?.uuid || gig.owner_id}`)}
+                                            className="text-blue-600 text-base font-medium leading-normal mb-1 hover:text-blue-700 transition-colors duration-200 text-left"
+                                        >
                                             @{sellerDetails?.username || gig.owner_username || 'seller'}
-                                        </p>
+                                        </button>
                                         <p className="text-gray-600 text-base font-normal leading-normal mb-2">
                                             {sellerDetails?.seller_headline || gig.category_name || 'Service Provider'}
                                         </p>
