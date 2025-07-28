@@ -3,23 +3,37 @@ import React from 'react';
 import { Button } from 'antd';
 import { ExclamationCircleOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 
 const ReportButton = ({ 
-  userId, 
+  Id, 
   size = 'small', 
   type = 'default',
   className = '',
   children 
 }) => {
+  const { authUser } = useAuth();
+
   const navigate = useNavigate();
 
   const handleReport = () => {
-    if (userId) {
+    if (Id === authUser?.uuid) {
+      // Nếu userId trùng với authUser, không cho phép report
+      alert("You cannot report yourself.");
+      return;
+    } else if (type === 'report-gig' && Id == authUser?.uuid) {
+      alert(
+        "You cannot report your own gig."
+      );
+      return;
+    }
+
+    if (type === 'report-user') {
       // Nếu có userId, chuyển đến trang report với pre-filled data
-      navigate('/report-user', { state: { targetUserId: userId } });
-    } else {
+      navigate('/report-user', { state: { targetUserId: Id } });
+    } else if (type === 'report-gig') {
       // Nếu không có userId, chỉ chuyển đến trang report
-      navigate('/report-user');
+      navigate('/report-gig', { state: { targetGigId: Id } });
     }
   };
 

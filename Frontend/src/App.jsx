@@ -24,6 +24,7 @@ import ServicesManagement from './pages/Admin/ServiceManagement';
 import GigDetailContent from './pages/Admin/AdminGigContent';
 import AdminSellerInfor from './pages/Admin/AdminSellerInfor'; // Updated import for AdminSellerInfo
 import ReportUserPage from './pages/ReportUserPage';
+import ReportGigPage from './pages/ReportGigPage'; // Assuming you have a ReportGigPage component
 function App() {
   return (
     <AuthProvider>
@@ -85,6 +86,8 @@ function App() {
             <Route path="/favorites" element={<Favorites />} />
 
             <Route path="/report-user" element={<ReportUserPage />} />
+
+            <Route path="/report-gig" element={<ReportGigPage />} />
 
             {/* 404 Route for unmatched paths */}
             <Route path="*" element={

@@ -35,7 +35,7 @@ const OTPForm = ({ email, onVerify, onResendOTP }) => {
         setSuccess('New verification code sent to your email!');
       } else {
         // Fallback API call if onResendOTP is not provided
-        const response = await fetch(`${window.BASE_API || 'http://localhost:8000'}/api/auth/resend-otp`, {
+        const response = await fetch('http://localhost:8000/api/auth/resend-otp', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
