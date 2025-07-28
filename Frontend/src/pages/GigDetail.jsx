@@ -497,7 +497,7 @@ const GigDetail = () => {
                                 </button>
                                 <div className="top-0 right-0">
                                     <ReportButton 
-                                        Id={gig.owner_id}
+                                        Id={gig.id}
                                         type="report-gig"
                                         className="bg-red-600 hover:bg-red-300 text-white border border-red-200 px-3 py-1 text-sm font-medium rounded-md shadow transition duration-200"
                                     >

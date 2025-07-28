@@ -21,11 +21,11 @@ const ReportGigPage = () => {
 
   // Pre-fill form if userId is passed via state
   useEffect(() => {
-    if (location.state?.targetUserId) {
-      const userId = location.state.targetUserId;
-      setPrefilledUserId(userId);
+    if (location.state?.targetGigId) {
+      const gigId = location.state.targetGigId;
+      setPrefilledUserId(gigId);
       form.setFieldsValue({
-        target_user_id: userId
+        target_gig_id: gigId
       });
     }
   }, [location.state, form]);
@@ -41,13 +41,13 @@ const ReportGigPage = () => {
       }
 
       const reportData = {
-        target_id: values.target_user_id,
+        target_id: values.target_gig_id,
         target_type: 'gig',
         action_type: 'report gig',
         description: `Report reason: ${values.reason}. Additional details: ${values.description || 'No additional details provided.'}`
       };
 
-      const response = await fetch(`${window.BASE_API || 'http://localhost:8000'}/api/admin/log`, {
+      const response = await fetch(`http://localhost:8000/api/admin/log`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -116,31 +116,10 @@ const ReportGigPage = () => {
               onFinish={handleSubmit}
               requiredMark={false}
             >
-              {/* Target User ID - only show if not pre-filled */}
-              {!prefilledUserId && (
-                <Form.Item
-                  label={<span className="text-gray-700 font-semibold">User ID to Report</span>}
-                  name="target_user_id"
-                  rules={[
-                    { required: true, message: 'Please enter the User ID' },
-                    { 
-                      pattern: /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/,
-                      message: 'Please enter a valid UUID format'
-                    }
-                  ]}
-                  extra="Enter the UUID of the user you want to report. You can find this in their profile URL."
-                >
-                  <Input
-                    placeholder="e.g., 123e4567-e89b-12d3-a456-426614174000"
-                    size="large"
-                    className="rounded-lg"
-                  />
-                </Form.Item>
-              )}
 
               {/* Hidden field for pre-filled user ID */}
               {prefilledUserId && (
-                <Form.Item name="target_user_id" style={{ display: 'none' }}>
+                <Form.Item name="target_gig_id" style={{ display: 'none' }}>
                   <Input />
                 </Form.Item>
               )}
