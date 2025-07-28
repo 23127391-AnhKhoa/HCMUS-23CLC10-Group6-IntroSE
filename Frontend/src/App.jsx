@@ -25,6 +25,7 @@ import SearchPage from './pages/SearchPage';
 import ServicesManagement from './pages/Admin/ServiceManagement';
 import GigDetailContent from './pages/Admin/AdminGigContent';
 import AdminSellerInfor from './pages/Admin/AdminSellerInfor'; // Updated import for AdminSellerInfo
+import ManageReportedGigs from './pages/Admin/ManageReportedGigs'; // Import the new ManageReportedGigs component
 function App() {
   return (
     <AuthProvider>
@@ -42,7 +43,7 @@ function App() {
             <Route path="/login" element={<LoginPage />} />
 
             <Route path="admin/AdminDashboard" element={<AdminDashboard />} />
-            
+            <Route path="/admin/manage-reported-gigs" element={<ManageReportedGigs />} />
             {/* Route for signup page */}
             <Route path="/signup" element={<SignupPage />} />
             <Route path="/admin/servicemanagement" element={<ServicesManagement />} />

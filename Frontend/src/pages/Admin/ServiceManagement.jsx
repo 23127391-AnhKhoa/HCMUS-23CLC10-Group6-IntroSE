@@ -17,8 +17,8 @@ const Sidebar = () => (
           <a href="/admin/admindashboard" className="flex items-center p-3 text-gray-600 hover:bg-gray-100 rounded-lg transition-smooth">
             <FiHome className="mr-3" /> Dashboard
           </a>
-          <a href="#" className="flex items-center p-3 text-gray-600 hover:bg-gray-100 rounded-lg transition-smooth">
-            <FiList className="mr-3" /> Orders
+          <a href="/admin/manage-reported-gigs" className="flex items-center p-3 text-gray-600 hover:bg-gray-100 rounded-lg transition-smooth">
+            <FiList className="mr-3" /> Report
           </a>
           <a href="/admin/servicesmanagement" className="flex items-center p-3 bg-gray-100 text-gray-800 font-bold rounded-lg transition-smooth">
             <FiTrendingUp className="mr-3" /> Services Management
