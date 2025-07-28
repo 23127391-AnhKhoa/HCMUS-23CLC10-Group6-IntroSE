@@ -195,7 +195,7 @@ const CreateGigsPage = () => {
   // Check if user is authenticated and fetch categories
   useEffect(() => {
     if (!authUser) {
-      navigate('/login', { 
+      navigate('/auth', { 
         state: { 
           from: '/create-gig',
           message: 'Please login to create a gig' 

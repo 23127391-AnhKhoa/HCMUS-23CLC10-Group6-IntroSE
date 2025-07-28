@@ -54,7 +54,7 @@ const GigDetail = () => {
         if (!authUser || !token) {
             setErrorNotification('Please log in to save favorites');
             setTimeout(() => {
-                navigate('/login');
+                navigate('/auth');
             }, 1500);
             return;
         }
@@ -97,7 +97,7 @@ const GigDetail = () => {
         if (!authUser) {
             setErrorNotification('Please log in to create an order');
             setTimeout(() => {
-                navigate('/login');
+                navigate('/auth');
             }, 1500);
             return;
         }
@@ -115,7 +115,7 @@ const GigDetail = () => {
         if (!authUser || !token) {
             setErrorNotification('Please log in to create an order');
             setTimeout(() => {
-                navigate('/login');
+                navigate('/auth');
             }, 1500);
             return { success: false, error: 'Authentication required' };
         }
@@ -448,7 +448,7 @@ const GigDetail = () => {
                 {/* Error notification */}
                 {errorNotification && (
                     <div className="fixed top-20 left-1/2 transform -translate-x-1/2 z-50 px-6 py-3 bg-white/90 backdrop-blur-sm border border-red-200 text-red-600 rounded-2xl shadow-xl flex items-center">
-                        <span className="mr-2">⚠️</span>
+                        <span className="mr-2"></span>
                         <span className="font-medium">{errorNotification}</span>
                         <button 
                             onClick={() => setErrorNotification('')}
@@ -494,14 +494,7 @@ const GigDetail = () => {
                                         }}
                                     />
                                 </button>
-                                <button 
-                                    className="flex w-10 h-10 cursor-pointer items-center justify-center rounded-full border-2 border-red-400 text-red-500 hover:border-red-500 hover:text-red-600 transition-all duration-200 hover:shadow-lg transform hover:-translate-y-0.5"
-                                    title="Report Gig"
-                                >
-                                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                                        <path d="M12 2L1 21h22L12 2zm0 3.5L19.5 19h-15L12 5.5zM11 10v4h2v-4h-2zm0 5v2h2v-2h-2z"/>
-                                    </svg>
-                                </button>
+
                             </div>
                         </div>
 
@@ -678,7 +671,7 @@ const GigDetail = () => {
                                             </div>
                                         ) : (
                                             <button 
-                                                onClick={() => navigate('/login')}
+                                                onClick={() => navigate('/auth')}
                                                 className="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-2xl h-12 px-6 bg-gradient-to-r from-blue-500 to-purple-600 text-white text-sm font-bold leading-normal tracking-[0.015em] hover:from-blue-600 hover:to-purple-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
                                             >
                                                 <span className="truncate">Login to Order</span>
@@ -703,12 +696,18 @@ const GigDetail = () => {
                                         }}
                                     ></div>
                                     <div className="flex flex-col justify-center flex-1">
-                                        <p className="text-gray-800 text-[22px] font-bold leading-tight tracking-[-0.015em] mb-1">
+                                        <button 
+                                            onClick={() => navigate(`/SellerInfo/${sellerDetails?.uuid || gig.owner_id}`)}
+                                            className="text-gray-800 text-[22px] font-bold leading-tight tracking-[-0.015em] mb-1 hover:text-blue-700 transition-colors duration-200 text-left"
+                                        >
                                             {sellerDetails?.fullname || gig.owner_fullname || 'Professional Seller'}
-                                        </p>
-                                        <p className="text-blue-600 text-base font-medium leading-normal mb-1">
+                                        </button>
+                                        <button 
+                                            onClick={() => navigate(`/SellerInfo/${sellerDetails?.uuid || gig.owner_id}`)}
+                                            className="text-blue-600 text-base font-medium leading-normal mb-1 hover:text-blue-700 transition-colors duration-200 text-left"
+                                        >
                                             @{sellerDetails?.username || gig.owner_username || 'seller'}
-                                        </p>
+                                        </button>
                                         <p className="text-gray-600 text-base font-normal leading-normal mb-2">
                                             {sellerDetails?.seller_headline || gig.category_name || 'Service Provider'}
                                         </p>

@@ -4,7 +4,6 @@ import { Link, NavLink, useNavigate  } from 'react-router-dom';
 import { Avatar, Badge, Dropdown, Menu, message } from 'antd';
 import { BellOutlined, UserOutlined } from '@ant-design/icons';
 import { useAuth } from '../contexts/AuthContext';
-import FreelandLogo from '../assets/logo.svg';
 
 const SellerNavbar = () => {
     const { authUser, logout, updateUser } = useAuth();
@@ -13,7 +12,7 @@ const SellerNavbar = () => {
 
     const handleLogout = () => {
         logout();
-        navigate('/login');
+        navigate('/auth');
     };
 
     const handleSwitchToBuying = async () => {
@@ -23,7 +22,7 @@ const SellerNavbar = () => {
             
             if (!token) {
                 message.error('You must be logged in');
-                navigate('/login');
+                navigate('/auth');
                 return;
             }
 
@@ -104,7 +103,7 @@ const SellerNavbar = () => {
           {/* Phần bên trái: Logo và Menu Seller */}
           <div className="flex items-center space-x-8">
             <Link to="/profile_seller" className="flex items-center">
-              <img src={FreelandLogo} alt="FREELAND Logo" className="h-8 w-auto" />
+              <img src="/logo.svg" alt="FREELAND Logo" className="h-4 w-auto" />
             </Link>
             <nav className="flex items-center space-x-6 font-medium text-gray-600">
               <NavLink to="/dashboard" className={({ isActive }) => isActive ? "text-blue-600" : "hover:text-blue-600"}>
