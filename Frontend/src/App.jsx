@@ -24,6 +24,7 @@ import ServicesManagement from './pages/Admin/ServiceManagement';
 import GigDetailContent from './pages/Admin/AdminGigContent';
 import AdminSellerInfor from './pages/Admin/AdminSellerInfor'; // Updated import for AdminSellerInfo
 import ReportUserPage from './pages/ReportUserPage';
+import NotificationPage from './pages/NotificationPage';
 function App() {
   return (
     <AuthProvider>
@@ -77,6 +78,9 @@ function App() {
             <Route path="/inbox" element={<InboxPage />} />
 
             <Route path="/messages" element={<InboxPage />} />
+            
+            <Route path="/notifications" element={<NotificationPage />} />
+            
             <Route path="/admin/seller/:sellerId" element={<AdminSellerInfor />} />
 
             {/* Admin routes */}
