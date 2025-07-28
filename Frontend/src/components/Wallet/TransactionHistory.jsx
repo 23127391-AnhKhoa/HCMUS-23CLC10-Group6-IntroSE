@@ -59,7 +59,7 @@ const TransactionHistory = ({ token, refreshTrigger }) => {
       title: 'Type',
       dataIndex: 'type',
       key: 'type',
-      width: 100,
+      width: 130,
       render: (type) => (
         <Tag 
           icon={type === 'deposit' ? <ArrowDownOutlined /> : <ArrowUpOutlined />}

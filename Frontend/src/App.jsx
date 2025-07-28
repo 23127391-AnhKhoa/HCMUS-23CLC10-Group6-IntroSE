@@ -25,7 +25,12 @@ import GigDetailContent from './pages/Admin/AdminGigContent';
 import AdminSellerInfor from './pages/Admin/AdminSellerInfor'; // Updated import for AdminSellerInfo
 import ManageReportedGigs from './pages/Admin/ManageReportedGigs'; // Import the new ManageReportedGigs component
 import ReportUserPage from './pages/ReportUserPage';
+<<<<<<< HEAD
 
+=======
+>>>>>>> 550d3eabfba22ef8e0492cb05640bd9832589265
+import ReportGigPage from './pages/ReportGigPage'; // Assuming you have a ReportGigPage component
+>>>>>>> a346e2610e188df9f09c71a5ab1220dbab9ab70b
 function App() {
   return (
     <AuthProvider>
@@ -90,6 +95,8 @@ function App() {
             <Route path="/favorites" element={<Favorites />} />
 
             <Route path="/report-user" element={<ReportUserPage />} />
+
+            <Route path="/report-gig" element={<ReportGigPage />} />
 
             {/* 404 Route for unmatched paths */}
             <Route path="*" element={
