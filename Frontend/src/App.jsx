@@ -22,18 +22,11 @@ import Favorites from './pages/Favorites';
 import SearchPage from './pages/SearchPage';
 import ServicesManagement from './pages/Admin/ServiceManagement';
 import GigDetailContent from './pages/Admin/AdminGigContent';
-import AdminSellerInfor from './pages/Admin/AdminSellerInfor'; // Updated import for AdminSellerInfo
-import ManageReportedGigs from './pages/Admin/ManageReportedGigs'; // Import the new ManageReportedGigs component
+import AdminSellerInfor from './pages/Admin/AdminSellerInfor'; 
+import ManageReportedGigs from './pages/Admin/ManageReportedGigs'; 
 import ReportUserPage from './pages/ReportUserPage';
-<<<<<<< HEAD
-<<<<<<< HEAD
+import ReportGigPage from './pages/ReportGigPage'; 
 
-=======
->>>>>>> 550d3eabfba22ef8e0492cb05640bd9832589265
-=======
->>>>>>> c0c63646a20620f7ff3d469043b569666051a10e
-import ReportGigPage from './pages/ReportGigPage'; // Assuming you have a ReportGigPage component
->>>>>>> a346e2610e188df9f09c71a5ab1220dbab9ab70b
 function App() {
   return (
     <AuthProvider>
@@ -45,14 +38,9 @@ function App() {
             <Route path="/" element={<Introduction />} />
 
             <Route path="admin/AdminDashboard" element={<AdminDashboard />} />
-<<<<<<< HEAD
             <Route path="/admin/manage-reported-gigs" element={<ManageReportedGigs />} />
             {/* Route for signup page */}
             
-=======
-
-            <Route path="/admin/manage-reported-gigs" element={<ManageReportedGigs />} />
->>>>>>> c0c63646a20620f7ff3d469043b569666051a10e
             {/* Route for authentication page */}
             <Route path="/auth" element={<AuthPage />} />
 

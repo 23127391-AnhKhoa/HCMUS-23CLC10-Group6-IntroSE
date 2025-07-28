@@ -8,7 +8,15 @@ const User = {
     if (error && error.code !== 'PGRST116') throw error;
     return data;
   },
-
+  findByIds: async (ids) => {
+        if (!ids || ids.length === 0) return [];
+        const { data, error } = await supabase
+            .from('User')
+            .select('uuid, username') // Chỉ lấy các trường cần thiết
+            .in('uuid', ids);
+        if (error) throw error;
+        return data;
+    },
   // Tìm user bằng username
   findByUsername: async (username) => {
     const { data, error } = await supabase.from('User').select('*').eq('username', username).single();

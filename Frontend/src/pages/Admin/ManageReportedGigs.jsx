@@ -1,48 +1,84 @@
 import React, { useState, useEffect, useCallback } from 'react';
-// Thêm các icon cho Sidebar
-import { FiSearch, FiHome, FiList, FiTrendingUp, FiUsers, FiHelpCircle, FiSettings } from 'react-icons/fi';
+// Sửa đổi ở đây: Thêm FiEye và đổi FiList thành FiAlertCircle cho Report
+import { FiSearch, FiHome, FiAlertCircle, FiTrendingUp, FiUsers, FiHelpCircle, FiSettings, FiEye } from 'react-icons/fi';
 
 // --- Components Con ---
 
 const Sidebar = () => (
-    <div className="w-64 bg-white h-screen flex flex-col justify-between p-4 shadow-lg">
-      <div>
-        <div className="flex items-center space-x-2 mb-10 p-2">
-          <img src="https://i.pravatar.cc/150?u=freeland-logo" alt="Logo" className="w-10 h-10 rounded-full" />
-          <span className="font-bold text-xl text-gray-800">FREELAND</span>
-        </div>
-        <nav className="flex flex-col space-y-2">
-          <a href="/admin/admindashboard" className="flex items-center p-3 text-gray-600 hover:bg-gray-100 rounded-lg transition-smooth">
-            <FiHome className="mr-3" /> Dashboard
-          </a>
-          <a href="/admin/manage-reported-gigs" className="flex items-center p-3 text-gray-600 hover:bg-gray-100 rounded-lg transition-smooth">
-            <FiList className="mr-3" /> Report
-          </a>
-          <a href="/admin/servicesmanagement" className="flex items-center p-3 bg-gray-100 text-gray-800 font-bold rounded-lg transition-smooth">
-            <FiTrendingUp className="mr-3" /> Services Management
-          </a>
-          <a href="#" className="flex items-center p-3 text-gray-600 hover:bg-gray-100 rounded-lg transition-smooth">
-            <FiUsers className="mr-3" /> Earnings
-          </a>
-          <a href="#" className="flex items-center p-3 text-gray-600 hover:bg-gray-100 rounded-lg transition-smooth">
-            <FiUsers className="mr-3" /> Community
-          </a>
-          <a href="/admin/usermanagement" className="flex items-center p-3 text-gray-600 hover:bg-gray-100 rounded-lg transition-smooth">
-            <FiUsers className="mr-3" /> User Management
-          </a>
-        </nav>
-      </div>
-       <div className="flex flex-col space-y-2">
-        <a href="#" className="flex items-center p-3 text-gray-600 hover:bg-gray-100 rounded-lg transition-smooth">
-          <FiHelpCircle className="mr-3" /> Help
-        </a>
-        <a href="#" className="flex items-center p-3 text-gray-600 hover:bg-gray-100 rounded-lg transition-smooth">
-          <FiSettings className="mr-3" /> Settings
-        </a>
-      </div>
-    </div>
-);
 
+    <div className="w-64 bg-white h-screen flex flex-col justify-between p-4 shadow-lg">
+
+      <div>
+
+        <div className="flex items-center space-x-2 mb-10 p-2">
+
+          <img src="https://i.pravatar.cc/150?u=freeland-logo" alt="Logo" className="w-10 h-10 rounded-full" />
+
+          <span className="font-bold text-xl text-gray-800">FREELAND</span>
+
+        </div>
+
+        <nav className="flex flex-col space-y-2">
+
+          <a href="/admin/admindashboard" className="flex items-center p-3 text-gray-600 hover:bg-gray-100 rounded-lg transition-smooth">
+
+            <FiHome className="mr-3" /> Dashboard
+
+          </a>
+
+          <a href="/admin/manage-reported-gigs" className="flex items-center p-3 bg-gray-100 text-gray-800 font-bold rounded-lg transition-smooth">
+
+            <FiAlertCircle className="mr-3" /> Report
+
+          </a>
+
+          <a href="/admin/servicesmanagement" className="flex items-center p-3 text-gray-600 hover:bg-gray-100 rounded-lg transition-smooth">
+
+            <FiTrendingUp className="mr-3" /> Services Management
+
+          </a>
+
+          <a href="#" className="flex items-center p-3 text-gray-600 hover:bg-gray-100 rounded-lg transition-smooth">
+
+            <FiUsers className="mr-3" /> Earnings
+
+          </a>
+
+          <a href="#" className="flex items-center p-3 text-gray-600 hover:bg-gray-100 rounded-lg transition-smooth">
+
+            <FiUsers className="mr-3" /> Community
+
+          </a>
+
+          <a href="/admin/usermanagement" className="flex items-center p-3 text-gray-600 hover:bg-gray-100 rounded-lg transition-smooth">
+
+            <FiUsers className="mr-3" /> User Management
+
+          </a>
+
+        </nav>
+
+      </div>
+
+       <div className="flex flex-col space-y-2">
+
+        <a href="#" className="flex items-center p-3 text-gray-600 hover:bg-gray-100 rounded-lg transition-smooth">
+
+          <FiHelpCircle className="mr-3" /> Help
+
+        </a>
+
+        <a href="#" className="flex items-center p-3 text-gray-600 hover:bg-gray-100 rounded-lg transition-smooth">
+
+          <FiSettings className="mr-3" /> Settings
+
+        </a>
+
+      </div>
+
+    </div>
+
+);
 const ReportsTable = ({ title, headers, data, renderRow }) => (
     <div className="mb-10">
         <h2 className="text-xl font-bold text-gray-700 mb-4">{title}</h2>
@@ -50,24 +86,33 @@ const ReportsTable = ({ title, headers, data, renderRow }) => (
             <table className="w-full text-left">
                 <thead>
                     <tr className="border-b">
-                        {headers.map(h => (
-                            <th key={h} className="p-4 text-sm font-semibold text-gray-500">{h}</th>
-                        ))}
+                        {headers.map(h => <th key={h} className="p-4 text-sm font-semibold text-gray-500">{h}</th>)}
                     </tr>
                 </thead>
                 <tbody>
                     {data && data.length > 0 ? (
                         data.map((item, index) => renderRow(item, index))
                     ) : (
-                        <tr>
-                            <td colSpan={headers.length} className="text-center p-6 text-gray-500">No data available.</td>
-                        </tr>
+                        <tr><td colSpan={headers.length} className="text-center p-6 text-gray-500">No data available.</td></tr>
                     )}
                 </tbody>
             </table>
         </div>
     </div>
 );
+
+
+// Sửa đổi ở đây: Thêm hàm xử lý chuỗi Reason
+const parseReason = (description) => {
+    if (!description || typeof description !== 'string') return 'N/A';
+    try {
+        const mainPart = description.split('Additional details:')[0];
+        const reason = mainPart.replace('Report reason:', '').trim();
+        return reason || description;
+    } catch {
+        return description; // Trả về nguyên bản nếu có lỗi
+    }
+};
 
 // --- Component Chính ---
 const ManageReportedGigs = () => {
@@ -136,10 +181,18 @@ const ManageReportedGigs = () => {
                             renderRow={(item, index) => (
                                 <tr key={index} className="border-b last:border-b-0">
                                     <td className="p-4 font-medium">{item.gig_title}</td>
-                                    <td className="p-4 text-gray-600">Reported by: Multiple Users</td>
-                                    <td className="p-4 text-gray-600">Reason: Multiple</td>
+                                    <td className="p-4 text-gray-600">Multiple Users</td>
+                                    <td className="p-4 text-gray-600">Multiple Reasons</td>
                                     <td className="p-4 text-gray-600 font-semibold">{item.report_count}</td>
-                                    <td className="p-4"><button className="font-semibold text-blue-600 hover:underline">View Details</button></td>
+                                    <td className="p-4">
+                                        {/* Sửa đổi ở đây: Thêm nút View Details icon */}
+                                        <button 
+                                            onClick={() => window.open(`/admin/gig/${item.gig_id}`, '_blank')}
+                                            className="flex items-center bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold px-4 py-2 rounded-lg transition-smooth"
+                                        >
+                                            <FiEye className="mr-2"/> View
+                                        </button>
+                                    </td>
                                 </tr>
                             )}
                         />
@@ -150,10 +203,21 @@ const ManageReportedGigs = () => {
                             data={reports.allReports}
                             renderRow={(item, index) => (
                                 <tr key={item.id} className="border-b last:border-b-0">
-                                    <td className="p-4 font-medium">{item.gig?.title || 'Gig not found'}</td>
-                                    <td className="p-4 text-gray-600">Reported by: {item.reporter?.username || 'N/A'}</td>
-                                    <td className="p-4 text-gray-600">{item.description}</td>
-                                    <td className="p-4"><button className="font-semibold text-blue-600 hover:underline">View Details</button></td>
+                                    <td className="p-4 font-medium">{item.gig?.title || 'Deleted/Invalid Gig'}</td>
+                                    {/* Sửa đổi ở đây: Bỏ chữ "Reported by:" */}
+                                    <td className="p-4 text-gray-600">{item.reporter?.username || 'N/A'}</td>
+                                    {/* Sửa đổi ở đây: Dùng hàm parseReason */}
+                                    <td className="p-4 text-gray-600">{parseReason(item.description)}</td>
+                                    <td className="p-4">
+                                        {/* Sửa đổi ở đây: Thêm nút View Details icon */}
+                                        <button 
+                                            onClick={() => window.open(`/admin/gig/${item.gig?.id}`, '_blank')}
+                                            disabled={!item.gig?.id}
+                                            className="flex items-center bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold px-4 py-2 rounded-lg transition-smooth disabled:opacity-50 disabled:cursor-not-allowed"
+                                        >
+                                            <FiEye className="mr-2"/> View
+                                        </button>
+                                    </td>
                                 </tr>
                             )}
                         />
