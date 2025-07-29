@@ -70,6 +70,18 @@ const Orders = () => {
         }
     }, [authUser, token, authLoading, activeTab, statusFilter, currentPage]);
 
+    useEffect(() => {
+        if (!authLoading && authUser) {
+            if (authUser.role === 'buyer') {
+                setActiveTab('buyer');
+            } else {
+                setActiveTab('seller');
+            }
+            setCurrentPage(1);
+            setViewMode('overview');
+        }
+    }, [authUser, authLoading]);
+
     /**
      * Fetch orders from API based on current filters
      */
@@ -394,39 +406,8 @@ const Orders = () => {
                 {/* Tab Navigation and View Controls */}
                 <div className="mb-6 space-y-4">
                     {/* Tab Navigation */}
+                    
                     <div className="flex justify-between items-center">
-                        <div className="flex space-x-1 bg-gray-200 p-1 rounded-lg w-fit">
-                            <button
-                                onClick={() => {
-                                    setActiveTab('buyer');
-                                    setCurrentPage(1);
-                                    setViewMode('overview'); // Reset to overview when switching tabs
-                                }}
-                                className={`px-4 py-2 rounded-md font-medium transition-colors ${
-                                    activeTab === 'buyer'
-                                        ? 'bg-white text-blue-600 shadow-sm'
-                                        : 'text-gray-600 hover:text-gray-900'
-                                }`}
-                            >
-                                <ShoppingOutlined className="mr-2" />
-                                As Buyer
-                            </button>
-                            <button
-                                onClick={() => {
-                                    setActiveTab('seller');
-                                    setCurrentPage(1);
-                                    setViewMode('overview'); // Reset to overview when switching tabs
-                                }}
-                                className={`px-4 py-2 rounded-md font-medium transition-colors ${
-                                    activeTab === 'seller'
-                                        ? 'bg-white text-blue-600 shadow-sm'
-                                        : 'text-gray-600 hover:text-gray-900'
-                                }`}
-                            >
-                                <EyeOutlined className="mr-2" />
-                                As Seller
-                            </button>
-                        </div>
 
                         {/* View Mode Toggle */}
                         <div className="flex space-x-1 bg-gray-100 rounded-lg p-1">
