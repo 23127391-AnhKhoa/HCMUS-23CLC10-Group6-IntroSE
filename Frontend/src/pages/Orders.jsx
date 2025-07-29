@@ -5,10 +5,7 @@
  * @description Main page for viewing and managing orders
  * Shows different views based on user role (buyer/seller)
  * 
- * @requir                // Add files to FormData with correct field name
-                for (let i = 0; i < files.length; i++) {
-                    formData.append('deliveryFiles', files[i]);
-                }eact - For component state and lifecycle
+ * @requires react - For component state and lifecycle
  * @requires react-router-dom - For navigation
  * @requires @ant-design/icons - For icons
  */
@@ -23,7 +20,7 @@ import OrderCard from '../components/OrderCard/OrderCard';
 import OrderOverviewCard from '../components/OrderOverviewCard/OrderOverviewCard';
 import AutoPaymentWidget from '../components/AutoPaymentWidget/AutoPaymentWidget';
 import { useAuth } from '../contexts/AuthContext';
-import ApiService from '../config/api.js';
+import ApiService from '../services/apiService';
 
 /**
  * Orders component for managing user orders
@@ -392,40 +389,6 @@ const Orders = () => {
                     </p>
                 </div>
 
-                {/* Tab Navigation */}
-                <div className="mb-6">
-                    <div className="flex space-x-1 bg-gray-200 p-1 rounded-lg w-fit">
-                        <button
-                            onClick={() => {
-                                setActiveTab('buyer');
-                                setCurrentPage(1);
-                            }}
-                            className={`px-4 py-2 rounded-md font-medium transition-colors ${
-                                activeTab === 'buyer'
-                                    ? 'bg-white text-blue-600 shadow-sm'
-                                    : 'text-gray-600 hover:text-gray-900'
-                            }`}
-                        >
-                            <ShoppingOutlined className="mr-2" />
-                            As Buyer
-                        </button>
-                        <button
-                            onClick={() => {
-                                setActiveTab('seller');
-                                setCurrentPage(1);
-                                // hàm đổi mode
-                            }}
-                            className={`px-4 py-2 rounded-md font-medium transition-colors ${
-                                activeTab === 'seller'
-                                    ? 'bg-white text-blue-600 shadow-sm'
-                                    : 'text-gray-600 hover:text-gray-900'
-                            }`}
-                        >
-                            <EyeOutlined className="mr-2" />
-                            As Seller
-                        </button>
-                    </div>
-                </div>
                 {/* Tab Navigation and View Controls */}
                 <div className="mb-6 space-y-4">
                     {/* Tab Navigation */}

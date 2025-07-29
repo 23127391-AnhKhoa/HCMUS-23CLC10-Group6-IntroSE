@@ -14,7 +14,7 @@ import {
     LoadingOutlined,
     ReloadOutlined
 } from '@ant-design/icons';
-import ApiService from '../../config/api.js'; // ĐÚNG
+import ApiService from '../../services/apiService';
 import Toast from '../Toast/Toast';
 
 const DeliveryFilesModal = ({ 

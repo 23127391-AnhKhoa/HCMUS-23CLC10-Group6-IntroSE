@@ -1,6 +1,71 @@
 // src/services/apiService.js
 
 class ApiService {
+  // Get delivery files for an order
+  static async getDeliveryFiles(orderId) {
+    try {
+      const token = localStorage.getItem('token');
+      const headers = {};
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+      const response = await fetch(`http://localhost:8000/api/orders/${orderId}/delivery-files`, {
+        method: 'GET',
+        headers,
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to get delivery files');
+      }
+      return data;
+    } catch (error) {
+      console.error('Get delivery files error:', error);
+      throw error;
+    }
+  }
+  // Upload delivery files
+  static async uploadDeliveryFiles(orderId, files, message = '') {
+    try {
+      const formData = new FormData();
+      files.forEach(file => formData.append('files', file));
+      if (message) formData.append('message', message);
+
+      const token = localStorage.getItem('token');
+      const headers = {};
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
+      const response = await fetch(`http://localhost:8000/api/orders/${orderId}/upload-delivery`, {
+        method: 'POST',
+        headers,
+        body: formData,
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to upload delivery files');
+      }
+      return data;
+    } catch (error) {
+      console.error('Upload delivery files error:', error);
+      throw error;
+    }
+  }
+  // Update order status
+  static async updateOrderStatus(orderId, newStatus) {
+    try {
+      const response = await fetch(`http://localhost:8000/api/orders/${orderId}/status`, {
+        method: 'PATCH',
+        headers: this.getAuthHeaders(),
+        body: JSON.stringify({ status: newStatus }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to update order status');
+      }
+      return data;
+    } catch (error) {
+      console.error('Update order status error:', error);
+      throw error;
+    }
+  }
   // Helper method to get auth headers
   static getAuthHeaders() {
     const token = localStorage.getItem('token');
