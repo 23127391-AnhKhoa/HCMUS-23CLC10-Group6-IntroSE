@@ -7,8 +7,8 @@ import CreateGigsPage from './pages/Create_Gigs';
 import AdminDashboard from './pages/Admin/AdminDashboard';
 import ExplorePage from './pages/ExplorePage';
 import GigDetail from './pages/GigDetail';
-import ProfileBuyer from './pages/Profile_Buyer';
-import ProfileSeller from './pages/Profile_Seller';
+import DashBoardBuyer from './pages/DashBoard_Buyer';
+import DashBoardSeller from './pages/DashBoard_Seller';
 import EarningsPage from './pages/EarningsPage';
 import ManageGigs from './pages/ManageGigs';
 import Orders from './pages/Orders';
@@ -52,11 +52,9 @@ function App() {
             <Route path="/admin/gig/:id" element={<GigDetailContent />} />
 
             {/* Profile routes */}
-            <Route path="/profile_buyer" element={<ProfileBuyer />} />
+            <Route path="/dashboard_buyer" element={<DashBoardBuyer />} />
             
-            <Route path="/profile_seller" element={<ProfileSeller />} />
-
-            <Route path="/dashboard" element={<ProfileSeller />} />
+            <Route path="/dashboard_seller" element={<DashBoardSeller />} />
 
             <Route path="/earnings" element={<EarningsPage />} />
 

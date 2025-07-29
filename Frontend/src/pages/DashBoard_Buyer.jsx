@@ -6,7 +6,7 @@ import NavBar from '../Common/NavBar_Buyer';
 import { useAuth } from '../contexts/AuthContext';
 import AvatarUpload from '../components/AvatarUpload';
 
-const ProfileBuyer = () => {
+const DashBoardBuyer = () => {
   const navigate = useNavigate();
   const { authUser, token } = useAuth();
   const [profileData, setProfileData] = useState({
@@ -432,4 +432,4 @@ const ProfileBuyer = () => {
   );
 };
 
-export default ProfileBuyer;
+export default DashBoardBuyer;
