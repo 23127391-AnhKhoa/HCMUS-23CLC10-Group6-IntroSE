@@ -64,7 +64,6 @@ app.use('/api/reports', reportsRoutes);
 
 // Lấy port từ biến môi trường hoặc dùng port 3000 mặc định
 const PORT = process.env.PORT || 8000;
-app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/conversations', conversationRoutes);
 //app.use('/api/admin', adminRoutes); // Uncomment when needed
 

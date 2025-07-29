@@ -8,7 +8,7 @@ import NavbarLD from '../Common/Navbar_LD';
 import LoadingOverlay from '../Common/LoadingOverlay';
 import Stepper from '../components/CreateGigButton/Stepper/Stepper';
 import GigPublishSuccess from '../components/GigPublishSuccess';
-import ApiService from '../services/CreateGigs.service';
+import ApiService from '../services/apiService';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
@@ -56,6 +56,7 @@ const CreateGigsPage = () => {
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [publishedGigData, setPublishedGigData] = useState(null);
   const [isPublishing, setIsPublishing] = useState(false); // Track publishing state
+  const [hasSubmitted, setHasSubmitted] = useState(false); // Prevent multiple submissions
   const [categories, setCategories] = useState([]); // Store categories from API
 
   const [gigData, setGigData] = useState({
@@ -291,14 +292,15 @@ const CreateGigsPage = () => {
 
   const publishGig = async () => {
     // Prevent double submission
-    if (isPublishing || isLoading) {
-      console.log('Already publishing, preventing duplicate submission');
+    if (isPublishing || isLoading || hasSubmitted) {
+      console.log('Already publishing or submitted, preventing duplicate submission');
       return;
     }
 
     try {
       setIsPublishing(true);
       setIsLoading(true);
+      setHasSubmitted(true); // Mark as submitted
       setLoadingMessage("Publishing your gig...");
       
       // Calculate the total price with surcharges
@@ -395,6 +397,7 @@ const CreateGigsPage = () => {
       setTimeout(() => {
         setIsLoading(false);
         setIsPublishing(false);
+        setHasSubmitted(false); // Reset submission flag on error
         setErrors({ 
           publish: `Failed to publish gig: ${error.message}. Please try again.` 
         });
@@ -552,10 +555,15 @@ const CreateGigsPage = () => {
                 <div className="flex flex-col sm:flex-row items-center gap-4">
                   <button
                     type="submit"
-                    disabled={isLoading}
+                    disabled={isLoading || isPublishing || hasSubmitted}
                     className="w-full sm:w-auto bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-8 rounded-lg shadow-md hover:shadow-lg transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    {GIG_CREATION_STEPS.findIndex(step => step.id === currentStepId) < totalSteps - 1 ? 'Save & Continue' : 'Save & Publish'}
+                    {isPublishing || hasSubmitted 
+                      ? 'Publishing...' 
+                      : GIG_CREATION_STEPS.findIndex(step => step.id === currentStepId) < totalSteps - 1 
+                        ? 'Save & Continue' 
+                        : 'Save & Publish'
+                    }
                   </button>
                 </div>
               </div>

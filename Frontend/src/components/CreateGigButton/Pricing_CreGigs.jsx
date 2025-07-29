@@ -121,7 +121,7 @@ const PricingCreGigs = ({ gigData, onInputChange, errors = {} }) => {
             {/* Response Time */}
             <div className="space-y-2">
               <label htmlFor="response_time_hours" className={labelClasses}>
-                Response Time (Hours)
+                Response Time
               </label>
               <select
                 id="response_time_hours"

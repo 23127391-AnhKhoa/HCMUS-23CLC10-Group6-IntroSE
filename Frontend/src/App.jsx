@@ -27,11 +27,7 @@ import GigDetailContent from './pages/Admin/AdminGigContent';
 import AdminSellerInfor from './pages/Admin/AdminSellerInfor'; 
 import ManageReportedGigs from './pages/Admin/ManageReportedGigs'; 
 import ReportUserPage from './pages/ReportUserPage';
-<<<<<<< HEAD
-import ReportGigPage from './pages/ReportGigPage'; 
-=======
 import ReportGigPage from './pages/ReportGigPage'; // Assuming you have a ReportGigPage component
->>>>>>> 183969761a7f13ee8a859824204fb5fbf6f976e6
 
 function App() {
   return (
@@ -44,17 +40,11 @@ function App() {
             <Route path="/" element={<Introduction />} />
 
             <Route path="admin/AdminDashboard" element={<AdminDashboard />} />
-<<<<<<< HEAD
-            <Route path="/admin/manage-reported-gigs" element={<ManageReportedGigs />} />
-            {/* Route for signup page */}
-            
-=======
 
             <Route path="/admin/manage-reported-gigs" element={<ManageReportedGigs />} />
             {/* Route for signup page */}
 
             <Route path="/admin/manage-reported-gigs" element={<ManageReportedGigs />} />
->>>>>>> 183969761a7f13ee8a859824204fb5fbf6f976e6
             {/* Route for authentication page */}
             <Route path="/auth" element={<AuthPage />} />
 

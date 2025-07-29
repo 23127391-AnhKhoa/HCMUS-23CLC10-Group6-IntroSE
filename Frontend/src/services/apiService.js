@@ -117,6 +117,7 @@ class ApiService {
     }
   }
 
+
   static async downloadDeliveryFile(orderId, fileId) {
     try {
       const response = await fetch(`${API_BASE_URL}/orders/${orderId}/delivery/file/${fileId}`, {
@@ -356,6 +357,96 @@ class ApiService {
       throw error;
     }
   }
+    // Upload multiple files
+  static async uploadMultipleFiles(files) {
+    try {
+      const formData = new FormData();
+      
+      // Append each file to FormData
+      files.forEach(file => {
+        formData.append('files', file);
+      });
+
+      const token = localStorage.getItem('token');
+      const headers = {};
+      
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      console.log('Uploading multiple files to:', `${API_BASE_URL}/upload/multiple`);
+      const response = await fetch(`${API_BASE_URL}/upload/multiple`, {
+        method: 'POST',
+        headers,
+        body: formData,
+      });
+
+      const data = await response.json();
+      console.log('Multiple upload API response:', data);
+
+      if (!response.ok) {
+        throw new Error(data.message || `Multiple upload failed with status ${response.status}`);
+      }
+
+      return data;
+    } catch (error) {
+      console.error('Multiple upload error:', error);
+      throw error;
+    }
+  }
+
+  // Upload files with fields (cover + gallery + videos)
+  static async uploadFilesWithFields(filesObject) {
+    try {
+      const formData = new FormData();
+      
+      // Append cover image
+      if (filesObject.cover_image) {
+        formData.append('cover_image', filesObject.cover_image);
+      }
+
+      // Append gallery images
+      if (filesObject.gallery_images && filesObject.gallery_images.length > 0) {
+        filesObject.gallery_images.forEach(file => {
+          formData.append('gallery_images', file);
+        });
+      }
+
+      // Append videos
+      if (filesObject.videos && filesObject.videos.length > 0) {
+        filesObject.videos.forEach(file => {
+          formData.append('videos', file);
+        });
+      }
+
+      const token = localStorage.getItem('token');
+      const headers = {};
+      
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      console.log('Uploading files with fields to:', `${API_BASE_URL}/upload/fields`);
+      const response = await fetch(`${API_BASE_URL}/upload/fields`, {
+        method: 'POST',
+        headers,
+        body: formData,
+      });
+
+      const data = await response.json();
+      console.log('Fields upload API response:', data);
+
+      if (!response.ok) {
+        throw new Error(data.message || `Fields upload failed with status ${response.status}`);
+      }
+
+      return data;
+    } catch (error) {
+      console.error('Fields upload error:', error);
+      throw error;
+    }
+  }
+
 
   // Gig API methods
   static async createGig(gigData) {

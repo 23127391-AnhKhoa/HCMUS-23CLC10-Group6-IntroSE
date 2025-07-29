@@ -207,15 +207,15 @@ const GigService = {
       }
 
       // Check for potential duplicate gigs (same owner, similar title)
-      // TEMPORARILY DISABLED - uncomment if needed
+      // Only check for exact duplicates within last 5 minutes to prevent accidental duplicates
       if (gigData.owner_id && gigData.title) {
         const { data: existingGigs, error: checkError } = await supabase
           .from('Gigs')
           .select('id, title, created_at')
           .eq('owner_id', gigData.owner_id)
-          .ilike('title', `%${gigData.title.trim()}%`)
-          .gte('created_at', new Date(Date.now() - 60000).toISOString()) // Last 1 minute
-          .limit(5);
+          .eq('title', gigData.title.trim()) // Exact match only, not ILIKE
+          .gte('created_at', new Date(Date.now() - 300000).toISOString()) // Last 5 minutes instead of 1 minute
+          .limit(1);
 
         if (!checkError && existingGigs && existingGigs.length > 0) {
           console.log('⚠️ Potential duplicate gig detected:', {
@@ -224,14 +224,8 @@ const GigService = {
             existing_gigs: existingGigs
           });
           
-          // If exact title match within last minute, prevent duplicate
-          const exactMatch = existingGigs.find(gig => 
-            gig.title.toLowerCase().trim() === gigData.title.toLowerCase().trim()
-          );
-          
-          if (exactMatch) {
-            throw new Error(`Duplicate gig detected. A gig with title "${gigData.title}" was already created recently.`);
-          }
+          // Only prevent if exact title and within 5 minutes
+          throw new Error(`Duplicate gig detected. A gig with the exact title "${gigData.title}" was already created recently. Please wait a few minutes or use a different title.`);
         }
       }
 

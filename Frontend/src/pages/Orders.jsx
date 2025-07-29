@@ -391,41 +391,6 @@ const Orders = () => {
                         Manage your orders and track their progress
                     </p>
                 </div>
-
-                {/* Tab Navigation */}
-                <div className="mb-6">
-                    <div className="flex space-x-1 bg-gray-200 p-1 rounded-lg w-fit">
-                        <button
-                            onClick={() => {
-                                setActiveTab('buyer');
-                                setCurrentPage(1);
-                            }}
-                            className={`px-4 py-2 rounded-md font-medium transition-colors ${
-                                activeTab === 'buyer'
-                                    ? 'bg-white text-blue-600 shadow-sm'
-                                    : 'text-gray-600 hover:text-gray-900'
-                            }`}
-                        >
-                            <ShoppingOutlined className="mr-2" />
-                            As Buyer
-                        </button>
-                        <button
-                            onClick={() => {
-                                setActiveTab('seller');
-                                setCurrentPage(1);
-                                // hàm đổi mode
-                            }}
-                            className={`px-4 py-2 rounded-md font-medium transition-colors ${
-                                activeTab === 'seller'
-                                    ? 'bg-white text-blue-600 shadow-sm'
-                                    : 'text-gray-600 hover:text-gray-900'
-                            }`}
-                        >
-                            <EyeOutlined className="mr-2" />
-                            As Seller
-                        </button>
-                    </div>
-                </div>
                 {/* Tab Navigation and View Controls */}
                 <div className="mb-6 space-y-4">
                     {/* Tab Navigation */}
