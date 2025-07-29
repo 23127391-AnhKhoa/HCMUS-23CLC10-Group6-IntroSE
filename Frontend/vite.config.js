@@ -1,16 +1,22 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
-// https://vite.dev/config/
+// https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
   server: {
+    host: '0.0.0.0',              // Cho phép truy cập từ bên ngoài (public IP)
+    port: 10000,                  // Cổng chạy server dev
+    allowedHosts: ['hcmus-23clc10-group6-introse.onrender.com'], // Cho phép domain Render gọi tới
     proxy: {
-      // Chuỗi '/api' là tiền tố của các request API bạn muốn chuyển tiếp
       '/api': {
-        target: 'http://localhost:8000', // Đổi thành địa chỉ backend của bạn nếu khác
-        changeOrigin: true,
+        target: 'http://localhost:8000', // API backend chạy local (trong dev mode)
+        changeOrigin: true
       }
     }
+  },
+  preview: {
+    port: 4173,                   // Cổng khi chạy `vite preview`
+    host: '0.0.0.0'               // Cho phép truy cập khi preview
   }
 })

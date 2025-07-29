@@ -15,8 +15,9 @@
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import NavBar_Buyer from '../Common/NavBar_Buyer';
+import NavBar_Seller from '../Common/NavBar_Seller';
 import { EyeOutlined, ClockCircleOutlined, CheckCircleOutlined, CloseCircleOutlined, ShoppingOutlined, FileTextOutlined, AppstoreOutlined, UnorderedListOutlined } from '@ant-design/icons';
-import NavBar from '../Common/NavBar_Buyer';
 import Footer from '../Common/Footer';
 import OrderCard from '../components/OrderCard/OrderCard';
 import OrderOverviewCard from '../components/OrderOverviewCard/OrderOverviewCard';
@@ -57,7 +58,7 @@ const Orders = () => {
         
         if (!authLoading && (!authUser || !token)) {
             console.log('❌ No authentication, redirecting to login');
-            navigate('/login');
+            navigate('/auth');
             return;
         }
     }, [authUser, token, authLoading, navigate]);
@@ -359,10 +360,11 @@ const Orders = () => {
         { key: 'cancelled', label: 'Cancelled', count: 0 }
     ];
 
+    
     if (authLoading || loading) {
         return (
             <div className="min-h-screen bg-gray-50" style={{ fontFamily: 'Inter, "Noto Sans", sans-serif' }}>
-                <NavBar />
+                
                 <div className="flex-1 flex items-center justify-center py-32">
                     <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-500"></div>
                 </div>
@@ -370,6 +372,7 @@ const Orders = () => {
             </div>
         );
     }
+    const navBarComponent = authUser.role === 'seller' ? <NavBar_Seller /> : <NavBar_Buyer />;
 
     // If not authenticated, the useEffect will redirect
     if (!authUser || !token) {
@@ -378,7 +381,7 @@ const Orders = () => {
 
     return (
         <div className="min-h-screen bg-gray-50" style={{ fontFamily: 'Inter, "Noto Sans", sans-serif' }}>
-            <NavBar />
+            {navBarComponent}
             
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pt-32">
                 {/* Header */}
@@ -389,6 +392,40 @@ const Orders = () => {
                     </p>
                 </div>
 
+                {/* Tab Navigation */}
+                <div className="mb-6">
+                    <div className="flex space-x-1 bg-gray-200 p-1 rounded-lg w-fit">
+                        <button
+                            onClick={() => {
+                                setActiveTab('buyer');
+                                setCurrentPage(1);
+                            }}
+                            className={`px-4 py-2 rounded-md font-medium transition-colors ${
+                                activeTab === 'buyer'
+                                    ? 'bg-white text-blue-600 shadow-sm'
+                                    : 'text-gray-600 hover:text-gray-900'
+                            }`}
+                        >
+                            <ShoppingOutlined className="mr-2" />
+                            As Buyer
+                        </button>
+                        <button
+                            onClick={() => {
+                                setActiveTab('seller');
+                                setCurrentPage(1);
+                                // hàm đổi mode
+                            }}
+                            className={`px-4 py-2 rounded-md font-medium transition-colors ${
+                                activeTab === 'seller'
+                                    ? 'bg-white text-blue-600 shadow-sm'
+                                    : 'text-gray-600 hover:text-gray-900'
+                            }`}
+                        >
+                            <EyeOutlined className="mr-2" />
+                            As Seller
+                        </button>
+                    </div>
+                </div>
                 {/* Tab Navigation and View Controls */}
                 <div className="mb-6 space-y-4">
                     {/* Tab Navigation */}

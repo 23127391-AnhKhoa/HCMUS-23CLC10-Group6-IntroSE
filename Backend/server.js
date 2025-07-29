@@ -42,16 +42,28 @@ const orderRoutes = require('./routes/orders.routes');
 const transactionRoutes = require('./routes/transactions.routes');
 const adminRoutes = require('./routes/admin.routes');
 const uploadRoutes = require('./routes/upload.routes');
-const dashboardRoutes = require('./routes/dashboard.routes');
 const conversationRoutes = require('./routes/conversations.routes');
+const categoriesRoutes = require('./routes/categories.routes');
+const reportsRoutes = require('./routes/reports.routes'); // <-- Thêm dòng này
 
 // API routes
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/conversations', conversationRoutes);
 app.use('/api/gigs', gigRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/transactions', transactionRoutes);
 app.use('/api/upload', uploadRoutes);
+app.use('/api/admin', adminRoutes);
+app.use('/api/categories', categoriesRoutes); 
+app.use('/api/reports', reportsRoutes); 
+//app.use('/api/admin', adminRoutes);
+// Xài cái api thì nhớ bỏ // ở đầu, ví dụ xài gigs thì bỏ //, tại bây giờ chưa định nghĩa mà để dô thì nó không được hiểu là function, nó sẽ bị lỗi
+
+////////////////////////////////////////////////////////////
+
+// Lấy port từ biến môi trường hoặc dùng port 3000 mặc định
+const PORT = process.env.PORT || 8000;
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/conversations', conversationRoutes);
 //app.use('/api/admin', adminRoutes); // Uncomment when needed
@@ -83,12 +95,9 @@ app.use('*', (req, res) => {
 });
 
 // Get port from environment or use default
-const PORT = process.env.PORT || 8000;
+
 
 // Start server
 app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
-  console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`🔗 Health check: http://localhost:${PORT}/health`);
-  console.log(`📧 Mail configured: ${process.env.MAIL_HOST ? '✅' : '❌'}`);
+  console.log(`Server running on port ${PORT}`);
 });

@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 
-export const useRealtimeChat = (conversationId, authUser, refreshKey = 0) => {
+export const useRealtimeChat = (conversationId, authUser) => {
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(false);
 
@@ -42,9 +42,6 @@ export const useRealtimeChat = (conversationId, authUser, refreshKey = 0) => {
     // Fetch initial messages
     fetchMessages();
 
-    // Clean up any existing subscription with the same name
-    supabase.removeChannel(`conversation:${conversationId}`);
-
     // Subscribe to new messages
     const subscription = supabase
       .channel(`conversation:${conversationId}`)
@@ -74,16 +71,14 @@ export const useRealtimeChat = (conversationId, authUser, refreshKey = 0) => {
           setMessages(prevMessages => [...prevMessages, messageWithSender]);
         }
       )
-      .subscribe((status) => {
-        console.log(`Conversation ${conversationId} subscription status:`, status);
-      });
+      .subscribe();
 
     // Cleanup subscription on unmount
     return () => {
       console.log(`Unsubscribing from conversation:${conversationId}`);
       subscription.unsubscribe();
     };
-  }, [conversationId, fetchMessages, refreshKey]); // Add refreshKey as dependency
+  }, [conversationId, fetchMessages]);
 
   // Send message function using backend API
   const sendMessage = async (content) => {

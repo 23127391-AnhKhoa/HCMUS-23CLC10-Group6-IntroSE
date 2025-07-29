@@ -8,7 +8,15 @@ const User = {
     if (error && error.code !== 'PGRST116') throw error;
     return data;
   },
-
+  findByIds: async (ids) => {
+        if (!ids || ids.length === 0) return [];
+        const { data, error } = await supabase
+            .from('User')
+            .select('uuid, username') // Chỉ lấy các trường cần thiết
+            .in('uuid', ids);
+        if (error) throw error;
+        return data;
+    },
   // Tìm user bằng username
   findByUsername: async (username) => {
     const { data, error } = await supabase.from('User').select('*').eq('username', username).single();
@@ -79,14 +87,145 @@ const User = {
   searchUsers: async (query) => {
     const { data, error } = await supabase
       .from('User')
-      .select('uuid, fullname, username, avt_url, role, status')
+      .select('uuid, fullname, username, avt_url, role, status, seller_headline')
       .or(`fullname.ilike.%${query}%,username.ilike.%${query}%`)
       .eq('status', 'active')
       .order('fullname')
       .limit(20);
 
     if (error) throw error;
-    return data || [];
+    
+    // Map avt_url to avatar for frontend compatibility
+    const users = (data || []).map(user => ({
+      ...user,
+      avatar: user.avt_url
+    }));
+    
+    return { status: 'success', data: users };
+  },
+
+  // === USER FAVORITES FUNCTIONS ===
+  
+  // Thêm gig vào favorites
+  addFavorite: async (userId, gigId) => {
+    try {
+      const { data, error } = await supabase
+        .from('UserFavorites')
+        .insert([
+          {
+            user_id: userId,
+            gig_id: gigId,
+            created_at: new Date().toISOString()
+          }
+        ])
+        .select();
+
+      if (error) {
+        console.error('Error adding favorite:', error);
+        throw error;
+      }
+
+      return data[0];
+    } catch (error) {
+      console.error('Error in addFavorite:', error);
+      throw error;
+    }
+  },
+
+  // Xóa gig khỏi favorites
+  removeFavorite: async (userId, gigId) => {
+    try {
+      const { data, error } = await supabase
+        .from('UserFavorites')
+        .delete()
+        .eq('user_id', userId)
+        .eq('gig_id', gigId)
+        .select();
+
+      if (error) {
+        console.error('Error removing favorite:', error);
+        throw error;
+      }
+
+      return data;
+    } catch (error) {
+      console.error('Error in removeFavorite:', error);
+      throw error;
+    }
+  },
+
+  // Lấy tất cả favorites của user
+  getUserFavorites: async (userId) => {
+    try {
+      const { data, error } = await supabase
+        .from('UserFavorites')
+        .select(`
+          *,
+          Gigs!UserFavorites_gig_id_fkey (
+            id,
+            title,
+            description,
+            price,
+            cover_image,
+            category_id,
+            owner_id,
+            created_at,
+            updated_at
+          )
+        `)
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error getting user favorites:', error);
+        throw error;
+      }
+
+      return data;
+    } catch (error) {
+      console.error('Error in getUserFavorites:', error);
+      throw error;
+    }
+  },
+
+  // Kiểm tra xem gig có được favorite hay không
+  isFavorited: async (userId, gigId) => {
+    try {
+      const { data, error } = await supabase
+        .from('UserFavorites')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('gig_id', gigId)
+        .single();
+
+      if (error && error.code !== 'PGRST116') { // PGRST116 = No rows found
+        console.error('Error checking favorite status:', error);
+        throw error;
+      }
+
+      return !!data;
+    } catch (error) {
+      console.error('Error in isFavorited:', error);
+      throw error;
+    }
+  },
+
+  // Toggle favorite status
+  toggleFavorite: async (userId, gigId) => {
+    try {
+      const isFav = await User.isFavorited(userId, gigId);
+      
+      if (isFav) {
+        await User.removeFavorite(userId, gigId);
+        return { action: 'removed', isFavorited: false };
+      } else {
+        await User.addFavorite(userId, gigId);
+        return { action: 'added', isFavorited: true };
+      }
+    } catch (error) {
+      console.error('Error in toggleFavorite:', error);
+      throw error;
+    }
   }
 };
 
