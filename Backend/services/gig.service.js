@@ -261,25 +261,59 @@ const GigService = {
   // Update an existing gig
   updateGig: async (gigId, updateData) => {
     try {
-      // Prepare update data with proper type conversion
-      const updateFields = {};
+        const updateFields = {};
 
-      if (updateData.title) updateFields.title = updateData.title;
-      if (updateData.cover_image) updateFields.cover_image = updateData.cover_image;
-      if (updateData.description) updateFields.description = updateData.description;
-      if (updateData.price) updateFields.price = parseFloat(updateData.price);
-      if (updateData.delivery_days) updateFields.delivery_days = parseInt(updateData.delivery_days);
-      if (updateData.num_of_edits !== undefined) updateFields.num_of_edits = updateData.num_of_edits ? parseInt(updateData.num_of_edits) : null;
-      if (updateData.category_id) updateFields.category_id = parseInt(updateData.category_id);
-      if (updateData.status) updateFields.status = updateData.status;
+        // --- LOGIC MỚI: XỬ LÝ BAN GIG ---
+        // Kiểm tra nếu request có chứa thông tin để ban
+        if (updateData.ban_duration) {
+            updateFields.status = 'denied'; // Đặt trạng thái là denied
+            updateFields.ban_reason = updateData.ban_reason; // Lưu lý do ban
+            
+            // Tính toán thời gian hết hạn ban
+            if (updateData.ban_duration !== 'forever') {
+                const now = new Date();
+                switch (updateData.ban_duration) {
+                     case '1_minute': now.setMinutes(now.getMinutes() + 1); break;
+                     case '5_minutes': now.setMinutes(now.getMinutes() + 5); break;
+                     case '30_minutes': now.setMinutes(now.getMinutes() + 30); break;
+                     case '1_day': now.setDate(now.getDate() + 1); break;
+                     case '2_days': now.setDate(now.getDate() + 2); break;
+                     case '1_week': now.setDate(now.getDate() + 7); break;
+                    case '1_month': now.setMonth(now.getMonth() + 1); break;
+                    case '1_year': now.setFullYear(now.getFullYear() + 1); break;
+                }
+                updateFields.banned_until = now.toISOString();
+            } else {
+                updateFields.banned_until = null; // Ban vĩnh viễn
+            }
+        }
+        // --- KẾT THÚC LOGIC MỚI ---
 
-      const updatedGig = await Gig.updateById(gigId, updateFields);
-      return updatedGig;
+
+        // --- LOGIC CŨ CỦA BẠN (GIỮ NGUYÊN) ---
+        // Xử lý các trường cập nhật thông thường khác
+        if (updateData.title) updateFields.title = updateData.title;
+        if (updateData.cover_image) updateFields.cover_image = updateData.cover_image;
+        if (updateData.description) updateFields.description = updateData.description;
+        if (updateData.price) updateFields.price = parseFloat(updateData.price);
+        if (updateData.delivery_days) updateFields.delivery_days = parseInt(updateData.delivery_days);
+        if (updateData.num_of_edits !== undefined) updateFields.num_of_edits = updateData.num_of_edits ? parseInt(updateData.num_of_edits) : null;
+        if (updateData.category_id) updateFields.category_id = parseInt(updateData.category_id);
+        
+        // Chỉ cập nhật 'status' nếu đây không phải là một hành động ban
+        if (updateData.status && !updateData.ban_duration) {
+            updateFields.status = updateData.status;
+        }
+        // --- KẾT THÚC LOGIC CŨ ---
+
+        // Gọi đến model với tất cả các trường đã được tổng hợp
+        const updatedGig = await Gig.updateById(gigId, updateFields);
+        return updatedGig;
+        
     } catch (error) {
-      throw new Error(`Error updating gig: ${error.message}`);
+        throw new Error(`Error updating gig: ${error.message}`);
     }
-  },
-
+},
   // Delete a gig
   deleteGig: async (gigId) => {
     try {

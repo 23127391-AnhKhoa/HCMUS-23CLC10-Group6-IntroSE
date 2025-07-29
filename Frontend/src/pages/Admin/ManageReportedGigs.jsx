@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
-// Sửa đổi ở đây: Thêm FiEye và đổi FiList thành FiAlertCircle cho Report
-import { FiSearch, FiHome, FiAlertCircle, FiTrendingUp, FiUsers, FiHelpCircle, FiSettings, FiEye } from 'react-icons/fi';
-
+// Thêm FiTrash2 và các icon khác
+import { FiSearch, FiHome, FiAlertCircle, FiTrendingUp, FiUsers, FiHelpCircle, FiSettings, FiEye, FiEdit2, FiTrash2, FiLock } from 'react-icons/fi';
+// Import useAuth để lấy token
+import { useAuth } from '../../contexts/AuthContext'; // <-- QUAN TRỌNG: Hãy chắc chắn đường dẫn này đúng
 // --- Components Con ---
 
 const Sidebar = () => (
@@ -102,7 +103,7 @@ const ReportsTable = ({ title, headers, data, renderRow }) => (
 );
 
 
-// Sửa đổi ở đây: Thêm hàm xử lý chuỗi Reason
+// Hàm xử lý chuỗi Reason
 const parseReason = (description) => {
     if (!description || typeof description !== 'string') return 'N/A';
     try {
@@ -110,16 +111,136 @@ const parseReason = (description) => {
         const reason = mainPart.replace('Report reason:', '').trim();
         return reason || description;
     } catch {
-        return description; // Trả về nguyên bản nếu có lỗi
+        return description;
     }
+};
+
+const BanGigModal = ({ gig, onClose, onConfirm }) => {
+    const [reason, setReason] = useState('');
+    const [duration, setDuration] = useState('1_minute');
+
+    // ✅ THÊM: Kiểm tra nếu gig đã bị ban
+    const isEditMode = gig?.status === 'denied';
+
+    // ✅ THÊM: Load thông tin ban hiện tại khi edit
+    useEffect(() => {
+        if (isEditMode && gig) {
+            setReason(gig.ban_reason || '');
+            setDuration(gig.ban_duration || '1_minute');
+        }
+    }, [isEditMode, gig]);
+
+    if (!gig) return null;
+
+    const handleConfirm = () => {
+        if (!reason.trim()) {
+            alert('Please provide a reason for banning.');
+            return;
+        }
+        onConfirm(gig.id, reason, duration);
+    };
+
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
+            <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
+                <div className="flex justify-between items-center mb-4">
+                    <h2 className="text-xl font-bold text-gray-800">
+                        {isEditMode ? 'Edit Ban Settings' : 'Ban Gig'}
+                    </h2>
+                    <button 
+                        onClick={onClose}
+                        className="text-gray-500 hover:text-gray-700"
+                    >
+                        ✕
+                    </button>
+                </div>
+
+                {/* ✅ THÊM: Hiển thị status hiện tại nếu đang edit */}
+                {isEditMode && (
+                    <div className="mb-4 p-3 bg-red-50 rounded-md border border-red-200">
+                        <p className="text-sm text-red-600 font-medium">
+                            This gig is currently banned
+                        </p>
+                    </div>
+                )}
+
+                <div className="mb-4">
+                    <label htmlFor="gigTitle" className="block text-sm font-medium text-gray-700 mb-1">
+                        Gig Title
+                    </label>
+                    <input
+                        id="gigTitle"
+                        type="text"
+                        value={gig.title || 'N/A'}
+                        disabled
+                        className="w-full p-2 border border-gray-300 rounded-md bg-gray-100 text-gray-600"
+                    />
+                </div>
+
+                <div className="mb-4">
+                    <label htmlFor="banReason" className="block text-sm font-medium text-gray-700 mb-1">
+                        Ban Reason
+                    </label>
+                    <textarea
+                        id="banReason"
+                        value={reason}
+                        onChange={(e) => setReason(e.target.value)}
+                        placeholder="Enter the reason for banning this gig..."
+                        className="w-full p-2 border border-gray-300 rounded-md h-20 resize-none"
+                    />
+                </div>
+
+                <div className="mb-6">
+                    <label htmlFor="banDuration" className="block text-sm font-medium text-gray-700 mb-1">
+                        Ban Duration
+                    </label>
+                    <select
+                        id="banDuration"
+                        value={duration}
+                        onChange={(e) => setDuration(e.target.value)}
+                        className="w-full p-2 border border-gray-300 rounded-md"
+                    >
+                        <option value="1_minute">1 Minute (Test)</option>
+                        <option value="5_minutes">5 Minutes (Test)</option>
+                        <option value="30_minutes">30 Minutes (Test)</option>
+                        <option value="1_day">1 Day</option>
+                        <option value="2_days">2 Days</option>
+                        <option value="1_week">1 Week</option>
+                        <option value="1_month">1 Month</option>
+                        <option value="1_year">1 Year</option>
+                        <option value="forever">Forever</option>
+                    </select>
+                </div>
+
+                <div className="flex justify-end space-x-3">
+                    <button
+                        onClick={onClose}
+                        className="px-4 py-2 text-gray-600 bg-gray-200 rounded-md hover:bg-gray-300 transition-colors"
+                    >
+                        Cancel
+                    </button>
+                    <button
+                        onClick={handleConfirm}
+                        className="px-4 py-2 text-white bg-red-600 rounded-md hover:bg-red-700 transition-colors"
+                    >
+                        {isEditMode ? 'Update Ban' : 'Confirm Ban'}
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
 };
 
 // --- Component Chính ---
 const ManageReportedGigs = () => {
+    const { token } = useAuth(); // Lấy token từ Context
     const [reports, setReports] = useState({ mostReported: [], allReports: [] });
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
+    const [isBanModalOpen, setIsBanModalOpen] = useState(false);
+    const [gigToBan, setGigToBan] = useState(null);
+
 
     const fetchReports = useCallback(async (searchQuery = '') => {
         setIsLoading(true);
@@ -147,6 +268,87 @@ const ManageReportedGigs = () => {
         return () => clearTimeout(timerId);
     }, [searchTerm, fetchReports]);
     
+
+    const openBanModal = (gig) => {
+        setGigToBan(gig);
+        setIsBanModalOpen(true);
+    };
+
+    const handleConfirmBan = async (gigId, reason, duration) => {
+    if (!window.confirm(`Are you sure you want to ban this gig?`)) return;
+    if (!token) return alert('Access token is required');
+
+    try {
+        const response = await fetch(`/api/gigs/${gigId}`, {
+            method: 'PUT',
+            headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+                ban_reason: reason,
+                ban_duration: duration,
+            }),
+        });
+
+        if (!response.ok) {
+            const errData = await response.json();
+            throw new Error(errData.message || "Failed to ban the gig.");
+        }
+
+        // *** QUAN TRỌNG: Cập nhật UI ngay lập tức ***
+        setReports(prev => ({
+            ...prev,
+            allReports: prev.allReports.map(report => 
+                report.gig?.id === gigId 
+                    ? { ...report, gig: { ...report.gig, status: 'denied' } }
+                    : report
+            ),
+            mostReported: prev.mostReported.map(report => 
+                report.gig_id === gigId 
+                    ? { ...report, status: 'denied' }
+                    : report
+            )
+        }));
+
+        setIsBanModalOpen(false);
+        setGigToBan(null);
+        alert("Gig has been successfully banned.");
+
+    } catch (err) {
+        alert(err.message);
+    }
+};
+
+    // --- HÀM MỚI: DISMISS REPORT ---
+    const handleDismissReport = async (logId) => {
+        if (!window.confirm("Are you sure you want to dismiss this report? It won't be shown again.")) return;
+        if (!token) return alert('Access token is required');
+
+        try {
+            const response = await fetch(`/api/reports/logs/${logId}`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+            });
+
+            if (!response.ok) {
+                const errData = await response.json();
+                throw new Error(errData.message || "Failed to dismiss report.");
+            }
+            
+            // Xóa report khỏi UI ngay lập tức
+            setReports(prev => ({
+                ...prev,
+                allReports: prev.allReports.filter(report => report.id !== logId)
+            }));
+
+        } catch (err) {
+            alert(err.message);
+        }
+    };
     return (
         <div className="flex bg-gray-50 min-h-screen font-sans">
             <Sidebar />
@@ -198,32 +400,78 @@ const ManageReportedGigs = () => {
                         />
 
                         <ReportsTable
-                            title="All Reported Gigs"
-                            headers={['Gig', 'Reported By', 'Reason', 'Actions']}
-                            data={reports.allReports}
-                            renderRow={(item, index) => (
-                                <tr key={item.id} className="border-b last:border-b-0">
-                                    <td className="p-4 font-medium">{item.gig?.title || 'Deleted/Invalid Gig'}</td>
-                                    {/* Sửa đổi ở đây: Bỏ chữ "Reported by:" */}
-                                    <td className="p-4 text-gray-600">{item.reporter?.username || 'N/A'}</td>
-                                    {/* Sửa đổi ở đây: Dùng hàm parseReason */}
-                                    <td className="p-4 text-gray-600">{parseReason(item.description)}</td>
-                                    <td className="p-4">
-                                        {/* Sửa đổi ở đây: Thêm nút View Details icon */}
-                                        <button 
-                                            onClick={() => window.open(`/admin/gig/${item.gig?.id}`, '_blank')}
-                                            disabled={!item.gig?.id}
-                                            className="flex items-center bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold px-4 py-2 rounded-lg transition-smooth disabled:opacity-50 disabled:cursor-not-allowed"
-                                        >
-                                            <FiEye className="mr-2"/> View
-                                        </button>
-                                    </td>
-                                </tr>
-                            )}
-                        />
+    title="All Reported Gigs"
+    headers={['Gig', 'Reported By', 'Reason', 'Actions']}
+    data={reports.allReports}
+    renderRow={(item) => {
+        const isGigBanned = item.gig?.status === 'denied';
+        const hasValidGig = item.gig?.id;
+        
+        return (
+            <tr key={item.id} className="border-b last:border-b-0">
+                <td className="p-4 font-medium">{item.gig?.title || 'Deleted/Invalid Gig'}</td>
+                <td className="p-4 text-gray-600">{item.reporter?.username || 'N/A'}</td>
+                <td className="p-4 text-gray-600">{parseReason(item.description)}</td>
+                <td className="p-4">
+                    <div className="flex items-center space-x-2">
+                        {/* View Button - Always enabled if gig exists */}
+                        <button 
+                            onClick={() => window.open(`/admin/gig/${item.gig?.id}`, '_blank')}
+                            disabled={!hasValidGig}
+                            className={`p-2 rounded-md transition-all ${
+                                hasValidGig 
+                                    ? 'bg-blue-100 text-blue-600 hover:bg-blue-200 cursor-pointer' 
+                                    : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                            }`}
+                            title="View Details"
+                        >
+                            <FiEye size={18}/>
+                        </button>
+                        
+                        {/* Ban Button - Show different states */}
+{isGigBanned ? (
+    // ✅ Gig đã bị ban - dùng icon Lock và màu vàng đậm hơn
+    <button 
+        onClick={() => openBanModal(item.gig)}
+        className="p-2 rounded-md bg-yellow-200 text-yellow-700 hover:bg-yellow-300 cursor-pointer transition-all"
+        title="Edit Ban Settings (Currently Banned)"
+    >
+        <FiLock size={18}/>
+    </button>
+) : (
+    // ✅ Gig chưa bị ban - dùng icon Edit và màu vàng nhạt
+    <button 
+        onClick={() => openBanModal(item.gig)}
+        disabled={!hasValidGig}
+        className={`p-2 rounded-md transition-all ${
+            hasValidGig 
+                ? 'bg-yellow-100 text-yellow-600 hover:bg-yellow-200 cursor-pointer' 
+                : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+        }`}
+        title="Ban this Gig"
+    >
+        <FiEdit2 size={18}/>
+    </button>
+)}
+                        
+                        {/* Dismiss Button - Always enabled */}
+                        <button
+                            onClick={() => handleDismissReport(item.id)}
+                            className="p-2 rounded-md bg-red-100 text-red-600 hover:bg-red-200 cursor-pointer transition-all"
+                            title="Dismiss Report"
+                        >
+                            <FiTrash2 size={18} />
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        );
+    }}
+/>
                     </>
                 )}
             </main>
+            {isBanModalOpen && ( <BanGigModal gig={gigToBan} onClose={() => setIsBanModalOpen(false)} onConfirm={handleConfirmBan} /> )}
         </div>
     );
 };

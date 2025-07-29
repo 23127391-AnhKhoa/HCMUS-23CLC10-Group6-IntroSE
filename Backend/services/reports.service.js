@@ -45,4 +45,9 @@ const fetchGigReports = async (searchTerm = '') => {
     return { mostReported, allReports: allReports.slice(0, 10) }; // Trả về 10 kết quả sau khi lọc
 };
 
-module.exports = { fetchGigReports };
+const dismissReport = async (logId) => {
+    // Chỉ cho phép chuyển sang 'dismissed'
+    return await ReportsModel.updateLogStatus(logId, 'dismissed');
+};
+
+module.exports = { fetchGigReports, dismissReport }; // Thêm dismissReport vào export

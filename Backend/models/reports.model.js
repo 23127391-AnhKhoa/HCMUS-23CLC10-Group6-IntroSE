@@ -10,20 +10,28 @@ const ReportsModel = {
         if (error) throw error;
         return data;
     },
-
-    // Lấy tất cả log báo cáo cho gig
-    getAllGigReportLogs: async (searchTerm) => {
-        let query = supabase
+    updateLogStatus: async (logId, newStatus) => {
+        const { data, error } = await supabase
             .from('AdminLog')
-            .select('id, description, created_at, target_id, actor_id')
-            .eq('action_type', 'report gig'); // Lọc theo action_type
-
-        // Tìm kiếm sẽ được xử lý ở service
-        const { data, error } = await query.order('created_at', { ascending: false }).limit(50); // Lấy 50 logs gần nhất
-
+            .update({ status: newStatus })
+            .eq('id', logId)
+            .select()
+            .single();
         if (error) throw error;
         return data;
-    }
+    },
+    // Lấy tất cả log báo cáo cho gig
+    getAllGigReportLogs: async (searchTerm) => {
+    let query = supabase
+        .from('AdminLog')
+        .select('id, description, created_at, target_id, actor_id')
+        .eq('action_type', 'report gig')
+        .eq('status', 'pending'); // <-- THÊM DÒNG NÀY
+
+    const { data, error } = await query.order('created_at', { ascending: false }).limit(50);
+    if (error) throw error;
+    return data;
+},
 };
 
 module.exports = ReportsModel;
