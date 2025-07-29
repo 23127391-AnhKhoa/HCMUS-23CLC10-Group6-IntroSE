@@ -8,22 +8,13 @@ export const useRealtimeNotifications = (userId) => {
   const [loading, setLoading] = useState(true);
   const channelRef = useRef(null);
 
-  // Debug log
-  console.log('🔍 useRealtimeNotifications called with userId:', userId);
-
   // Function to fetch notifications from API
   const fetchNotifications = async () => {
-    if (!userId) {
-      console.log('⚠️ No userId provided, skipping fetch');
-      setLoading(false);
-      return;
-    }
+    if (!userId) return;
 
     try {
-      console.log('📡 Fetching notifications for userId:', userId);
       setLoading(true);
       const token = localStorage.getItem('token');
-      console.log('🔑 Token exists:', !!token);
       
       const response = await fetch(`http://localhost:8000/api/notifications`, {
         method: 'GET',
@@ -33,24 +24,19 @@ export const useRealtimeNotifications = (userId) => {
         }
       });
 
-      console.log('📡 Fetch response status:', response.status);
-
       if (response.ok) {
         const data = await response.json();
-        console.log('📊 Fetch response data:', data);
         if (data.status === 'success') {
           setNotifications(data.data.notifications);
           setUnreadCount(data.data.unreadCount);
-          console.log('✅ Notifications set:', data.data.notifications.length, 'items');
         }
       } else {
-        console.error('❌ Failed to fetch notifications:', response.statusText);
+        console.error('Failed to fetch notifications:', response.statusText);
       }
     } catch (error) {
-      console.error('💥 Error fetching notifications:', error);
+      console.error('Error fetching notifications:', error);
     } finally {
       setLoading(false);
-      console.log('🏁 Fetch completed, loading set to false');
     }
   };
 
