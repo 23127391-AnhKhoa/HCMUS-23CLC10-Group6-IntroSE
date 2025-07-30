@@ -1,11 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate, useLocation } from 'react-router-dom';
 import ServCard from '../Common/ServCard';
 import Footer from '../Common/Footer';
 import NavBar from '../Common/NavBar_Buyer';
 
 const SearchPage = () => {
-    const [searchParams] = useSearchParams();
+    const [searchParams, setSearchParams] = useSearchParams();
+    const navigate = useNavigate();
+    const location = useLocation();
     const [searchResults, setSearchResults] = useState([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
@@ -22,12 +24,28 @@ const SearchPage = () => {
     const [currentPage, setCurrentPage] = useState(1); // Track current page
     const [totalPages, setTotalPages] = useState(1); // Track total pages
     const [showScrollTop, setShowScrollTop] = useState(false); // Track scroll position for scroll-to-top button
+    const [userResults, setUserResults] = useState([]); // Store user search results
+    const [navigationState, setNavigationState] = useState(null); // Track navigation state
 
-    // Derived values from sort state
-    const [sortBy, sortOrder] = sort.split('_');
+    // Derived values from sort state - fix parsing for multi-part sort columns like created_at
+    const sortParts = sort.split('_');
+    const sortOrder = sortParts[sortParts.length - 1]; // Last part is always the order (asc/desc)
+    const sortBy = sortParts.slice(0, -1).join('_'); // Everything before the last part is the column name
     
     // Debug log to track sort state
     console.log('[SearchPage] Current sort state:', { sort, sortBy, sortOrder });
+
+    // Handle browser navigation (back/forward buttons)
+    useEffect(() => {
+        const handlePopstate = (event) => {
+            console.log('[SearchPage] Browser navigation detected:', event.state);
+            // The useEffect with searchParams dependency will handle the state update
+            // No need to manually trigger search here as URL change will trigger it
+        };
+
+        window.addEventListener('popstate', handlePopstate);
+        return () => window.removeEventListener('popstate', handlePopstate);
+    }, []);
 
     // Handle scroll to show/hide scroll-to-top button
     useEffect(() => {
@@ -50,26 +68,91 @@ const SearchPage = () => {
     useEffect(() => {
         const queryFromUrl = searchParams.get('q');
         const categoryFromUrl = searchParams.get('category');
+        const pageFromUrl = searchParams.get('page');
+        const sortFromUrl = searchParams.get('sort');
+        const minPriceFromUrl = searchParams.get('minPrice');
+        const maxPriceFromUrl = searchParams.get('maxPrice');
         
-        if (queryFromUrl) {
+        console.log('[SearchPage] URL parameters changed:', { 
+            query: queryFromUrl, 
+            category: categoryFromUrl, 
+            page: pageFromUrl,
+            sort: sortFromUrl,
+            minPrice: minPriceFromUrl,
+            maxPrice: maxPriceFromUrl
+        });
+        
+        // Update state from URL parameters
+        if (queryFromUrl !== null) {
             setSearchQuery(queryFromUrl);
         }
         
-        if (categoryFromUrl) {
+        if (categoryFromUrl !== null) {
             setSelectedCategory(categoryFromUrl);
             // If category comes from URL and no search query, it's from navbar
             setCategoryFromNavbar(!queryFromUrl);
         }
         
+        if (pageFromUrl !== null) {
+            const page = parseInt(pageFromUrl) || 1;
+            setCurrentPage(page);
+        } else {
+            setCurrentPage(1);
+        }
+        
+        if (sortFromUrl !== null) {
+            setSort(sortFromUrl);
+        }
+        
+        if (minPriceFromUrl !== null || maxPriceFromUrl !== null) {
+            setPriceRange({
+                min: minPriceFromUrl || '',
+                max: maxPriceFromUrl || ''
+            });
+        }
+        
         // Always perform search - pass both query and category to ensure proper filtering
-        searchGigs(queryFromUrl || '', 1, categoryFromUrl);
+        const pageToSearch = parseInt(pageFromUrl) || 1;
+        searchGigs(queryFromUrl || '', pageToSearch, categoryFromUrl);
+        
+        // Also search for users if there's a query
+        if (queryFromUrl?.trim()) {
+            searchUsers(queryFromUrl);
+        }
         
         fetchCategories();
         setIsInitialLoad(false);
         
-        // Auto scroll to top when entering search page
-        scrollToTop();
+        // Auto scroll to top when entering search page (but not when navigating pages)
+        if (!pageFromUrl || pageFromUrl === '1') {
+            scrollToTop();
+        }
     }, [searchParams]);
+
+    // Function to update URL parameters for browser navigation
+    const updateUrlParams = (params = {}) => {
+        const newSearchParams = new URLSearchParams(searchParams);
+        
+        // Update or remove parameters
+        Object.entries(params).forEach(([key, value]) => {
+            if (value && value !== '' && value !== '0') {
+                newSearchParams.set(key, value.toString());
+            } else {
+                newSearchParams.delete(key);
+            }
+        });
+        
+        // Remove empty parameters
+        if (!newSearchParams.get('q')) newSearchParams.delete('q');
+        if (!newSearchParams.get('category')) newSearchParams.delete('category');
+        if (!newSearchParams.get('page') || newSearchParams.get('page') === '1') newSearchParams.delete('page');
+        if (!newSearchParams.get('sort') || newSearchParams.get('sort') === 'relevance_desc') newSearchParams.delete('sort');
+        if (!newSearchParams.get('minPrice')) newSearchParams.delete('minPrice');
+        if (!newSearchParams.get('maxPrice')) newSearchParams.delete('maxPrice');
+        
+        console.log('[SearchPage] Updating URL with params:', Object.fromEntries(newSearchParams));
+        setSearchParams(newSearchParams, { replace: false }); // Don't replace history, allow back/forward
+    };
 
     // Fetch categories for filter dropdown
     const fetchCategories = async () => {
@@ -90,6 +173,58 @@ const SearchPage = () => {
         } catch (err) {
             console.error('[SearchPage] Error fetching categories:', err);
             // Don't set error state as categories are optional
+        }
+    };
+
+    // Search users function
+    const searchUsers = async (query = searchQuery) => {
+        try {
+            console.log('[SearchPage] Starting user search with:', { search: query });
+
+            const params = new URLSearchParams({
+                limit: '10' // Get 10 most relevant users
+            });
+
+            // Only add search param if query is not empty
+            if (query?.trim()) {
+                params.append('q', query.trim()); // Changed from 'search' to 'q' to match API
+            } else {
+                // No query, clear user results
+                setUserResults([]);
+                return;
+            }
+
+            const searchUrl = `http://localhost:8000/api/users/search?${params}`;
+            console.log('[SearchPage] User search URL:', searchUrl);
+
+            // Get auth token
+            const token = localStorage.getItem('token');
+            const headers = {
+                'Content-Type': 'application/json'
+            };
+            
+            if (token) {
+                headers['Authorization'] = `Bearer ${token}`;
+            }
+
+            const response = await fetch(searchUrl, { headers });
+            if (!response.ok) {
+                console.warn('[SearchPage] User search failed:', response.status);
+                setUserResults([]); // Clear user results on error but don't show error
+                return;
+            }
+
+            const data = await response.json();
+            if (data.status === 'success') {
+                const results = data.data || [];
+                setUserResults(results);
+                console.log('[SearchPage] User search results:', results.length);
+            } else {
+                setUserResults([]);
+            }
+        } catch (err) {
+            console.error('[SearchPage] User search error:', err);
+            setUserResults([]); // Clear user results on error but don't show error
         }
     };
 
@@ -205,14 +340,43 @@ const SearchPage = () => {
         setCategoryFromNavbar(false); // Reset navbar tracking
         setCurrentPage(1); // Reset pagination
         setTotalPages(1);
-        searchGigs('', 1, ''); // Start fresh search from page 1 with no category
+        setUserResults([]); // Clear user results
+        
+        // Update URL to clear all filters but keep search query
+        updateUrlParams({
+            q: searchQuery,
+            category: undefined,
+            page: undefined,
+            sort: undefined,
+            minPrice: undefined,
+            maxPrice: undefined
+        });
     };
 
     // Navigate to specific page
     const goToPage = (page) => {
         if (page >= 1 && page !== currentPage) {
-            searchGigs(searchQuery, page, selectedCategory);
+            updateUrlParams({
+                q: searchQuery,
+                category: selectedCategory,
+                page: page > 1 ? page : undefined,
+                sort: sort !== 'relevance_desc' ? sort : undefined,
+                minPrice: priceRange.min,
+                maxPrice: priceRange.max
+            });
         }
+    };
+
+    // Handle search execution
+    const handleSearch = (query = searchQuery) => {
+        updateUrlParams({
+            q: query?.trim() || undefined,
+            category: selectedCategory,
+            page: undefined, // Reset to page 1
+            sort: sort !== 'relevance_desc' ? sort : undefined,
+            minPrice: priceRange.min,
+            maxPrice: priceRange.max
+        });
     };
 
     // Handle filter changes
@@ -224,10 +388,15 @@ const SearchPage = () => {
         setCurrentPage(1);
         setTotalPages(1);
         
-        // Always trigger search when sort parameters or categories change
-        // This ensures sorting works even when viewing "All Gigs"
-        console.log('[SearchPage] useEffect triggered for filters:', { selectedCategory, selectedSubcategory, sort });
-        searchGigs(searchQuery, 1, selectedCategory); // Start from page 1 with new filters
+        // Update URL with new filter values
+        updateUrlParams({
+            q: searchQuery,
+            category: selectedCategory,
+            page: undefined, // Reset to page 1
+            sort: sort !== 'relevance_desc' ? sort : undefined,
+            minPrice: priceRange.min,
+            maxPrice: priceRange.max
+        });
     }, [selectedCategory, selectedSubcategory, sort, isInitialLoad]);
 
     // Handle category change - reset subcategory when parent category changes
@@ -238,15 +407,25 @@ const SearchPage = () => {
     // Handle price range changes with debounce
     useEffect(() => {
         const timer = setTimeout(() => {
+            if (isInitialLoad) return;
+            
             // Reset pagination when price filter changes
             setCurrentPage(1);
             setTotalPages(1);
-            // Always search when price range changes (even for "All Gigs")
-            searchGigs(searchQuery, 1, selectedCategory);
+            
+            // Update URL with new price range
+            updateUrlParams({
+                q: searchQuery,
+                category: selectedCategory,
+                page: undefined, // Reset to page 1
+                sort: sort !== 'relevance_desc' ? sort : undefined,
+                minPrice: priceRange.min,
+                maxPrice: priceRange.max
+            });
         }, 500); // 500ms debounce
 
         return () => clearTimeout(timer);
-    }, [priceRange]);
+    }, [priceRange, isInitialLoad]);
 
     const renderGigCards = () => {
         if (loading) {
@@ -375,23 +554,13 @@ const SearchPage = () => {
                                     onChange={(e) => setSearchQuery(e.target.value)}
                                     onKeyPress={(e) => {
                                         if (e.key === 'Enter') {
-                                            setCurrentPage(1);
-                                            setTotalPages(1);
-                                            searchGigs(searchQuery, 1, selectedCategory);
-                                            // Scroll to top after search
-                                            setTimeout(() => scrollToTop(), 100);
+                                            handleSearch(searchQuery);
                                         }
                                     }}
                                     className="w-full pl-6 pr-32 py-6 text-lg border-none outline-none focus:ring-0"
                                 />
                                 <button
-                                    onClick={() => {
-                                        setCurrentPage(1);
-                                        setTotalPages(1);
-                                        searchGigs(searchQuery, 1, selectedCategory);
-                                        // Scroll to top after search
-                                        setTimeout(() => scrollToTop(), 100);
-                                    }}
+                                    onClick={() => handleSearch(searchQuery)}
                                     className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-8 py-4 rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl flex items-center gap-2 font-semibold"
                                 >
                                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -409,11 +578,7 @@ const SearchPage = () => {
                                         key={term}
                                         onClick={() => {
                                             setSearchQuery(term);
-                                            setCurrentPage(1);
-                                            setTotalPages(1);
-                                            searchGigs(term, 1, selectedCategory);
-                                            // Scroll to top after search
-                                            setTimeout(() => scrollToTop(), 100);
+                                            handleSearch(term);
                                         }}
                                         className="text-sm bg-gray-100 hover:bg-blue-100 text-gray-700 hover:text-blue-700 px-4 py-2 rounded-full transition-colors duration-200"
                                     >
@@ -507,6 +672,15 @@ const SearchPage = () => {
                                             onChange={(e) => {
                                                 setSelectedCategory(e.target.value);
                                                 setCategoryFromNavbar(false);
+                                                // Update URL immediately for category changes
+                                                updateUrlParams({
+                                                    q: searchQuery,
+                                                    category: e.target.value || undefined,
+                                                    page: undefined,
+                                                    sort: sort !== 'relevance_desc' ? sort : undefined,
+                                                    minPrice: priceRange.min,
+                                                    maxPrice: priceRange.max
+                                                });
                                             }}
                                             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                         >
@@ -527,6 +701,15 @@ const SearchPage = () => {
                                             onChange={(e) => {
                                                 setSelectedSubcategory(e.target.value);
                                                 setCategoryFromNavbar(false);
+                                                // Update URL immediately for subcategory changes
+                                                updateUrlParams({
+                                                    q: searchQuery,
+                                                    category: e.target.value || selectedCategory || undefined,
+                                                    page: undefined,
+                                                    sort: sort !== 'relevance_desc' ? sort : undefined,
+                                                    minPrice: priceRange.min,
+                                                    maxPrice: priceRange.max
+                                                });
                                             }}
                                             disabled={!selectedCategory}
                                             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
@@ -571,6 +754,15 @@ const SearchPage = () => {
                                             onChange={(e) => {
                                                 console.log('[SearchPage] Sort dropdown changed to:', e.target.value);
                                                 setSort(e.target.value);
+                                                // Update URL immediately for sort changes
+                                                updateUrlParams({
+                                                    q: searchQuery,
+                                                    category: selectedCategory,
+                                                    page: undefined,
+                                                    sort: e.target.value !== 'relevance_desc' ? e.target.value : undefined,
+                                                    minPrice: priceRange.min,
+                                                    maxPrice: priceRange.max
+                                                });
                                             }}
                                             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                         >
@@ -592,9 +784,14 @@ const SearchPage = () => {
                                     </button>
                                     <button
                                         onClick={() => {
-                                            setCurrentPage(1);
-                                            setTotalPages(1);
-                                            searchGigs(searchQuery, 1, selectedCategory);
+                                            updateUrlParams({
+                                                q: searchQuery,
+                                                category: selectedCategory,
+                                                page: undefined,
+                                                sort: sort !== 'relevance_desc' ? sort : undefined,
+                                                minPrice: priceRange.min,
+                                                maxPrice: priceRange.max
+                                            });
                                         }}
                                         className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                                     >
@@ -604,6 +801,49 @@ const SearchPage = () => {
                             </div>
                     </div>
                 </div>
+                
+                {/* User Results Section - Show if there are user matches */}
+                {userResults.length > 0 && (
+                    <div className="w-full max-w-6xl px-4 sm:px-6 lg:px-8 pb-4">
+                        <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-6">
+                            <h3 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+                                <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                </svg>
+                                Talented Users ({userResults.length})
+                            </h3>
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                {userResults.map((user) => (
+                                    <div 
+                                        key={user.uuid} 
+                                        className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl p-4 border border-blue-200 hover:shadow-lg transition-all duration-200 cursor-pointer transform hover:-translate-y-1"
+                                        onClick={() => navigate(`/SellerInfo/${user.uuid}`)}
+                                    >
+                                        <div className="flex items-center space-x-3">
+                                            <div
+                                                className="w-12 h-12 bg-center bg-no-repeat bg-cover rounded-full ring-2 ring-white shadow-md border-2 border-white"
+                                                style={{
+                                                    backgroundImage: `url("${user.avatar || 'https://placehold.co/100x100'}")`
+                                                }}
+                                            ></div>
+                                            <div className="flex-1 min-w-0">
+                                                <h4 className="text-sm font-bold text-gray-800 truncate">
+                                                    {user.fullname || 'Professional Seller'}
+                                                </h4>
+                                                <p className="text-xs text-blue-600 font-medium truncate">
+                                                    @{user.username}
+                                                </p>
+                                                <p className="text-xs text-gray-600 truncate">
+                                                    {user.seller_headline || 'Service Provider'}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                )}
                 
                 {/* Results Grid */}
                 <div className="w-full max-w-6xl px-4 sm:px-6 lg:px-8 pb-8">

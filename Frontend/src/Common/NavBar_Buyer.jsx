@@ -191,10 +191,10 @@ const Navbar = () => {
       </Menu.Item>
       <Menu.Divider />
       <Menu.Item key="deposit">
-        <Link to="/deposit">💰 Deposit</Link>
+        <Link to="/wallet">💰 Deposit</Link>
       </Menu.Item>
       <Menu.Item key="withdraw">
-        <Link to="/withdraw">💸 Withdraw</Link>
+        <Link to="/wallet">💸 Withdraw</Link>
       </Menu.Item>
       <Menu.Divider />
       <Menu.Item key="logout" onClick={handleLogout}>

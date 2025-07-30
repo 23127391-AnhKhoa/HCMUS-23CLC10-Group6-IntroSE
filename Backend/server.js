@@ -1,21 +1,40 @@
 // server.js
-const express = require('express');
 const dotenv = require('dotenv');
+const express = require('express');
 const cors = require('cors');
 const path = require('path');
 
-// Tải các biến môi trường từ file .env
-//dotenv.config({ path: path.join(__dirname, '.env') });
+// Load environment variables
 dotenv.config();
-// Khởi tạo ứng dụng Express
+
+// Validate required environment variables
+const requiredEnvVars = ['SUPABASE_URL', 'SUPABASE_SERVICE_KEY', 'JWT_SECRET'];
+const missingVars = requiredEnvVars.filter(envVar => !process.env[envVar]);
+
+if (missingVars.length > 0) {
+  console.error('❌ Missing required environment variables:', missingVars.join(', '));
+  console.error('Please check your .env file.');
+  
+  // Don't exit in development, just warn
+  if (process.env.NODE_ENV === 'production') {
+    process.exit(1);
+  } else {
+    console.warn('⚠️  Running in development mode with missing variables');
+  }
+}
+
+// Initialize Express app
 const app = express();
 
-// Sử dụng middleware
-app.use(cors()); // Cho phép các domain khác gọi API
-app.use(express.json()); // Cho phép server đọc được body của request dưới dạng JSON
+// Middleware
+app.use(cors()); // Enable CORS for all routes
+app.use(express.json()); // Parse JSON request bodies
+app.use(express.urlencoded({ extended: true })); // Parse URL-encoded request bodies
 
-/////////////////////////////////////////////////////////////
-// --- IMPORT ROUTES ---
+// Serve static files from uploads directory
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+// Import routes
 const authRoutes = require('./routes/auth.routes');
 const userRoutes = require('./routes/users.routes');
 const gigRoutes = require('./routes/gigs.routes');
@@ -25,11 +44,9 @@ const adminRoutes = require('./routes/admin.routes');
 const uploadRoutes = require('./routes/upload.routes');
 const conversationRoutes = require('./routes/conversations.routes');
 const categoriesRoutes = require('./routes/categories.routes');
+const reportsRoutes = require('./routes/reports.routes'); // <-- Thêm dòng này
 
-// Định nghĩa các route chính
-// Mọi request đến /api/auth sẽ được xử lý bởi authRoutes
-
-// --- USE ROUTES ---
+// API routes
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/conversations', conversationRoutes);
@@ -39,15 +56,47 @@ app.use('/api/transactions', transactionRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/categories', categoriesRoutes); 
+app.use('/api/reports', reportsRoutes); 
 //app.use('/api/admin', adminRoutes);
 // Xài cái api thì nhớ bỏ // ở đầu, ví dụ xài gigs thì bỏ //, tại bây giờ chưa định nghĩa mà để dô thì nó không được hiểu là function, nó sẽ bị lỗi
 
 ////////////////////////////////////////////////////////////
 
 // Lấy port từ biến môi trường hoặc dùng port 3000 mặc định
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 8000;
+app.use('/api/conversations', conversationRoutes);
+//app.use('/api/admin', adminRoutes); // Uncomment when needed
 
-// Khởi động server
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.json({ 
+    status: 'OK', 
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV || 'development'
+  });
+});
+
+// Error handling middleware
+app.use((err, req, res, next) => {
+  console.error('Error:', err.stack);
+  res.status(500).json({
+    error: 'Internal Server Error',
+    message: process.env.NODE_ENV === 'development' ? err.message : 'Something went wrong'
+  });
+});
+
+// 404 handler
+app.use('*', (req, res) => {
+  res.status(404).json({
+    error: 'Not Found',
+    message: `Route ${req.originalUrl} not found`
+  });
+});
+
+// Get port from environment or use default
+
+
+// Start server
 app.listen(PORT, () => {
-  console.log(`Server is running ${PORT}`);
+  console.log(`Server running on port ${PORT}`);
 });

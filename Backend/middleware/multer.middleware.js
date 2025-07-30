@@ -12,23 +12,64 @@ const upload = multer({
     files: 10, // Maximum 10 files per upload
   },
   fileFilter: (req, file, cb) => {
-    // Kiểm tra loại file
+    // Allow all file types for flexibility
     const allowedMimeTypes = [
+      // Images
       'image/jpeg',
       'image/jpg', 
       'image/png',
       'image/gif',
       'image/webp',
+      'image/bmp',
+      'image/tiff',
+      'image/svg+xml',
+      // Videos
       'video/mp4',
       'video/avi',
       'video/mov',
-      'video/quicktime'
+      'video/quicktime',
+      'video/webm',
+      'video/mkv',
+      // Documents
+      'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/vnd.ms-excel',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'application/vnd.ms-powerpoint',
+      'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+      // Text files
+      'text/plain',
+      'text/csv',
+      'text/html',
+      'text/css',
+      'text/javascript',
+      'application/json',
+      'application/xml',
+      // Archives
+      'application/zip',
+      'application/x-zip-compressed',
+      'application/zip-compressed',
+      'application/x-rar-compressed',
+      'application/x-7z-compressed',
+      'application/x-tar',
+      'application/gzip',
+      // Audio
+      'audio/mpeg',
+      'audio/wav',
+      'audio/ogg',
+      'audio/mp3',
+      // Other common formats
+      'application/octet-stream'
     ];
     
-    if (allowedMimeTypes.includes(file.mimetype)) {
+    // For delivery uploads, allow all file types
+    if (req.route && req.route.path.includes('upload-delivery')) {
+      cb(null, true);
+    } else if (allowedMimeTypes.includes(file.mimetype)) {
       cb(null, true);
     } else {
-      cb(new Error('File type not allowed. Only images (JPEG, JPG, PNG, GIF, WebP) and videos (MP4, AVI, MOV) are allowed.'), false);
+      cb(new Error('File type not allowed. Please contact support if you need to upload this file type.'), false);
     }
   },
 });
@@ -38,6 +79,9 @@ const singleUpload = upload.single('file');
 
 // Multiple files upload (max 10 files)
 const multipleUpload = upload.array('files', 10);
+
+// Delivery files upload (for order deliveries) - Allow all file types
+const deliveryUpload = upload.array('deliveryFiles', 10);
 
 // Fields-based upload for mixed uploads
 const fieldsUpload = upload.fields([
@@ -50,5 +94,6 @@ module.exports = {
   upload,
   singleUpload,
   multipleUpload,
+  deliveryUpload,
   fieldsUpload
 };

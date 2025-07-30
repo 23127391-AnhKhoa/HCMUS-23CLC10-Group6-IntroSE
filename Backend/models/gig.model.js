@@ -57,7 +57,6 @@ const Gig = {
         
         return result;
       };
-
       const result = await executeQueryWithRetry(queryFunction, 'findById');
       return result.data;
       
@@ -66,7 +65,15 @@ const Gig = {
       throw error;
     }
   },
-
+  findByIds: async (ids) => {
+        if (!ids || ids.length === 0) return [];
+        const { data, error } = await supabase
+            .from('Gigs')
+            .select('*')
+            .in('id', ids);
+        if (error) throw error;
+        return data;
+    },
   // Create a new gig
   create: async (gigData) => {
     const { data, error } = await supabase

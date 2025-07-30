@@ -137,6 +137,35 @@ const ConversationController = {
         error: error.message
       });
     }
+  },
+
+  // Tạo hoặc lấy conversation cho order
+  getOrCreateOrderConversation: async (req, res) => {
+    try {
+      const { orderId } = req.params;
+      const userId = req.user.uuid;
+
+      // Tạo hoặc lấy conversation cho order
+      const conversation = await Conversation.findOrCreateForOrder(orderId);
+
+      // Kiểm tra xem user có quyền truy cập conversation này không
+      if (conversation.user1.uuid !== userId && conversation.user2.uuid !== userId) {
+        return res.status(403).json({
+          message: 'Access denied: You are not part of this conversation'
+        });
+      }
+
+      res.status(200).json({
+        status: 'success',
+        data: conversation
+      });
+    } catch (error) {
+      console.error('Error getting/creating order conversation:', error);
+      res.status(500).json({
+        message: 'Internal server error',
+        error: error.message
+      });
+    }
   }
 };
 

@@ -7,7 +7,15 @@ const User = {
     if (error && error.code !== 'PGRST116') throw error;
     return data;
   },
-
+  findByIds: async (ids) => {
+        if (!ids || ids.length === 0) return [];
+        const { data, error } = await supabase
+            .from('User')
+            .select('uuid, username') // Chỉ lấy các trường cần thiết
+            .in('uuid', ids);
+        if (error) throw error;
+        return data;
+    },
   // Tìm user bằng username
   findByUsername: async (username) => {
     const { data, error } = await supabase.from('User').select('*').eq('username', username).single();
@@ -77,14 +85,21 @@ const User = {
   searchUsers: async (query) => {
     const { data, error } = await supabase
       .from('User')
-      .select('uuid, fullname, username, avt_url, role, status')
+      .select('uuid, fullname, username, avt_url, role, status, seller_headline')
       .or(`fullname.ilike.%${query}%,username.ilike.%${query}%`)
       .eq('status', 'active')
       .order('fullname')
       .limit(20);
 
     if (error) throw error;
-    return data || [];
+    
+    // Map avt_url to avatar for frontend compatibility
+    const users = (data || []).map(user => ({
+      ...user,
+      avatar: user.avt_url
+    }));
+    
+    return { status: 'success', data: users };
   },
 
   // === USER FAVORITES FUNCTIONS ===
