@@ -317,6 +317,7 @@ const SearchPage = () => {
                 if (!isInitialLoad && page === 1) {
                     setTimeout(() => scrollToTop(), 100);
                 }
+                searchUsers(query);
                 
                 console.log('[SearchPage] Search results:', results.length, 'on page', page);
             } else {
