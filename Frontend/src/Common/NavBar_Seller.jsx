@@ -66,12 +66,8 @@ const SellerNavbar = () => {
     // Định nghĩa menu theo cách mới, dùng mảng items
     const userMenuItems = [
         {
-            key: 'profile',
-            label: <Link to="/profile_seller">My Profile</Link>,
-        },
-        {
             key: 'dashboard',
-            label: <Link to="/dashboard">Dashboard</Link>,
+            label: <Link to="/dashboard_seller">DashBoard</Link>,
         },
         {
             type: 'divider',
@@ -102,11 +98,9 @@ const SellerNavbar = () => {
         <div className="flex items-center justify-between h-16">
           {/* Phần bên trái: Logo và Menu Seller */}
           <div className="flex items-center space-x-8">
-            <Link to="/profile_seller" className="flex items-center">
               <img src="/logo.svg" alt="FREELAND Logo" className="h-4 w-auto" />
-            </Link>
             <nav className="flex items-center space-x-6 font-medium text-gray-600">
-              <NavLink to="/dashboard" className={({ isActive }) => isActive ? "text-blue-600" : "hover:text-blue-600"}>
+              <NavLink to="/dashboard_seller" className={({ isActive }) => isActive ? "text-blue-600" : "hover:text-blue-600"}>
                 Dashboard
               </NavLink>
               <NavLink to="/orders" className={({ isActive }) => isActive ? "text-blue-600" : "hover:text-blue-600"}>

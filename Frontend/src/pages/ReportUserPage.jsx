@@ -46,7 +46,7 @@ const ReportUserPage = () => {
         description: `Report reason: ${values.reason}. Additional details: ${values.description || 'No additional details provided.'}`
       };
 
-      const response = await fetch(`${window.BASE_API || 'http://localhost:8000'}/api/admin/log`, {
+      const response = await fetch(`http://localhost:8000/api/admin/log`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

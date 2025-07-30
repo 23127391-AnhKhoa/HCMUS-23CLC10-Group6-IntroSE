@@ -235,8 +235,8 @@ const searchUsers = async (req, res) => {
             });
         }
 
-        const users = await User.searchUsers(q.trim());
-        res.status(200).json(users);
+        const result = await User.searchUsers(q.trim());
+        res.status(200).json(result);
     } catch (error) {
         res.status(500).json({ 
             status: 'error', 

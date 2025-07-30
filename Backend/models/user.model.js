@@ -1,14 +1,21 @@
 // models/user.model.js
-const supabase = require('../config/supabaseClient'); // Giả định
+const supabase = require('../config/supabaseClient'); 
 
 const User = {
-  // HÀM CŨ CỦA BẠN (giữ nguyên)
   findById: async (uuid) => {
     const { data, error } = await supabase.from('User').select('*').eq('uuid', uuid).single();
     if (error && error.code !== 'PGRST116') throw error;
     return data;
   },
-
+  findByIds: async (ids) => {
+        if (!ids || ids.length === 0) return [];
+        const { data, error } = await supabase
+            .from('User')
+            .select('uuid, username') // Chỉ lấy các trường cần thiết
+            .in('uuid', ids);
+        if (error) throw error;
+        return data;
+    },
   // Tìm user bằng username
   findByUsername: async (username) => {
     const { data, error } = await supabase.from('User').select('*').eq('username', username).single();
@@ -23,11 +30,10 @@ const User = {
     return data[0];
   },
 
-  // HÀM CŨ CỦA BẠN (giữ nguyên, nhưng tôi sẽ dùng tên bảng là 'User' cho nhất quán)
   updateByUuid: async (uuid, updateData) => {
     
     const { data, error } = await supabase
-      .from('User') // Sửa 'users' thành 'User' cho nhất quán với các hàm khác
+      .from('User') 
       .update(updateData)
       .eq('uuid', uuid)
       .select();
@@ -79,14 +85,21 @@ const User = {
   searchUsers: async (query) => {
     const { data, error } = await supabase
       .from('User')
-      .select('uuid, fullname, username, avt_url, role, status')
+      .select('uuid, fullname, username, avt_url, role, status, seller_headline')
       .or(`fullname.ilike.%${query}%,username.ilike.%${query}%`)
       .eq('status', 'active')
       .order('fullname')
       .limit(20);
 
     if (error) throw error;
-    return data || [];
+    
+    // Map avt_url to avatar for frontend compatibility
+    const users = (data || []).map(user => ({
+      ...user,
+      avatar: user.avt_url
+    }));
+    
+    return { status: 'success', data: users };
   },
 
   // === USER FAVORITES FUNCTIONS ===

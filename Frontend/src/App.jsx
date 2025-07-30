@@ -7,13 +7,15 @@ import CreateGigsPage from './pages/Create_Gigs';
 import AdminDashboard from './pages/Admin/AdminDashboard';
 import ExplorePage from './pages/ExplorePage';
 import GigDetail from './pages/GigDetail';
-import ProfileBuyer from './pages/Profile_Buyer';
-import ProfileSeller from './pages/Profile_Seller';
+import DashBoardBuyer from './pages/DashBoard_Buyer';
+import DashBoardSeller from './pages/DashBoard_Seller';
 import EarningsPage from './pages/EarningsPage';
 import ManageGigs from './pages/ManageGigs';
 import Orders from './pages/Orders';
 import InboxPage from './pages/InboxPage';
 import SellerInfo from './pages/SellerInfo';
+import Payment from './pages/Payment';
+import PaymentSuccess from './pages/PaymentSuccess';
 import Footer from './Common/Footer';
 import BecomeSellerPage from './pages/BecomeSeller';
 import UserManagement from './pages/Admin/UserManagement';
@@ -22,8 +24,11 @@ import Favorites from './pages/Favorites';
 import SearchPage from './pages/SearchPage';
 import ServicesManagement from './pages/Admin/ServiceManagement';
 import GigDetailContent from './pages/Admin/AdminGigContent';
-import AdminSellerInfor from './pages/Admin/AdminSellerInfor'; // Updated import for AdminSellerInfo
+import AdminSellerInfor from './pages/Admin/AdminSellerInfor'; 
+import ManageReportedGigs from './pages/Admin/ManageReportedGigs'; 
 import ReportUserPage from './pages/ReportUserPage';
+import ReportGigPage from './pages/ReportGigPage'; // Assuming you have a ReportGigPage component
+
 function App() {
   return (
     <AuthProvider>
@@ -35,6 +40,11 @@ function App() {
             <Route path="/" element={<Introduction />} />
 
             <Route path="admin/AdminDashboard" element={<AdminDashboard />} />
+
+            <Route path="/admin/manage-reported-gigs" element={<ManageReportedGigs />} />
+            {/* Route for signup page */}
+
+            <Route path="/admin/manage-reported-gigs" element={<ManageReportedGigs />} />
             {/* Route for authentication page */}
             <Route path="/auth" element={<AuthPage />} />
 
@@ -52,11 +62,9 @@ function App() {
             <Route path="/admin/gig/:id" element={<GigDetailContent />} />
 
             {/* Profile routes */}
-            <Route path="/profile_buyer" element={<ProfileBuyer />} />
+            <Route path="/dashboard_buyer" element={<DashBoardBuyer />} />
             
-            <Route path="/profile_seller" element={<ProfileSeller />} />
-
-            <Route path="/dashboard" element={<ProfileSeller />} />
+            <Route path="/dashboard_seller" element={<DashBoardSeller />} />
 
             <Route path="/earnings" element={<EarningsPage />} />
 
@@ -65,6 +73,10 @@ function App() {
             <Route path="/manage-gigs" element={<ManageGigs />} />
 
             <Route path="/seller/gigs" element={<CreateGigsPage />} />
+            <Route path="/seller/orders" element={<Orders />} />
+
+            <Route path="/payment/:orderId" element={<Payment />} />
+            <Route path="/payment/success/:orderId" element={<PaymentSuccess />} />
 
             <Route path="/become-seller" element={<BecomeSellerPage />} />
 
@@ -85,6 +97,8 @@ function App() {
             <Route path="/favorites" element={<Favorites />} />
 
             <Route path="/report-user" element={<ReportUserPage />} />
+
+            <Route path="/report-gig" element={<ReportGigPage />} />
 
             {/* 404 Route for unmatched paths */}
             <Route path="*" element={

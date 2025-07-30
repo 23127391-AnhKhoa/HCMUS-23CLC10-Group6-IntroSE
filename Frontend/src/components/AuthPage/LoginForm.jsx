@@ -46,7 +46,7 @@ const LoginForm = () => {
         navigate('/explore');
       }
       else if (data.user.role === 'seller') {
-        navigate('/profile_seller');
+        navigate('/dashboard_seller');
       }
 
     } catch (err) {

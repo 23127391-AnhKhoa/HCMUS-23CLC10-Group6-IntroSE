@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import ApiService from '../services/CreateGigs.service';
+import ApiService from '../services/apiService';
 import { useAuth } from '../contexts/AuthContext';
 
 const AvatarUpload = ({ currentAvatar, onAvatarChange, size = 'large' }) => {
