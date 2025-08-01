@@ -171,13 +171,20 @@ const DashBoardSeller = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
+      // Only send fields that can be updated (exclude email)
+      const updateData = {
+        fullname: formData.fullname,
+        username: formData.username,
+        avt_url: formData.avt_url
+      };
+
       const response = await fetch('http://localhost:8000/api/users/profile', {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify(formData)
+        body: JSON.stringify(updateData)
       });
 
       if (!response.ok) {
@@ -414,9 +421,11 @@ const DashBoardSeller = () => {
                   name="email"
                   value={formData.email}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-600 cursor-not-allowed focus:outline-none"
                   required
+                  readOnly
                 />
+                <p className="text-xs text-gray-500 mt-1">Email cannot be changed</p>
               </div>
               
               <div className="flex space-x-3 pt-4">
