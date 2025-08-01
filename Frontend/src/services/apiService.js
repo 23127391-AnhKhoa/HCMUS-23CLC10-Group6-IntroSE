@@ -309,35 +309,6 @@ class ApiService {
     }
   }
 
-  // Notification API methods
-  static async fetchNotifications() {
-    try {
-      const response = await fetch(`${API_BASE_URL}/notifications`, {
-        method: 'GET',
-        headers: this.getAuthHeaders()
-      });
-      
-      return await this.handleApiResponse(response);
-    } catch (error) {
-      console.error('Error fetching notifications:', error);
-      throw error;
-    }
-  }
-
-  static async markNotificationAsRead(notificationId) {
-    try {
-      const response = await fetch(`${API_BASE_URL}/notifications/${notificationId}/read`, {
-        method: 'PUT',
-        headers: this.getAuthHeaders()
-      });
-      
-      return await this.handleApiResponse(response);
-    } catch (error) {
-      console.error('Error marking notification as read:', error);
-      throw error;
-    }
-  }
-
   // File upload API methods
   static async uploadFile(file, category) {
     try {

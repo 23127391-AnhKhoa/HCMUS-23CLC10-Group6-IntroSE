@@ -16,7 +16,6 @@ import DOMPurify from 'dompurify';
 import ApiService from '../../services/apiService';
 import DeliveryFilesModal from '../DeliveryFilesModal/DeliveryFilesModal';
 import UploadDeliveryModal from '../UploadDeliveryModal/UploadDeliveryModal';
-import AutoPaymentTimer from '../AutoPaymentTimer/AutoPaymentTimer';
 import OrderStatus from '../OrderStatus/OrderStatus';
 import Toast from '../Toast/Toast';
 import { 
@@ -147,18 +146,19 @@ const OrderCard = ({
         }
     };
     
-    // Handle payment
+    // Handle payment - now processed in DeliveryFilesModal
     const handlePayment = async () => {
         try {
             setProcessing(true);
-            const response = await ApiService.processOrderPayment(order.id);
-            if (response.status === 'success') {
-                safeOnStatusUpdate(order.id, 'completed');
-                alert('Payment processed successfully!');
-            }
+            // Payment is now handled in DeliveryFilesModal
+            // This is just a callback to refresh the order data
+            console.log('Payment completed, refreshing order data...');
+            
+            // Update order status to completed
+            safeOnStatusUpdate(order.id, 'completed');
+            
         } catch (error) {
-            console.error('Error processing payment:', error);
-            alert('Payment failed: ' + error.message);
+            console.error('Error in payment callback:', error);
         } finally {
             setProcessing(false);
         }
@@ -654,15 +654,6 @@ const OrderCard = ({
                             <span>
                                 <span className="font-medium">Edits:</span> {safeOrder.gig_num_of_edits}
                             </span>
-                            {/* Compact countdown timer */}
-                            {safeOrder.status === 'delivered' && safeOrder.auto_payment_deadline && safeOrder.download_start_time && (
-                                <AutoPaymentTimer
-                                    deadline={safeOrder.auto_payment_deadline}
-                                    userRole={userRole}
-                                    compact={true}
-                                    className="ml-2"
-                                />
-                            )}
                         </div>
                     )}
                 </div>
@@ -728,37 +719,8 @@ const OrderCard = ({
             {console.log('🔍 OrderCard Debug:', {
                 orderId: safeOrder.id,
                 status: safeOrder.status,
-                auto_payment_deadline: safeOrder.auto_payment_deadline,
-                download_start_time: safeOrder.download_start_time,
                 userRole: userRole
             })}
-            {safeOrder.status === 'delivered' && 
-             safeOrder.auto_payment_deadline && 
-             safeOrder.download_start_time && (
-                <div className="bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200 rounded-lg p-4 mb-4">
-                    <div className="flex items-center mb-2">
-                        <ClockCircleOutlined className="text-orange-500 mr-2" />
-                        <span className="font-medium text-gray-800">
-                            {userRole === 'buyer' ? 'Payment Auto-Processing Timer' : 'Awaiting Payment Decision'}
-                        </span>
-                    </div>
-                    <div className="text-sm text-gray-600 mb-3">
-                        {userRole === 'buyer' 
-                            ? 'Timer started when you first downloaded the delivery files. Payment will be processed automatically if no action is taken.'
-                            : 'Buyer has downloaded the delivery files. Payment will be processed automatically if buyer takes no action.'
-                        }
-                    </div>
-                    <AutoPaymentTimer
-                        deadline={safeOrder.auto_payment_deadline}
-                        userRole={userRole}
-                        orderPrice={safeOrder.price_at_purchase}
-                        className="mb-2"
-                    />
-                    <div className="text-xs text-gray-500 mt-2">
-                        Download started: {safeOrder.download_start_time && new Date(safeOrder.download_start_time).toLocaleString()}
-                    </div>
-                </div>
-            )}
 
 
 
@@ -866,13 +828,8 @@ const OrderCard = ({
                         <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg">
                             <p className="text-sm text-green-800">
                                 <DownloadOutlined className="mr-2" />
-                                <strong>Files Ready!</strong> Download anytime - first download starts auto payment countdown.
+                                <strong>Files Ready!</strong> Download and review files, then complete payment in the delivery modal.
                             </p>
-                            {safeOrder.auto_payment_deadline && (
-                                <p className="text-xs text-green-700 mt-1">
-                                    ⏰ Or complete payment now to skip countdown and finish immediately
-                                </p>
-                            )}
                         </div>
                     )}
                 </div>

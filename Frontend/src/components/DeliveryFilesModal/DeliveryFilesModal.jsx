@@ -16,6 +16,7 @@ import {
 } from '@ant-design/icons';
 import ApiService from '../../services/apiService';
 import Toast from '../Toast/Toast';
+import { useAuth } from '../../contexts/AuthContext';
 
 const DeliveryFilesModal = ({ 
     isOpen, 
@@ -28,6 +29,9 @@ const DeliveryFilesModal = ({
     onFileDownload,
     processing
 }) => {
+    // Get updateUser from AuthContext
+    const { updateUser } = useAuth();
+    
     // Extract order properties for easier access
     const orderId = order?.id;
     const orderStatus = order?.status;
@@ -112,10 +116,51 @@ const DeliveryFilesModal = ({
 
     const handlePayment = async () => {
         try {
+            const confirmComplete = window.confirm(
+                'Are you sure you want to complete this order? Payment will be processed immediately.'
+            );
+
+            if (!confirmComplete) return;
+
             setLoading(true);
-            await onPayment();
-            showToast('Payment processed successfully', 'success');
-            loadDeliveryFiles(); // Refresh files after payment
+
+            const token = localStorage.getItem('token');
+            if (!token) {
+                throw new Error('Please log in to complete the order');
+            }
+
+            const response = await fetch(`http://localhost:8000/api/orders/${order.id}/complete`, {
+                method: 'PATCH',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.message || 'Failed to complete order');
+            }
+
+            console.log('✅ Payment response:', data);
+
+            // Update user balance in AuthContext if returned from backend
+            if (data.data?.payment?.updatedBuyerData) {
+                console.log('🔄 Updating buyer balance in AuthContext:', data.data.payment.updatedBuyerData);
+                updateUser(data.data.payment.updatedBuyerData);
+            }
+
+            showToast('Order completed successfully! Payment has been processed.', 'success');
+            
+            // Close modal and refresh order data
+            onClose();
+            
+            // Call onPayment callback if provided (for parent component updates)
+            if (onPayment) {
+                await onPayment();
+            }
+            
         } catch (error) {
             console.error('Payment error:', error);
             showToast(error.message || 'Payment failed', 'error');
