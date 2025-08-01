@@ -71,13 +71,20 @@ const CategoriesSection = () => {
         const response = await fetch('/api/categories');
         if (response.ok) {
           const data = await response.json();
-          // Map API data with default icons
-          const mappedCategories = data.map((cat, index) => ({
-            ...cat,
-            icon: defaultCategories[index % defaultCategories.length]?.icon || <FiCode className="w-8 h-8" />,
-            color: defaultCategories[index % defaultCategories.length]?.color || 'bg-gray-100 text-gray-600'
-          }));
-          setCategories(mappedCategories);
+          
+          if (data.success && data.data && data.data.length > 0) {
+            // Map real categories with icons
+            const mappedCategories = data.data.slice(0, 8).map((cat, index) => ({
+              id: cat.id,
+              name: cat.name,
+              icon: defaultCategories[index % defaultCategories.length]?.icon || <FiCode className="w-8 h-8" />,
+              description: cat.description || `Professional ${cat.name.toLowerCase()} services`,
+              color: defaultCategories[index % defaultCategories.length]?.color || 'bg-gray-100 text-gray-600'
+            }));
+            setCategories(mappedCategories);
+          } else {
+            setCategories(defaultCategories);
+          }
         } else {
           setCategories(defaultCategories);
         }

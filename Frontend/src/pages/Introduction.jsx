@@ -1,9 +1,9 @@
 import React from 'react';
 import HeroSection from '../components/Introduction/HeroSection';
-import CustomerReviewSection from '../components/Introduction/CustomerReviewSection';
+
 import Navbar from '../Common/Navbar_LD';
 import FeaturesSection from '../components/Introduction/FeatureSection';
-import FeaturedServicesSection from '../components/Introduction/FeatureServicesSection';
+
 import StatsSection from '../components/Introduction/StatsSection';
 import HowItWorksSection from '../components/Introduction/HowItWorksSection';
 import CategoriesSection from '../components/Introduction/CategoriesSection';
@@ -90,10 +90,10 @@ const Introduction = () => {
           at the top of the page, often used for key messages or calls to action.
           It includes animations and a gradient background for visual appeal.
         */}
-        <Navbar />
+        <Navbar/>
         <HeroSection />
         <StatsSection />
-        
+       
         <FeaturesSection/>
         <HowItWorksSection />
         <CategoriesSection />
