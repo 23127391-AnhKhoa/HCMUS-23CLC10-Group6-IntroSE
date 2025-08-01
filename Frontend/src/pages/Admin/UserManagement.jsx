@@ -10,9 +10,8 @@ import { useAuth } from "../../contexts/AuthContext";
 const Sidebar = () => (
   <div className="w-64 bg-white h-screen flex flex-col justify-between p-4 shadow-lg">
     <div>
-      <div className="flex items-center space-x-2 mb-10 p-2">
-        <img src="https://i.pravatar.cc/150?u=freeland-logo" alt="Logo" className="w-10 h-10 rounded-full" />
-        <span className="font-bold text-xl text-gray-800">FREELAND</span>
+      <div className="flex items-center justify-center mb-10 p-2">
+        <img src="/logo.svg" alt="Logo" className="h-12 w-auto" />
       </div>
       <nav className="flex flex-col space-y-2">
         <a href="/admin/admindashboard" className="flex items-center p-3 text-gray-600 hover:bg-gray-100 rounded-lg transition-smooth">
@@ -92,9 +91,10 @@ const Header = ({ searchTerm, onSearchChange }) => {
         <Dropdown overlay={userMenu} trigger={['click']}>
           <div className="flex items-center cursor-pointer space-x-2">
             <Avatar 
-              src={authUser?.avatar_url} 
-              icon={!authUser?.avatar_url && <UserOutlined />}
+              src={authUser?.avt_url} 
+              icon={!authUser?.avt_url && <UserOutlined />}
               className="bg-gray-300"
+              size={40}
             />
           </div>
         </Dropdown>
@@ -126,7 +126,14 @@ const UserRow = ({ user, onDelete, onUpdateRole, onReactivate }) => { // Thêm p
       {/* ... các thẻ <td> cho User, Role không đổi ... */}
       <td className="py-4 px-6">
         <div className="flex items-center space-x-4">
-          <img src={user.avatar_url || `https://i.pravatar.cc/150?u=${user.uuid}`} alt={user.username} className="w-10 h-10 rounded-full" />
+          <img 
+            src={user.avt_url || `https://i.pravatar.cc/150?u=${user.username}`} 
+            alt={user.username} 
+            className="w-10 h-10 rounded-full object-cover" 
+            onError={(e) => {
+              e.target.src = `https://i.pravatar.cc/150?u=${user.username}`;
+            }}
+          />
           <div>
             <div className="font-medium text-gray-800">{user.username}</div>
           </div>
@@ -212,6 +219,7 @@ const Pagination = ({ currentPage, totalPages, onPageChange }) => {
 
 // --- Main Component (Thay đổi nhiều nhất) ---
 const UserManagement = () => {
+  const { authUser } = useAuth(); // Thêm authUser ở đây
   const [users, setUsers] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -394,7 +402,14 @@ const UserManagement = () => {
 
       </main>
       <div className="fixed bottom-10 right-10">
-            <img src="https://i.pravatar.cc/150?u=bottom-admin" alt="Admin" className="w-16 h-16 rounded-full cursor-pointer shadow-lg border-4 border-white hover-scale"/>
+            <img 
+              src={authUser?.avt_url || "https://i.pravatar.cc/150?u=bottom-admin"} 
+              alt="Admin" 
+              className="w-16 h-16 rounded-full cursor-pointer shadow-lg border-4 border-white hover-scale object-cover"
+              onError={(e) => {
+                e.target.src = "https://i.pravatar.cc/150?u=bottom-admin";
+              }}
+            />
       </div>
     </div>
   );

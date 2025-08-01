@@ -4,6 +4,11 @@ import CustomerReviewSection from '../components/Introduction/CustomerReviewSect
 import Navbar from '../Common/Navbar_LD';
 import FeaturesSection from '../components/Introduction/FeatureSection';
 import FeaturedServicesSection from '../components/Introduction/FeatureServicesSection';
+import StatsSection from '../components/Introduction/StatsSection';
+import HowItWorksSection from '../components/Introduction/HowItWorksSection';
+import CategoriesSection from '../components/Introduction/CategoriesSection';
+import TopSellersSection from '../components/Introduction/TopSellersSection';
+import CTASection from '../components/Introduction/CTASection';
 import Footer from '../Common/Footer';
 /**
  * WhatNew component serves as the main page for "What's New" content,
@@ -87,14 +92,14 @@ const Introduction = () => {
         */}
         <Navbar />
         <HeroSection />
-        <FeaturedServicesSection />
+        <StatsSection />
+        
         <FeaturesSection/>
-        {/*
-          The CustomerReviewSection component showcases customer testimonials
-          in a carousel format, allowing users to scroll through different reviews.
-          This section enhances credibility and builds trust with visitors.
-        */}
-        <CustomerReviewSection />
+        <HowItWorksSection />
+        <CategoriesSection />
+        <TopSellersSection />
+        
+        <CTASection />
         <Footer/>
 
         {/*
