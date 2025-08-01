@@ -5,7 +5,7 @@ import NavBarSeller from '../Common/NavBar_Seller';
 import Footer from '../Common/Footer';
 import AvatarUpload from '../components/AvatarUpload';
 
-const ProfileSeller = () => {
+const DashBoardSeller = () => {
   const { authUser, token } = useAuth();
   const navigate = useNavigate();
   const [profile, setProfile] = useState(null);
@@ -482,4 +482,4 @@ const ProfileSeller = () => {
   );
 };
 
-export default ProfileSeller;
+export default DashBoardSeller;

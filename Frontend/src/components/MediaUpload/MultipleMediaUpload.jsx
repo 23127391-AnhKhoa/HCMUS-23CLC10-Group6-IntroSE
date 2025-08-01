@@ -1,6 +1,6 @@
 // src/components/MediaUpload/MultipleMediaUpload.jsx
 import React, { useState, useRef } from 'react';
-import ApiService from '../../services/CreateGigs.service';
+import ApiService from '../../services/apiService';
 import { XMarkIcon, PhotoIcon, VideoCameraIcon, EyeIcon } from '@heroicons/react/24/outline';
 
 const MultipleMediaUpload = ({ 

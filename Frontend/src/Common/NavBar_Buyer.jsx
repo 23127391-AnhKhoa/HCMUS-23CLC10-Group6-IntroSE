@@ -170,7 +170,7 @@ const Navbar = () => {
       updateUser(updatedUser);
 
       // Chuyển đến trang seller
-      navigate('/profile_seller');
+      navigate('/dashboard_seller');
     } catch (error) {
       console.error('Error reactivating seller:', error);
       // Fallback về trang become-seller nếu có lỗi
@@ -186,11 +186,8 @@ const Navbar = () => {
   // Menu cho avatar người dùng
   const userMenu = (
     <Menu>
-      <Menu.Item key="profile">
-        <Link to="/profile_buyer">Profile</Link>
-      </Menu.Item>
       <Menu.Item key="dashboard">
-        <Link to="/dashboard">Dashboard</Link>
+        <Link to="/dashboard_buyer">DashBoard</Link>
       </Menu.Item>
       <Menu.Divider />
       <Menu.Item key="deposit">

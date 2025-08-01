@@ -6,7 +6,7 @@ const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_KEY;
 
 if (!supabaseUrl || !supabaseKey) {
-  console.error('Missing Supabase environment variables');
+  console.error('⚠️  Missing Supabase environment variables');
   throw new Error('Missing Supabase URL or Service Key');
 }
 
@@ -24,4 +24,13 @@ const supabase = createClient(supabaseUrl, supabaseKey, {
   }
 });
 
+
+
+// Helper to track channels for cleanup
+const createChannel = (channelName) => {
+  activeChannels.push(channelName);
+  return supabase.channel(channelName);
+};
+
+// Export client and helper functions
 module.exports = supabase;

@@ -1,8 +1,7 @@
 // models/user.model.js
-const supabase = require('../config/supabaseClient'); // Giả định
+const supabase = require('../config/supabaseClient'); 
 
 const User = {
-  // HÀM CŨ CỦA BẠN (giữ nguyên)
   findById: async (uuid) => {
     const { data, error } = await supabase.from('User').select('*').eq('uuid', uuid).single();
     if (error && error.code !== 'PGRST116') throw error;
@@ -31,11 +30,10 @@ const User = {
     return data[0];
   },
 
-  // HÀM CŨ CỦA BẠN (giữ nguyên, nhưng tôi sẽ dùng tên bảng là 'User' cho nhất quán)
   updateByUuid: async (uuid, updateData) => {
     
     const { data, error } = await supabase
-      .from('User') // Sửa 'users' thành 'User' cho nhất quán với các hàm khác
+      .from('User') 
       .update(updateData)
       .eq('uuid', uuid)
       .select();
