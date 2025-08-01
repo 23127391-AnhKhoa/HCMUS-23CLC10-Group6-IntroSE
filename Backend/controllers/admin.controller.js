@@ -74,7 +74,40 @@ const createAdminLog = async (req, res) => {
     }
 };
 
+const getGigReports = async (req, res) => {
+    try {
+        const { search } = req.query;
+        const reports = await AdminService.fetchGigReports(search);
+        res.status(200).json({ status: 'success', data: reports });
+    } catch (error) {
+        console.error("Error fetching gig reports:", error);
+        res.status(500).json({ status: 'error', message: error.message });
+    }
+};
+
+const dismissReport = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const updatedLog = await AdminService.dismissReport(id);
+        res.status(200).json({ status: 'success', data: updatedLog });
+    } catch (error) {
+        res.status(500).json({ status: 'error', message: error.message });
+    }
+};
+
+const getUserReports = async (req, res) => {
+    try {
+        const { search } = req.query;
+        const reports = await AdminService.fetchUserReports(search);
+        res.status(200).json({ status: 'success', data: reports });
+    } catch (error) {
+        res.status(500).json({ status: 'error', message: error.message });
+    }
+};
 module.exports = {
     getAdminStats,
     createAdminLog,
+    getGigReports,
+    dismissReport,
+    getUserReports
 };

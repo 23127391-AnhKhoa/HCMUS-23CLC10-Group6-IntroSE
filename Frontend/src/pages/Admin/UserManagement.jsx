@@ -396,8 +396,7 @@ const UserManagement = () => {
                 </table>
             </div>
         </div>
-        
-        {/* <Pagination ... /> */}
+       
 
       </main>
       <div className="fixed bottom-10 right-10">

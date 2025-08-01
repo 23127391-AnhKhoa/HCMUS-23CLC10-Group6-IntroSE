@@ -6,7 +6,31 @@ const fetchAllUsers = async (searchTerm) => {
     const data = await User.findAll(searchTerm);
     return data;
 };
+const updateUser = async (userId, updateData) => {
+    try {
+        const updateFields = { ...updateData };
 
+        if (updateData.ban_duration) {
+            updateFields.status = 'inactive'; // Ban user là chuyển status sang inactive
+            updateFields.ban_reason = updateData.ban_reason;
+
+            if (updateData.ban_duration !== 'forever') {
+                const now = new Date();
+                switch (updateData.ban_duration) {
+                    // ... các case thời gian như trong gig.service ...
+                }
+                updateFields.banned_until = now.toISOString();
+            } else {
+                updateFields.banned_until = null;
+            }
+            delete updateFields.ban_duration;
+        }
+
+        return await User.update(userId, updateFields);
+    } catch (error) {
+        throw new Error(`Error updating user: ${error.message}`);
+    }
+};
 const updateUserByUuid = async (uuid, updateData) => {
     const allowedUpdates = ['role', 'status'];
     const finalUpdateData = {};
@@ -327,5 +351,6 @@ module.exports = {
     getUserById,
     getUserByUsername,
     getSellerEarnings,
-    getSellerRecentOrders
+    getSellerRecentOrders,
+    updateUser
 };

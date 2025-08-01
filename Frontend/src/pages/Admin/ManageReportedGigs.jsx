@@ -1,10 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
-// Thêm FiTrash2 và các icon khác
 import { FiSearch, FiHome, FiAlertCircle, FiTrendingUp, FiUsers, FiHelpCircle, FiSettings, FiEye, FiEdit2, FiTrash2, FiLock } from 'react-icons/fi';
-// Import useAuth để lấy token
-import { useAuth } from '../../contexts/AuthContext'; // <-- QUAN TRỌNG: Hãy chắc chắn đường dẫn này đúng
-// --- Components Con ---
+import { useAuth } from '../../contexts/AuthContext'; // QUAN TRỌNG: Hãy chắc chắn đường dẫn này đúng
 
+// --- Component Sidebar ---
 const Sidebar = () => (
 
     <div className="w-64 bg-white h-screen flex flex-col justify-between p-4 shadow-lg">
@@ -80,6 +78,8 @@ const Sidebar = () => (
     </div>
 
 );
+
+// --- Component Bảng ---
 const ReportsTable = ({ title, headers, data, renderRow }) => (
     <div className="mb-10">
         <h2 className="text-xl font-bold text-gray-700 mb-4">{title}</h2>
@@ -91,53 +91,37 @@ const ReportsTable = ({ title, headers, data, renderRow }) => (
                     </tr>
                 </thead>
                 <tbody>
-                    {data && data.length > 0 ? (
-                        data.map((item, index) => renderRow(item, index))
-                    ) : (
-                        <tr><td colSpan={headers.length} className="text-center p-6 text-gray-500">No data available.</td></tr>
-                    )}
+                    {data && data.length > 0
+                        ? data.map((item, index) => renderRow(item, index))
+                        : <tr><td colSpan={headers.length} className="text-center p-6 text-gray-500">No data available.</td></tr>
+                    }
                 </tbody>
             </table>
         </div>
     </div>
 );
 
-
-// Hàm xử lý chuỗi Reason
-const parseReason = (description) => {
-    if (!description || typeof description !== 'string') return 'N/A';
-    try {
-        const mainPart = description.split('Additional details:')[0];
-        const reason = mainPart.replace('Report reason:', '').trim();
-        return reason || description;
-    } catch {
-        return description;
-    }
-};
-
-const BanGigModal = ({ gig, onClose, onConfirm }) => {
+// --- Component Modal để Ban ---
+const BanModal = ({ target, targetType, onClose, onConfirm }) => {
     const [reason, setReason] = useState('');
     const [duration, setDuration] = useState('1_minute');
 
-    // ✅ THÊM: Kiểm tra nếu gig đã bị ban
-    const isEditMode = gig?.status === 'denied';
+    const isEditMode = target?.status === 'denied' || target?.status === 'inactive';
+    const targetTitle = target?.title || target?.username || 'N/A';
 
-    // ✅ THÊM: Load thông tin ban hiện tại khi edit
     useEffect(() => {
-        if (isEditMode && gig) {
-            setReason(gig.ban_reason || '');
-            setDuration(gig.ban_duration || '1_minute');
+        if (isEditMode && target) {
+            setReason(target.ban_reason || '');
         }
-    }, [isEditMode, gig]);
+    }, [isEditMode, target]);
 
-    if (!gig) return null;
+    if (!target) return null;
 
     const handleConfirm = () => {
         if (!reason.trim()) {
-            alert('Please provide a reason for banning.');
-            return;
+            return alert('Please provide a reason for banning.');
         }
-        onConfirm(gig.id, reason, duration);
+        onConfirm(target.id || target.uuid, reason, duration);
     };
 
     return (
@@ -145,117 +129,74 @@ const BanGigModal = ({ gig, onClose, onConfirm }) => {
             <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
                 <div className="flex justify-between items-center mb-4">
                     <h2 className="text-xl font-bold text-gray-800">
-                        {isEditMode ? 'Edit Ban Settings' : 'Ban Gig'}
+                        {isEditMode ? `Edit Ban (${targetType})` : `Ban ${targetType}`}
                     </h2>
-                    <button 
-                        onClick={onClose}
-                        className="text-gray-500 hover:text-gray-700"
-                    >
-                        ✕
-                    </button>
-                </div>
-
-                {/* ✅ THÊM: Hiển thị status hiện tại nếu đang edit */}
-                {isEditMode && (
-                    <div className="mb-4 p-3 bg-red-50 rounded-md border border-red-200">
-                        <p className="text-sm text-red-600 font-medium">
-                            This gig is currently banned
-                        </p>
-                    </div>
-                )}
-
-                <div className="mb-4">
-                    <label htmlFor="gigTitle" className="block text-sm font-medium text-gray-700 mb-1">
-                        Gig Title
-                    </label>
-                    <input
-                        id="gigTitle"
-                        type="text"
-                        value={gig.title || 'N/A'}
-                        disabled
-                        className="w-full p-2 border border-gray-300 rounded-md bg-gray-100 text-gray-600"
-                    />
+                    <button onClick={onClose} className="text-gray-500 hover:text-gray-700">&times;</button>
                 </div>
 
                 <div className="mb-4">
-                    <label htmlFor="banReason" className="block text-sm font-medium text-gray-700 mb-1">
-                        Ban Reason
-                    </label>
-                    <textarea
-                        id="banReason"
-                        value={reason}
-                        onChange={(e) => setReason(e.target.value)}
-                        placeholder="Enter the reason for banning this gig..."
-                        className="w-full p-2 border border-gray-300 rounded-md h-20 resize-none"
-                    />
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Target</label>
+                    <input type="text" value={targetTitle} disabled className="w-full p-2 border border-gray-300 rounded-md bg-gray-100" />
+                </div>
+
+                <div className="mb-4">
+                    <label htmlFor="banReason" className="block text-sm font-medium text-gray-700 mb-1">Ban Reason</label>
+                    <textarea id="banReason" value={reason} onChange={(e) => setReason(e.target.value)} className="w-full p-2 border border-gray-300 rounded-md h-20" />
                 </div>
 
                 <div className="mb-6">
-                    <label htmlFor="banDuration" className="block text-sm font-medium text-gray-700 mb-1">
-                        Ban Duration
-                    </label>
-                    <select
-                        id="banDuration"
-                        value={duration}
-                        onChange={(e) => setDuration(e.target.value)}
-                        className="w-full p-2 border border-gray-300 rounded-md"
-                    >
+                    <label htmlFor="banDuration" className="block text-sm font-medium text-gray-700 mb-1">Ban Duration</label>
+                    <select id="banDuration" value={duration} onChange={(e) => setDuration(e.target.value)} className="w-full p-2 border border-gray-300 rounded-md">
                         <option value="1_minute">1 Minute (Test)</option>
-                        <option value="5_minutes">5 Minutes (Test)</option>
-                        <option value="30_minutes">30 Minutes (Test)</option>
                         <option value="1_day">1 Day</option>
-                        <option value="2_days">2 Days</option>
                         <option value="1_week">1 Week</option>
                         <option value="1_month">1 Month</option>
-                        <option value="1_year">1 Year</option>
                         <option value="forever">Forever</option>
                     </select>
                 </div>
 
                 <div className="flex justify-end space-x-3">
-                    <button
-                        onClick={onClose}
-                        className="px-4 py-2 text-gray-600 bg-gray-200 rounded-md hover:bg-gray-300 transition-colors"
-                    >
-                        Cancel
-                    </button>
-                    <button
-                        onClick={handleConfirm}
-                        className="px-4 py-2 text-white bg-red-600 rounded-md hover:bg-red-700 transition-colors"
-                    >
-                        {isEditMode ? 'Update Ban' : 'Confirm Ban'}
-                    </button>
+                    <button onClick={onClose} className="px-4 py-2 bg-gray-200 rounded-md hover:bg-gray-300">Cancel</button>
+                    <button onClick={handleConfirm} className="px-4 py-2 text-white bg-red-600 rounded-md hover:bg-red-700">{isEditMode ? 'Update Ban' : 'Confirm Ban'}</button>
                 </div>
             </div>
         </div>
     );
 };
 
+// --- Hàm tiện ích ---
+const parseReason = (description) => {
+    if (!description || typeof description !== 'string') return 'N/A';
+    return description.split('Additional details:')[0].replace('Report reason:', '').trim();
+};
+
 // --- Component Chính ---
-const ManageReportedGigs = () => {
-    const { token } = useAuth(); // Lấy token từ Context
+const ReportsManagement = () => {
+    const { token } = useAuth();
     const [reports, setReports] = useState({ mostReported: [], allReports: [] });
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
+    const [activeTab, setActiveTab] = useState('gigs');
     const [isBanModalOpen, setIsBanModalOpen] = useState(false);
-    const [gigToBan, setGigToBan] = useState(null);
+    const [targetToBan, setTargetToBan] = useState(null);
 
-
-    const fetchReports = useCallback(async (searchQuery = '') => {
+    const fetchReports = useCallback(async (searchQuery = '', tab = 'gigs') => {
         setIsLoading(true);
         setError(null);
         try {
-            const response = await fetch(`/api/reports/gigs?search=${searchQuery}`);
-            if (!response.ok) throw new Error('Failed to fetch reports.');
+            const endpoint = tab === 'gigs' ? '/api/admin/reports/gigs' : '/api/admin/reports/users';
+            const response = await fetch(`${endpoint}?search=${searchQuery}`);
+            if (!response.ok) throw new Error(`Failed to fetch ${tab} reports.`);
             const result = await response.json();
             if (result.status === 'success') {
                 setReports(result.data);
             } else {
-                throw new Error(result.message || 'An unknown error occurred.');
+                throw new Error(result.message);
             }
         } catch (err) {
             setError(err.message);
+            setReports({ mostReported: [], allReports: [] });
         } finally {
             setIsLoading(false);
         }
@@ -263,217 +204,149 @@ const ManageReportedGigs = () => {
 
     useEffect(() => {
         const timerId = setTimeout(() => {
-            fetchReports(searchTerm);
+            fetchReports(searchTerm, activeTab);
         }, 500);
         return () => clearTimeout(timerId);
-    }, [searchTerm, fetchReports]);
-    
+    }, [searchTerm, activeTab, fetchReports]);
 
-    const openBanModal = (gig) => {
-        setGigToBan(gig);
+    const openBanModal = (target) => {
+        setTargetToBan(target);
         setIsBanModalOpen(true);
     };
 
-    const handleConfirmBan = async (gigId, reason, duration) => {
-    if (!window.confirm(`Are you sure you want to ban this gig?`)) return;
-    if (!token) return alert('Access token is required');
-
-    try {
-        const response = await fetch(`/api/gigs/${gigId}`, {
-            method: 'PUT',
-            headers: { 
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify({
-                ban_reason: reason,
-                ban_duration: duration,
-            }),
-        });
-
-        if (!response.ok) {
-            const errData = await response.json();
-            throw new Error(errData.message || "Failed to ban the gig.");
-        }
-
-        // *** QUAN TRỌNG: Cập nhật UI ngay lập tức ***
-        setReports(prev => ({
-            ...prev,
-            allReports: prev.allReports.map(report => 
-                report.gig?.id === gigId 
-                    ? { ...report, gig: { ...report.gig, status: 'denied' } }
-                    : report
-            ),
-            mostReported: prev.mostReported.map(report => 
-                report.gig_id === gigId 
-                    ? { ...report, status: 'denied' }
-                    : report
-            )
-        }));
-
-        setIsBanModalOpen(false);
-        setGigToBan(null);
-        alert("Gig has been successfully banned.");
-
-    } catch (err) {
-        alert(err.message);
-    }
-};
-
-    // --- HÀM MỚI: DISMISS REPORT ---
-    const handleDismissReport = async (logId) => {
-        if (!window.confirm("Are you sure you want to dismiss this report? It won't be shown again.")) return;
+    const handleConfirmBan = async (targetId, reason, duration) => {
+        const targetType = activeTab === 'gigs' ? 'gig' : 'user';
+        if (!window.confirm(`Are you sure you want to ban this ${targetType}?`)) return;
         if (!token) return alert('Access token is required');
 
+        const endpoint = targetType === 'gig' ? `/api/gigs/${targetId}` : `/api/users/${targetId}`;
+        
         try {
-            const response = await fetch(`/api/reports/logs/${logId}`, {
-                method: 'PATCH',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
+            const response = await fetch(endpoint, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ ban_reason: reason, ban_duration: duration }),
             });
+            if (!response.ok) throw new Error(`Failed to ban ${targetType}.`);
 
-            if (!response.ok) {
-                const errData = await response.json();
-                throw new Error(errData.message || "Failed to dismiss report.");
-            }
-            
-            // Xóa report khỏi UI ngay lập tức
-            setReports(prev => ({
-                ...prev,
-                allReports: prev.allReports.filter(report => report.id !== logId)
-            }));
-
+            setIsBanModalOpen(false);
+            setTargetToBan(null);
+            fetchReports(searchTerm, activeTab);
+            alert(`${targetType.charAt(0).toUpperCase() + targetType.slice(1)} has been banned.`);
         } catch (err) {
             alert(err.message);
         }
     };
+
+    const handleDismissReport = async (logId) => {
+        if (!window.confirm("Are you sure you want to dismiss this report?")) return;
+        if (!token) return alert('Access token is required');
+
+        try {
+            const response = await fetch(`/api/admin/reports/logs/${logId}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            });
+            if (!response.ok) throw new Error("Failed to dismiss report.");
+
+            setReports(prev => ({
+                ...prev,
+                allReports: prev.allReports.filter(report => report.id !== logId)
+            }));
+        } catch (err) {
+            alert(err.message);
+        }
+    };
+
+    const renderAllReportsRow = (item) => {
+        const target = activeTab === 'gigs' ? item.gig : item.user;
+        const targetTitle = target?.title || target?.username || 'Deleted/Invalid Target';
+        const isBanned = target?.status === 'denied' || target?.status === 'inactive';
+
+        return (
+            <tr key={item.id} className="border-b last:border-b-0">
+                <td className="p-4 font-medium">{targetTitle}</td>
+                <td className="p-4 text-gray-600">{item.reporter?.username || 'N/A'}</td>
+                <td className="p-4 text-gray-600">{parseReason(item.description)}</td>
+                <td className="p-4">
+                    <div className="flex items-center space-x-2">
+                        <button
+                            onClick={() => window.open(activeTab === 'gigs' ? `/gig/${target?.id}` : `/profile/${target?.uuid}`, '_blank')}
+                            disabled={!target}
+                            className="p-2 rounded-md bg-blue-100 text-blue-600 hover:bg-blue-200 disabled:opacity-50"
+                            title="View Details"
+                        ><FiEye size={18}/></button>
+                        
+                        <button 
+                            onClick={() => openBanModal(target)}
+                            disabled={!target}
+                            className={`p-2 rounded-md ${isBanned ? 'bg-yellow-200 text-yellow-700 hover:bg-yellow-300' : 'bg-yellow-100 text-yellow-600 hover:bg-yellow-200'} disabled:opacity-50`}
+                            title={isBanned ? "Edit Ban Settings" : "Ban this item"}
+                        >
+                            {isBanned ? <FiLock size={18} /> : <FiEdit2 size={18} />}
+                        </button>
+                        
+                        <button
+                            onClick={() => handleDismissReport(item.id)}
+                            className="p-2 rounded-md bg-red-100 text-red-600 hover:bg-red-200"
+                            title="Dismiss Report"
+                        ><FiTrash2 size={18} /></button>
+                    </div>
+                </td>
+            </tr>
+        );
+    };
+    
     return (
         <div className="flex bg-gray-50 min-h-screen font-sans">
             <Sidebar />
             <main className="flex-1 p-8">
                 <div className="flex justify-between items-center mb-6">
                     <div>
-                        <h1 className="text-3xl font-bold text-gray-800">Manage Reported Gigs</h1>
-                        <p className="text-gray-500 mt-1">Review and manage all reported gigs</p>
+                        <h1 className="text-3xl font-bold text-gray-800">Manage Reports</h1>
+                        <p className="text-gray-500 mt-1">Review and manage all reported gigs and users</p>
                     </div>
                     <div className="relative w-80">
                         <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
-                        <input
-                            type="text"
-                            placeholder="Search reported gigs..."
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            className="w-full bg-white rounded-lg py-3 pl-12 pr-4 border focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        />
+                        <input type="text" placeholder={`Search reported ${activeTab}...`} value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full bg-white rounded-lg py-3 pl-12 pr-4 border"/>
                     </div>
                 </div>
 
-                {isLoading ? (
-                    <div>Loading reports...</div>
-                ) : error ? (
-                    <div className="text-red-500">Error: {error}</div>
-                ) : (
+                <div className="flex border-b mb-6">
+                    <button onClick={() => setActiveTab('gigs')} className={`px-4 py-2 font-semibold ${activeTab === 'gigs' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500'}`}>Report Gigs</button>
+                    <button onClick={() => setActiveTab('users')} className={`px-4 py-2 font-semibold ${activeTab === 'users' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500'}`}>Report Users</button>
+                </div>
+
+                {isLoading ? ( <div className="text-center p-8">Loading...</div> ) 
+                : error ? ( <div className="text-center p-8 text-red-500">Error: {error}</div> ) 
+                : (
                     <>
                         <ReportsTable
-                            title="Most Reported Gigs"
-                            headers={['Gig', 'Reported By', 'Reason', 'Report Count', 'Actions']}
+                            title={activeTab === 'gigs' ? "Most Reported Gigs" : "Most Reported Users"}
+                            headers={[activeTab === 'gigs' ? 'Gig' : 'User', 'Report Count', 'Actions']}
                             data={reports.mostReported}
-                            renderRow={(item, index) => (
-                                <tr key={index} className="border-b last:border-b-0">
-                                    <td className="p-4 font-medium">{item.gig_title}</td>
-                                    <td className="p-4 text-gray-600">Multiple Users</td>
-                                    <td className="p-4 text-gray-600">Multiple Reasons</td>
+                            renderRow={(item) => (
+                                <tr key={item.gig_id || item.user_id} className="border-b last:border-b-0">
+                                    <td className="p-4 font-medium">{item.gig_title || item.username}</td>
                                     <td className="p-4 text-gray-600 font-semibold">{item.report_count}</td>
                                     <td className="p-4">
-                                        {/* Sửa đổi ở đây: Thêm nút View Details icon */}
-                                        <button 
-                                            onClick={() => window.open(`/admin/gig/${item.gig_id}`, '_blank')}
-                                            className="flex items-center bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold px-4 py-2 rounded-lg transition-smooth"
-                                        >
-                                            <FiEye className="mr-2"/> View
-                                        </button>
+                                      <button onClick={() => window.open(activeTab === 'gigs' ? `/gig/${item.gig_id}` : `/profile/${item.user_id}`, '_blank')} className="font-semibold text-blue-600 hover:underline">View</button>
                                     </td>
                                 </tr>
                             )}
                         />
-
                         <ReportsTable
-    title="All Reported Gigs"
-    headers={['Gig', 'Reported By', 'Reason', 'Actions']}
-    data={reports.allReports}
-    renderRow={(item) => {
-        const isGigBanned = item.gig?.status === 'denied';
-        const hasValidGig = item.gig?.id;
-        
-        return (
-            <tr key={item.id} className="border-b last:border-b-0">
-                <td className="p-4 font-medium">{item.gig?.title || 'Deleted/Invalid Gig'}</td>
-                <td className="p-4 text-gray-600">{item.reporter?.username || 'N/A'}</td>
-                <td className="p-4 text-gray-600">{parseReason(item.description)}</td>
-                <td className="p-4">
-                    <div className="flex items-center space-x-2">
-                        {/* View Button - Always enabled if gig exists */}
-                        <button 
-                            onClick={() => window.open(`/admin/gig/${item.gig?.id}`, '_blank')}
-                            disabled={!hasValidGig}
-                            className={`p-2 rounded-md transition-all ${
-                                hasValidGig 
-                                    ? 'bg-blue-100 text-blue-600 hover:bg-blue-200 cursor-pointer' 
-                                    : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                            }`}
-                            title="View Details"
-                        >
-                            <FiEye size={18}/>
-                        </button>
-                        
-                        {/* Ban Button - Show different states */}
-{isGigBanned ? (
-    // ✅ Gig đã bị ban - dùng icon Lock và màu vàng đậm hơn
-    <button 
-        onClick={() => openBanModal(item.gig)}
-        className="p-2 rounded-md bg-yellow-200 text-yellow-700 hover:bg-yellow-300 cursor-pointer transition-all"
-        title="Edit Ban Settings (Currently Banned)"
-    >
-        <FiLock size={18}/>
-    </button>
-) : (
-    // ✅ Gig chưa bị ban - dùng icon Edit và màu vàng nhạt
-    <button 
-        onClick={() => openBanModal(item.gig)}
-        disabled={!hasValidGig}
-        className={`p-2 rounded-md transition-all ${
-            hasValidGig 
-                ? 'bg-yellow-100 text-yellow-600 hover:bg-yellow-200 cursor-pointer' 
-                : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-        }`}
-        title="Ban this Gig"
-    >
-        <FiEdit2 size={18}/>
-    </button>
-)}
-                        
-                        {/* Dismiss Button - Always enabled */}
-                        <button
-                            onClick={() => handleDismissReport(item.id)}
-                            className="p-2 rounded-md bg-red-100 text-red-600 hover:bg-red-200 cursor-pointer transition-all"
-                            title="Dismiss Report"
-                        >
-                            <FiTrash2 size={18} />
-                        </button>
-                    </div>
-                </td>
-            </tr>
-        );
-    }}
-/>
+                            title={activeTab === 'gigs' ? "All Reported Gigs" : "All Reported Users"}
+                            headers={[activeTab === 'gigs' ? 'Gig' : 'User', 'Reported By', 'Reason', 'Actions']}
+                            data={reports.allReports}
+                            renderRow={renderAllReportsRow}
+                        />
                     </>
                 )}
             </main>
-            {isBanModalOpen && ( <BanGigModal gig={gigToBan} onClose={() => setIsBanModalOpen(false)} onConfirm={handleConfirmBan} /> )}
+            {isBanModalOpen && <BanModal target={targetToBan} targetType={activeTab.slice(0, -1)} onClose={() => setIsBanModalOpen(false)} onConfirm={handleConfirmBan} />}
         </div>
     );
 };
 
-export default ManageReportedGigs;
+export default ReportsManagement;
