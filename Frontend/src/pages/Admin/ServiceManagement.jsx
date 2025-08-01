@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 // Thêm icon Check và X để duyệt gig
-import { FiHome, FiList, FiTrendingUp, FiUsers, FiSettings, FiHelpCircle, FiSearch, FiEye, FiChevronLeft, FiChevronRight, FiCheck, FiX } from 'react-icons/fi';
+import { FiHome, FiList, FiTrendingUp, FiUsers, FiSettings, FiHelpCircle, FiSearch, FiEye, FiChevronLeft, FiChevronRight, FiCheck, FiX, FiAlertCircle } from 'react-icons/fi';
 // Import useAuth để lấy token
 import { useAuth } from '../../contexts/AuthContext'; // <-- QUAN TRỌNG: Hãy chắc chắn đường dẫn này đúng với cấu trúc dự án của bạn
 
@@ -10,7 +10,7 @@ const Sidebar = () => (
     <div className="w-64 bg-white h-screen flex flex-col justify-between p-4 shadow-lg">
       <div>
         <div className="flex items-center space-x-2 mb-10 p-2">
-          <img src="/logo.svg" alt="Logo" className="w-10 h-10 rounded-full" />
+          <img src="https://i.pravatar.cc/150?u=freeland-logo" alt="Logo" className="w-10 h-10 rounded-full" />
           <span className="font-bold text-xl text-gray-800">FREELAND</span>
         </div>
         <nav className="flex flex-col space-y-2">
@@ -18,16 +18,10 @@ const Sidebar = () => (
             <FiHome className="mr-3" /> Dashboard
           </a>
           <a href="/admin/manage-reported-gigs" className="flex items-center p-3 text-gray-600 hover:bg-gray-100 rounded-lg transition-smooth">
-            <FiList className="mr-3" /> Report
+            <FiAlertCircle className="mr-3" /> Report
           </a>
-          <a href="/admin/servicesmanagement" className="flex items-center p-3 bg-gray-100 text-gray-800 font-bold rounded-lg transition-smooth">
+          <a href="/admin/servicemanagement" className="flex items-center p-3 bg-gray-100 text-gray-800 font-bold rounded-lg transition-smooth">
             <FiTrendingUp className="mr-3" /> Services Management
-          </a>
-          <a href="#" className="flex items-center p-3 text-gray-600 hover:bg-gray-100 rounded-lg transition-smooth">
-            <FiUsers className="mr-3" /> Earnings
-          </a>
-          <a href="#" className="flex items-center p-3 text-gray-600 hover:bg-gray-100 rounded-lg transition-smooth">
-            <FiUsers className="mr-3" /> Community
           </a>
           <a href="/admin/usermanagement" className="flex items-center p-3 text-gray-600 hover:bg-gray-100 rounded-lg transition-smooth">
             <FiUsers className="mr-3" /> User Management
