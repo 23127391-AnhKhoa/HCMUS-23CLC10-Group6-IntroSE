@@ -100,6 +100,7 @@ const BanModal = ({ target, targetType, onClose, onConfirm }) => {
 
     useEffect(() => {
         if (isEditMode && target) {
+            // Lấy ban_reason từ target cho cả gig và user
             setReason(target.ban_reason || '');
         }
     }, [isEditMode, target]);
@@ -212,18 +213,32 @@ const ReportsManagement = () => {
         
         try {
             const response = await fetch(endpoint, {
-                method: 'PUT',
+                method: 'PATCH',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                body: JSON.stringify({ ban_reason: reason, ban_duration: duration }),
+                body: JSON.stringify({
+                    ban_reason: reason,
+                    ban_duration: duration
+                }),
             });
-            if (!response.ok) throw new Error(`Failed to ban ${targetType}.`);
+            
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || `Failed to ban ${targetType}.`);
+            }
 
+            const result = await response.json();
+            console.log('Ban result:', result);
+            
             setIsBanModalOpen(false);
             setTargetToBan(null);
-            fetchReports(searchTerm, activeTab);
-            alert(`${targetType.charAt(0).toUpperCase() + targetType.slice(1)} has been banned.`);
+            
+            // Force refresh data after ban
+            await fetchReports(searchTerm, activeTab);
+            
+            alert(result.message || `${targetType.charAt(0).toUpperCase() + targetType.slice(1)} has been banned successfully.`);
         } catch (err) {
-            alert(err.message);
+            console.error('Ban error:', err);
+            alert(`Error: ${err.message}`);
         }
     };
 
@@ -250,7 +265,12 @@ const ReportsManagement = () => {
     const renderAllReportsRow = (item) => {
         const target = activeTab === 'gigs' ? item.gig : item.user;
         const targetTitle = target?.title || target?.username || 'Deleted/Invalid Target';
-        const isBanned = target?.status === 'denied' || target?.status === 'inactive';
+        
+        // Cải thiện logic kiểm tra banned - kiểm tra cả status và ban_reason
+        const isBanned = target?.status === 'denied' || 
+                         target?.status === 'inactive' || 
+                         target?.ban_reason || 
+                         target?.banned_until;
 
         return (
             <tr key={item.id} className="border-b last:border-b-0">

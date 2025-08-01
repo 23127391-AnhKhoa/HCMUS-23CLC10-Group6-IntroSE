@@ -46,7 +46,7 @@ const Header = ({ searchTerm, onSearchChange }) => {
 
   const handleLogout = () => {
     logout();
-    navigate('/login');
+    navigate('/auth');
   };
 
   const userMenu = (

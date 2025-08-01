@@ -32,11 +32,41 @@ const updateUser = async (userId, updateData) => {
     }
 };
 const updateUserByUuid = async (uuid, updateData) => {
-    const allowedUpdates = ['role', 'status'];
+    const allowedUpdates = ['role', 'status', 'ban_reason', 'ban_duration'];
     const finalUpdateData = {};
-    for (const key of allowedUpdates) {
-        if (updateData[key]) {
-            finalUpdateData[key] = updateData[key];
+    
+    // Xử lý ban_duration logic như trong updateUser
+    if (updateData.ban_duration) {
+        finalUpdateData.status = 'inactive'; // Ban user là chuyển status sang inactive
+        finalUpdateData.ban_reason = updateData.ban_reason;
+
+        if (updateData.ban_duration !== 'forever') {
+            const now = new Date();
+            switch (updateData.ban_duration) {
+                case '1_minute':
+                    now.setMinutes(now.getMinutes() + 1);
+                    break;
+                case '1_day':
+                    now.setDate(now.getDate() + 1);
+                    break;
+                case '1_week':
+                    now.setDate(now.getDate() + 7);
+                    break;
+                case '1_month':
+                    now.setMonth(now.getMonth() + 1);
+                    break;
+            }
+            finalUpdateData.banned_until = now.toISOString();
+        } else {
+            finalUpdateData.banned_until = null;
+        }
+        // Không delete ban_duration để có thể lưu vào DB nếu cần
+    } else {
+        // Xử lý các field thông thường
+        for (const key of allowedUpdates) {
+            if (updateData[key] !== undefined) {
+                finalUpdateData[key] = updateData[key];
+            }
         }
     }
 
