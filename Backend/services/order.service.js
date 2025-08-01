@@ -638,8 +638,8 @@ getClientOrders: async (clientId, options = {}) => {
         await Transaction.create({
           user_id: userId,
           order_id: parseInt(orderId),
-          amount: -order.price_at_purchase, // Negative for deduction
-          type: 'order_payment',
+          amount: order.price_at_purchase,
+          type: 'payment',
           description: `Payment for order #${orderId}`
         });
 
@@ -647,8 +647,8 @@ getClientOrders: async (clientId, options = {}) => {
         await Transaction.create({
           user_id: order.gig_owner_id,
           order_id: parseInt(orderId),
-          amount: order.price_at_purchase, // Positive for income
-          type: 'order_payment',
+          amount: order.price_at_purchase * 0.8, // Positive for income + tax
+          type: 'received_payment',
           description: `Payment received from order #${orderId}`
         });
       } catch (transactionError) {
@@ -1035,7 +1035,7 @@ getClientOrders: async (clientId, options = {}) => {
       const buyerBalance = parseFloat(buyer.balance) || 0;
       const sellerBalance = parseFloat(seller.balance) || 0;
       const newBuyerBalance = buyerBalance - amount;
-      const newSellerBalance = sellerBalance + amount;
+      const newSellerBalance = sellerBalance + (amount * 0.8); // Seller nhận 80% do tax
 
       console.log('🔄 [Order Service] New balances will be:', {
         buyer: { old: buyerBalance, new: newBuyerBalance },
@@ -1100,18 +1100,18 @@ getClientOrders: async (clientId, options = {}) => {
       await Transaction.create({
         user_id: buyerId,
         order_id: order.id,
-        amount: -amount, // Số âm vì trừ tiền
+        amount: amount, // Số âm vì trừ tiền
         description: `Payment for order #${order.id} - ${order.Gigs?.title || 'Unknown Gig'}`,
-        type: 'order_payment'
+        type: 'payment'
       });
 
       // Lưu transaction cho seller (cộng tiền)
       await Transaction.create({
         user_id: sellerId,
         order_id: order.id,
-        amount: amount, // Số dương vì nhận tiền
+        amount: amount * 0.8, // Seller nhận 80% sau trừ phí platform
         description: `Payment received from order #${order.id} - ${order.Gigs?.title || 'Unknown Gig'}`,
-        type: 'order_payment'
+        type: 'received_payment'
       });
 
       console.log('📊 [Order Service] Transactions recorded successfully');
