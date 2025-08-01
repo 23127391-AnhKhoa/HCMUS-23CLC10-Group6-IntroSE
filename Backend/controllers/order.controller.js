@@ -10,9 +10,6 @@
 
 const OrderService = require('../services/order.service');
 const DeliveryFile = require('../models/deliveryFile.model');
-const FileValidation = require('../utils/fileValidation');
-const NotificationService = require('../services/notification.service');
-const AutoPaymentService = require('../services/autoPayment.service');
 const supabase = require('../config/supabaseClient');
 const path = require('path');
 
@@ -540,20 +537,8 @@ const uploadDelivery = async (req, res) => {
       });
     }
 
-    // Validate files
-    const validationResult = FileValidation.validateFiles(files, {
-      maxFileSize: 10 * 1024 * 1024, // 10MB
-      maxTotalSize: 50 * 1024 * 1024, // 50MB
-      maxFiles: 10
-    });
-
-    if (!validationResult.valid) {
-      return res.status(400).json({
-        status: 'error',
-        message: 'File validation failed',
-        errors: validationResult.errors
-      });
-    }
+    // File validation is now handled by middleware
+    // Files are already validated when reaching this point
 
     // Verify that the user is the seller of this order
     const order = await OrderService.getOrderById(orderId);
@@ -722,15 +707,6 @@ const uploadDelivery = async (req, res) => {
 
     // After successful file upload, do NOT change order status automatically
     // Seller will need to manually mark as delivered after uploading all files
-    
-    // Send file upload notification (not delivery notification)
-    try {
-      const NotificationService = require('../services/notification.service');
-      await NotificationService.sendFileUploadNotification(order, deliveryFiles.length);
-    } catch (notificationError) {
-      console.error('❌ Failed to send file upload notification:', notificationError);
-      // Don't fail the entire upload if notification fails
-    }
 
     // Log the file upload
     console.log(`� Files uploaded for order ${orderId}:`, {
@@ -838,10 +814,7 @@ const downloadDeliveryFile = async (req, res) => {
         
         console.log('📊 Download start time recorded for order:', orderId);
         
-        // Note: Auto payment timer should already be running from delivery upload
-        // But we can verify/restart if needed
-        const AutoPaymentService = require('../services/autoPayment.service');
-        await AutoPaymentService.startDownloadTimer(orderId);
+        // Auto payment timer logic removed - using manual payment only
         
       } catch (downloadTrackError) {
         console.error('❌ Failed to track download start time:', downloadTrackError);
@@ -1421,23 +1394,6 @@ const handleRevision = async (req, res) => {
     // Update order status
     const updatedOrder = await OrderService.updateOrderStatus(orderId, newStatus);
     
-    // If revision was accepted, start auto payment timer and send delivery notification
-    if (action === 'accept') {
-      try {
-        // Start auto payment timer for the delivered order
-        const AutoPaymentService = require('../services/autoPayment.service');
-        await AutoPaymentService.startDownloadTimer(orderId);
-        console.log('✅ Auto payment timer started for revised order:', orderId);
-        
-        // Send delivery notification to buyer
-        const NotificationService = require('../services/notification.service');
-        await NotificationService.sendDeliveryUploadNotification(updatedOrder, 0); // 0 files as revision is handled directly
-        console.log('✅ Delivery notification sent for revision completion');
-      } catch (serviceError) {
-        console.error('❌ Failed to start auto payment or send notification:', serviceError);
-      }
-    }
-    
     console.log('✅ Revision handled:', { orderId, action, newStatus });
     
     res.status(200).json({
@@ -1813,6 +1769,51 @@ const debugSignedUrls = async (req, res) => {
   }
 };
 
+/**
+ * Complete order and process manual payment
+ * 
+ * @route PATCH /api/orders/:orderId/complete
+ * @param {Object} req - Express request object
+ * @param {Object} req.params - Route parameters
+ * @param {string} req.params.orderId - Order ID
+ * @param {Object} req.user - Authenticated user object
+ * @param {Object} res - Express response object
+ * @returns {Object} JSON response with completed order
+ */
+const completeOrder = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const userUuid = req.user.uuid;
+    const userRole = req.user.role;
+
+    console.log('🎯 [Order Controller] completeOrder called:', { 
+      orderId, 
+      userUuid, 
+      userRole 
+    });
+
+    const result = await OrderService.completeOrder(orderId, userUuid, userRole);
+
+    res.status(200).json({
+      status: 'success',
+      message: result.message,
+      data: {
+        order: result.order,
+        payment: result.payment
+      }
+    });
+
+    console.log('✅ [Order Controller] completeOrder completed successfully with payment info:', result.payment);
+
+  } catch (error) {
+    console.error('💥 [Order Controller] Error in completeOrder:', error);
+    res.status(400).json({
+      status: 'error',
+      message: error.message
+    });
+  }
+};
+
 module.exports = {
   getAllOrders,
   getOrderById,
@@ -1833,5 +1834,6 @@ module.exports = {
   handleRevision,
   getOrderWorkflow,
   trackFileDownload,
-  debugSignedUrls
+  debugSignedUrls,
+  completeOrder
 };
