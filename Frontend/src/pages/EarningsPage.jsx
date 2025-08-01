@@ -42,23 +42,50 @@ const EarningsPage = () => {
         },
       });
 
-      if (earningsResponse.ok) {
-        const earningsData = await earningsResponse.json();
-        const stats = earningsData.data;
-        
-        setEarnings({
-          totalEarnings: stats.totalEarnings || 0,
-          thisMonth: stats.totalEarnings || 0, // Using total for thisMonth as example
-          lastMonth: 0,
-          thisWeek: 0,
-          availableForWithdraw: stats.availableBalance || 0,
-          pending: stats.pendingEarnings || 0
-        });
+      let earningsData = {
+        totalEarnings: 0,
+        availableBalance: 0,
+        monthlyBreakdown: []
+      };
 
-        // Use monthly breakdown from API
-        if (stats.monthlyBreakdown) {
-          setMonthlyEarnings(stats.monthlyBreakdown);
-        }
+      if (earningsResponse.ok) {
+        const result = await earningsResponse.json();
+        earningsData = result.data || earningsData;
+      }
+
+      // Fetch pending orders to calculate pending earnings
+      const pendingOrdersResponse = await fetch(`http://localhost:8000/api/orders/owner/${sellerId}?status=pending&limit=100`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      let pendingOrdersTotal = 0;
+      if (pendingOrdersResponse.ok) {
+        const pendingOrdersData = await pendingOrdersResponse.json();
+        const pendingOrders = pendingOrdersData.data || [];
+        
+        // Calculate total of pending orders
+        pendingOrdersTotal = pendingOrders.reduce((total, order) => {
+          return total + (parseFloat(order.price_at_purchase) || 0);
+        }, 0);
+        
+        console.log(`💰 Pending orders total: $${pendingOrdersTotal} from ${pendingOrders.length} orders`);
+      }
+      
+      setEarnings({
+        totalEarnings: earningsData.totalEarnings || 0,
+        thisMonth: earningsData.totalEarnings || 0, // Using total for thisMonth as example
+        lastMonth: 0,
+        thisWeek: 0,
+        availableForWithdraw: earningsData.availableBalance || 0,
+        pending: pendingOrdersTotal // Now from pending orders total
+      });
+
+      // Use monthly breakdown from API
+      if (earningsData.monthlyBreakdown) {
+        setMonthlyEarnings(earningsData.monthlyBreakdown);
       }
 
       // Fetch recent orders for transactions
@@ -99,11 +126,87 @@ const EarningsPage = () => {
     }
   };
 
-  // ...existing code...
+  const calculateEarnings = (orders) => {
+    const now = new Date();
+    const thisMonth = now.getMonth();
+    const thisYear = now.getFullYear();
+    const lastMonth = thisMonth === 0 ? 11 : thisMonth - 1;
+    const lastMonthYear = thisMonth === 0 ? thisYear - 1 : thisYear;
+    
+    const startOfWeek = new Date(now);
+    startOfWeek.setDate(now.getDate() - now.getDay());
 
-  const getGrowthPercentage = (current, previous) => {
-    if (previous === 0) return current > 0 ? 100 : 0;
-    return ((current - previous) / previous * 100).toFixed(1);
+    let totalEarnings = 0;
+    let thisMonthEarnings = 0;
+    let lastMonthEarnings = 0;
+    let thisWeekEarnings = 0;
+    let availableForWithdraw = 0;
+    let pendingEarnings = 0;
+
+    // Calculate monthly earnings for chart
+    const monthlyData = {};
+    
+    orders.forEach(order => {
+      if (order.seller_id === authUser?.id) {
+        const orderDate = new Date(order.created_at);
+        const orderMonth = orderDate.getMonth();
+        const orderYear = orderDate.getFullYear();
+        const price = parseFloat(order.price_at_purchase) || 0;
+
+        // Monthly data for chart
+        const monthKey = `${orderYear}-${orderMonth}`;
+        monthlyData[monthKey] = (monthlyData[monthKey] || 0) + price;
+
+        // Total earnings (all completed orders)
+        if (order.status === 'completed') {
+          totalEarnings += price;
+          availableForWithdraw += price * 0.9; // Assuming 10% platform fee
+        }
+
+        // Pending earnings - only from orders with status 'pending'
+        if (order.status === 'pending') {
+          pendingEarnings += price;
+        }
+
+        // This month
+        if (orderMonth === thisMonth && orderYear === thisYear && order.status === 'completed') {
+          thisMonthEarnings += price;
+        }
+
+        // Last month
+        if (orderMonth === lastMonth && orderYear === lastMonthYear && order.status === 'completed') {
+          lastMonthEarnings += price;
+        }
+
+        // This week
+        if (orderDate >= startOfWeek && order.status === 'completed') {
+          thisWeekEarnings += price;
+        }
+      }
+    });
+
+    // Convert monthly data to array for chart
+    const monthlyArray = Object.entries(monthlyData)
+      .map(([key, value]) => {
+        const [year, month] = key.split('-');
+        return {
+          month: new Date(year, month).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
+          earnings: value
+        };
+      })
+      .sort((a, b) => new Date(a.month) - new Date(b.month))
+      .slice(-12); // Last 12 months
+
+    setEarnings({
+      totalEarnings,
+      thisMonth: thisMonthEarnings,
+      lastMonth: lastMonthEarnings,
+      thisWeek: thisWeekEarnings,
+      availableForWithdraw,
+      pending: pendingEarnings
+    });
+
+    setMonthlyEarnings(monthlyArray);
   };
 
   const statsCards = [
@@ -167,7 +270,6 @@ const EarningsPage = () => {
                   <div>
                     <p className="text-sm font-medium text-gray-600">{stat.title}</p>
                     <p className="text-2xl font-bold text-gray-900 mt-1">{stat.value}</p>
-                    {/* Removed growth/change text */}
                   </div>
                   <div className={`${stat.color} p-3 rounded-lg`}>
                     <stat.icon className="h-6 w-6 text-white" />
@@ -238,11 +340,8 @@ const EarningsPage = () => {
                            'Deposit'}
                         </p>
                         <p className="text-xs text-gray-500">
-                          {transaction.created_at ? new Date(transaction.created_at).toLocaleDateString() : ''}
+                          {new Date(transaction.created_at).toLocaleDateString()}
                         </p>
-                        {transaction.description && (
-                          <p className="text-xs text-gray-400">{transaction.description}</p>
-                        )}
                       </div>
                       <span className={`text-sm font-semibold ${
                         transaction.transaction_type === 'withdrawal' ? 'text-red-600' : 'text-green-600'

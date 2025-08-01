@@ -2,10 +2,10 @@ import React, { useState, useEffect } from 'react';
 import ApiService from '../services/apiService';
 import { useAuth } from '../contexts/AuthContext';
 
-const AvatarUpload = ({ currentAvatar, onAvatarChange, size = 'large' }) => {
+const AvatarUpload = ({ currentAvatar, onAvatarChange, size = 'large', saveImmediately = true }) => {
   const [uploading, setUploading] = useState(false);
   const [previewUrl, setPreviewUrl] = useState(currentAvatar);
-  const { updateUser, authUser } = useAuth();
+  const { updateUser, authUser, token } = useAuth(); // Lấy token từ AuthContext
 
   // Update preview when currentAvatar changes
   useEffect(() => {
@@ -15,7 +15,7 @@ const AvatarUpload = ({ currentAvatar, onAvatarChange, size = 'large' }) => {
   // Update avatar in database
   const updateAvatarInDB = async (avatarUrl) => {
     try {
-      const token = localStorage.getItem('token');
+      // Sử dụng token từ AuthContext thay vì localStorage
       if (!token) throw new Error('No token found');
 
       const response = await fetch('http://localhost:8000/api/users/profile', {
@@ -24,11 +24,14 @@ const AvatarUpload = ({ currentAvatar, onAvatarChange, size = 'large' }) => {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ avt_url: avatarUrl })
+        body: JSON.stringify({ 
+          avt_url: avatarUrl,
+        })
       });
 
       if (!response.ok) {
-        throw new Error('Failed to update avatar in database');
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to update avatar in database');
       }
 
       const data = await response.json();
@@ -56,6 +59,9 @@ const AvatarUpload = ({ currentAvatar, onAvatarChange, size = 'large' }) => {
       return;
     }
 
+    // Reset file input để có thể chọn lại cùng file
+    event.target.value = '';
+
     try {
       setUploading(true);
       
@@ -64,37 +70,62 @@ const AvatarUpload = ({ currentAvatar, onAvatarChange, size = 'large' }) => {
       setPreviewUrl(objectUrl);
 
       // Upload file using ApiService
-      const uploadResult = await ApiService.uploadFile(file);
+      const uploadResult = await ApiService.uploadFile(file, 'avatar');
       
       if (uploadResult.status === 'success' && uploadResult.data) {
         const avatarUrl = uploadResult.data.url;
         
-        // Update avatar in database
-        await updateAvatarInDB(avatarUrl);
-        
-        // Update AuthContext with new avatar
-        if (authUser) {
-          updateUser({
-            ...authUser,
-            avatar_url: avatarUrl,
-            avt_url: avatarUrl
-          });
+        // Only save to database if saveImmediately is true
+        if (saveImmediately) {
+          // Update avatar in database
+          await updateAvatarInDB(avatarUrl);
+          
+          // Update AuthContext with new avatar
+          if (authUser && updateUser) {
+            updateUser({
+              ...authUser,
+              avatar_url: avatarUrl,
+              avt_url: avatarUrl
+            });
+          }
+          
+          alert('Avatar updated successfully!');
         }
         
+        // Clean up object URL
+        URL.revokeObjectURL(objectUrl);
         setPreviewUrl(avatarUrl);
-        onAvatarChange(avatarUrl);
-        alert('Avatar updated successfully!');
+        
+        // Always call callback để parent component biết avatar đã thay đổi
+        if (onAvatarChange) {
+          onAvatarChange(avatarUrl);
+        }
+        
       } else {
-        throw new Error('Upload failed');
+        throw new Error('Upload failed: ' + (uploadResult.message || 'Unknown error'));
       }
     } catch (error) {
       console.error('Avatar upload error:', error);
       alert('Failed to upload avatar: ' + error.message);
-      setPreviewUrl(currentAvatar); // Reset to original
+      
+      // Cleanup object URL and reset to original
+      if (previewUrl && previewUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(previewUrl);
+      }
+      setPreviewUrl(currentAvatar);
     } finally {
       setUploading(false);
     }
   };
+
+  // Cleanup object URLs when component unmounts
+  useEffect(() => {
+    return () => {
+      if (previewUrl && previewUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(previewUrl);
+      }
+    };
+  }, []);
 
   const sizeClasses = {
     small: 'w-12 h-12',
@@ -118,6 +149,10 @@ const AvatarUpload = ({ currentAvatar, onAvatarChange, size = 'large' }) => {
             src={previewUrl}
             alt="Avatar"
             className="w-full h-full object-cover"
+            onError={(e) => {
+              console.error('Image load error:', e);
+              setPreviewUrl(null);
+            }}
           />
         ) : (
           <span className={`${iconSizes[size]} text-gray-400 font-semibold`}>
@@ -126,11 +161,13 @@ const AvatarUpload = ({ currentAvatar, onAvatarChange, size = 'large' }) => {
         )}
         
         {/* Upload overlay */}
-        <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity cursor-pointer">
-          <span className="text-white text-xs font-medium">
-            {uploading ? '...' : 'Change'}
-          </span>
-        </div>
+        {!uploading && (
+          <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity cursor-pointer">
+            <span className="text-white text-xs font-medium">
+              Change
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Hidden file input */}
@@ -143,7 +180,7 @@ const AvatarUpload = ({ currentAvatar, onAvatarChange, size = 'large' }) => {
       />
       
       {uploading && (
-        <div className="absolute inset-0 flex items-center justify-center">
+        <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-80 rounded-full">
           <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
         </div>
       )}
@@ -151,4 +188,4 @@ const AvatarUpload = ({ currentAvatar, onAvatarChange, size = 'large' }) => {
   );
 };
 
-export default AvatarUpload;
+export default AvatarUpload;  
