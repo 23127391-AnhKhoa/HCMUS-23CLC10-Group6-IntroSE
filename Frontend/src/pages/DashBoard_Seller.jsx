@@ -26,7 +26,6 @@ const DashBoardSeller = () => {
   const [formData, setFormData] = useState({
     fullname: '',
     username: '',
-    email: '',
     avt_url: ''
   });
 
@@ -50,7 +49,6 @@ const DashBoardSeller = () => {
         setFormData({
           fullname: data.data.fullname || '',
           username: data.data.username || '',
-          email: data.data.email || authUser?.email || '',
           avt_url: data.data.avt_url || data.data.avatar_url || ''
         });
       } catch (err) {
@@ -171,7 +169,7 @@ const DashBoardSeller = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      // Only send fields that can be updated (exclude email)
+      // Only send fields that can be updated (fullname, username, avt_url)
       const updateData = {
         fullname: formData.fullname,
         username: formData.username,
@@ -412,20 +410,6 @@ const DashBoardSeller = () => {
                     required
                   />
                 </div>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
-                <input
-                  type="email"
-                  name="email"
-                  value={formData.email}
-                  onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-600 cursor-not-allowed focus:outline-none"
-                  required
-                  readOnly
-                />
-                <p className="text-xs text-gray-500 mt-1">Email cannot be changed</p>
               </div>
               
               <div className="flex space-x-3 pt-4">
