@@ -20,6 +20,7 @@ const router = express.Router();
 const OrderController = require('../controllers/order.controller');
 const { authenticateToken, optionalAuth } = require('../middleware/auth.middleware');
 const { deliveryUpload } = require('../middleware/multer.middleware');
+const { createPresetMiddleware } = require('../middleware/fileValidation.middleware');
 
 /**
  * @route GET /api/orders
@@ -116,6 +117,15 @@ router.get('/owner/:ownerId', authenticateToken, OrderController.getOwnerOrders)
 router.patch('/:id/status', authenticateToken, OrderController.updateOrderStatus);
 
 /**
+ * @route PATCH /api/orders/:orderId/complete
+ * @description Complete order and process manual payment
+ * @access Protected - Requires authentication (buyer only)
+ * @params {string} orderId - Order ID
+ * @returns {Object} JSON response with completed order
+ */
+router.patch('/:orderId/complete', authenticateToken, OrderController.completeOrder);
+
+/**
  * @route POST /api/orders/:id/upload-delivery
  * @description Upload delivery files for an order
  * @access Protected - Requires authentication (seller only)
@@ -123,7 +133,12 @@ router.patch('/:id/status', authenticateToken, OrderController.updateOrderStatus
  * @body {file} files - Delivery files to upload
  * @returns {Object} JSON response with upload confirmation
  */
-router.post('/:id/upload-delivery', authenticateToken, deliveryUpload, OrderController.uploadDelivery);
+router.post('/:id/upload-delivery', 
+  authenticateToken, 
+  deliveryUpload, 
+  createPresetMiddleware('delivery'), // File validation middleware
+  OrderController.uploadDelivery
+);
 
 /**
  * @route GET /api/orders/:orderId/delivery-files

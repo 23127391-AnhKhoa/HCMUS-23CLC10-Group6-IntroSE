@@ -38,30 +38,6 @@ router.get('/profile', authenticateToken, userController.getProfile);
 // PUT /api/users/profile - Cập nhật profile của user hiện tại
 router.put('/profile', authenticateToken, userController.updateProfile);
 
-// ========== Fetch user info endpoints ==========
-
-// GET /api/users/:id - Lấy user theo ID
-router.get('/:id', userController.getUserById);
-
-// GET /api/users/username/:username - Lấy user theo username
-router.get('/username/:username', userController.getUserByUsername);
-
-// =========== User Favorites endpoints ==========
-// POST /api/favorites/add - Thêm vào favorites
-router.post('/favorite/add', authenticateToken, UserFavoritesController.addFavorite);
-
-// DELETE /api/favorites/remove - Xóa khỏi favorites
-router.delete('/favorite/remove', authenticateToken, UserFavoritesController.removeFavorite);
-
-// POST /api/favorites/toggle - Toggle favorite status
-router.post('/favorite/toggle', authenticateToken, UserFavoritesController.toggleFavorite);
-
-// GET /api/favorites/:userId - Lấy favorites của user
-router.get('/favorite/:userId', authenticateToken, UserFavoritesController.getUserFavorites);
-
-// GET /api/favorites/check/:userId/:gigId - Kiểm tra favorite status
-router.get('/favorite/check/:userId/:gigId', authenticateToken, UserFavoritesController.checkFavorite);
-
 // ========== Earnings endpoints ==========
 
 /**
@@ -90,5 +66,29 @@ router.get('/:sellerId/earnings/recent-orders', authenticateToken, EarningsContr
  * @param {number} [months=12] - Number of months to include
  */
 router.get('/:sellerId/earnings/monthly', authenticateToken, EarningsController.getMonthlyEarnings);
+
+// ========== Fetch user info endpoints ==========
+
+// GET /api/users/:id - Lấy user theo ID
+router.get('/:id', userController.getUserById);
+
+// GET /api/users/username/:username - Lấy user theo username
+router.get('/username/:username', userController.getUserByUsername);
+
+// =========== User Favorites endpoints ==========
+// POST /api/favorites/add - Thêm vào favorites
+router.post('/favorite/add', authenticateToken, UserFavoritesController.addFavorite);
+
+// DELETE /api/favorites/remove - Xóa khỏi favorites
+router.delete('/favorite/remove', authenticateToken, UserFavoritesController.removeFavorite);
+
+// POST /api/favorites/toggle - Toggle favorite status
+router.post('/favorite/toggle', authenticateToken, UserFavoritesController.toggleFavorite);
+
+// GET /api/favorites/:userId - Lấy favorites của user
+router.get('/favorite/:userId', authenticateToken, UserFavoritesController.getUserFavorites);
+
+// GET /api/favorites/check/:userId/:gigId - Kiểm tra favorite status
+router.get('/favorite/check/:userId/:gigId', authenticateToken, UserFavoritesController.checkFavorite);
 
 module.exports = router;
