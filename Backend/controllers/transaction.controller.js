@@ -265,6 +265,83 @@ const TransactionController = {
         error: error.message
       });
     }
+  },
+
+  // API để lấy transactions theo user ID và transaction type
+  getUserTransactions: async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const { transaction_type, limit = 10, page = 1 } = req.query;
+
+      // Validation
+      const limitNum = parseInt(limit);
+      const pageNum = parseInt(page);
+      
+      if (limitNum < 1 || limitNum > 100) {
+        return res.status(400).json({
+          status: 'error',
+          message: 'Limit must be between 1 and 100'
+        });
+      }
+
+      if (pageNum < 1) {
+        return res.status(400).json({
+          status: 'error',
+          message: 'Page must be greater than 0'
+        });
+      }
+
+      // Build filter for the query
+      let filters = {
+        page: pageNum,
+        limit: limitNum
+      };
+
+      // Map transaction_type to type field in database
+      if (transaction_type) {
+        if (transaction_type === 'received_payment') {
+          filters.type = 'received_payment';
+        } else if (transaction_type === 'deposit') {
+          filters.type = 'deposit';
+        } else if (transaction_type === 'withdraw') {
+          filters.type = 'withdraw';
+        } else {
+          return res.status(400).json({
+            status: 'error',
+            message: 'Invalid transaction_type. Must be: received_payment, deposit, or withdraw'
+          });
+        }
+      }
+
+      // Get transactions
+      const { data: transactions, error } = await Transaction.getByUserId(userId, filters);
+
+      if (error) {
+        return res.status(500).json({
+          status: 'error',
+          message: 'Failed to fetch transactions',
+          details: error.message
+        });
+      }
+
+      return res.status(200).json({
+        status: 'success',
+        data: transactions || [],
+        pagination: {
+          page: pageNum,
+          limit: limitNum,
+          total: transactions?.length || 0
+        }
+      });
+
+    } catch (error) {
+      console.error('Error in getUserTransactions:', error);
+      return res.status(500).json({
+        status: 'error',
+        message: 'Internal server error',
+        details: error.message
+      });
+    }
   }
 };
 
