@@ -27,6 +27,7 @@ import GigDetailContent from './pages/Admin/AdminGigContent';
 import AdminSellerInfor from './pages/Admin/AdminSellerInfor'; 
 import ManageReportedGigs from './pages/Admin/ManageReportedGigs'; 
 import ReportUserPage from './pages/ReportUserPage';
+import ReportGigPage from './pages/ReportGigPage';
 import NotificationPage from './pages/NotificationPage';
 function App() {
   useEffect(() => {
