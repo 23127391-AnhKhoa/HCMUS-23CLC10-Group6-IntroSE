@@ -27,8 +27,7 @@ import GigDetailContent from './pages/Admin/AdminGigContent';
 import AdminSellerInfor from './pages/Admin/AdminSellerInfor'; 
 import ManageReportedGigs from './pages/Admin/ManageReportedGigs'; 
 import ReportUserPage from './pages/ReportUserPage';
-import ReportGigPage from './pages/ReportGigPage'; 
-
+import NotificationPage from './pages/NotificationPage';
 function App() {
   useEffect(() => {
     // Không cần chờ kết quả, chỉ cần gửi đi
@@ -91,6 +90,9 @@ function App() {
             <Route path="/inbox" element={<InboxPage />} />
 
             <Route path="/messages" element={<InboxPage />} />
+            
+            <Route path="/notifications" element={<NotificationPage />} />
+            
             <Route path="/admin/seller/:sellerId" element={<AdminSellerInfor />} />
 
             {/* Admin routes */}

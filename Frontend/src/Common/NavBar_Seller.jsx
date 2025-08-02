@@ -4,6 +4,7 @@ import { Link, NavLink, useNavigate  } from 'react-router-dom';
 import { Avatar, Badge, Dropdown, Menu, message } from 'antd';
 import { BellOutlined, UserOutlined } from '@ant-design/icons';
 import { useAuth } from '../contexts/AuthContext';
+import NotificationBell from '../components/NotificationBell/NotificationBell';
 
 const SellerNavbar = () => {
     const { authUser, logout, updateUser } = useAuth();
@@ -126,9 +127,7 @@ const SellerNavbar = () => {
               {loading ? 'Switching...' : 'Switch to Buying'}
             </button>
             
-            <Badge count={3} size="small">
-                <BellOutlined className="text-xl text-gray-600 hover:text-blue-600 cursor-pointer" />
-            </Badge>
+            <NotificationBell />
             <div className="px-4 py-1.5 bg-green-100 text-green-700 rounded-full font-semibold text-sm">
                 {authUser?.balance ? `$${authUser.balance.toFixed(2)}` : '$0.00'}
             </div>
