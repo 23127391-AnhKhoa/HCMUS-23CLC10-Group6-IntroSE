@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import AuthPage from './pages/AuthPage';
@@ -30,6 +30,10 @@ import ReportUserPage from './pages/ReportUserPage';
 import ReportGigPage from './pages/ReportGigPage'; 
 
 function App() {
+  useEffect(() => {
+    // Không cần chờ kết quả, chỉ cần gửi đi
+    fetch('/api/visits/log', { method: 'POST' });
+  }, []); // Mảng rỗng đảm bảo nó chỉ chạy 1 lần khi App được mount
   return (
     <AuthProvider>
       <Router>

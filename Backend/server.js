@@ -44,12 +44,13 @@ const adminRoutes = require('./routes/admin.routes');
 const uploadRoutes = require('./routes/upload.routes');
 const conversationRoutes = require('./routes/conversations.routes');
 const categoriesRoutes = require('./routes/categories.routes');
-
+const pageVisitRoutes = require('./routes/pageVisit.routes');
 
 // API routes
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/conversations', conversationRoutes);
+app.use('/api/visits', pageVisitRoutes);
 app.use('/api/gigs', gigRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/transactions', transactionRoutes);

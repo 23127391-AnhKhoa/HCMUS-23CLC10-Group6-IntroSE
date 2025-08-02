@@ -16,5 +16,5 @@ reportsRouter.get('/users', adminController.getUserReports);
 reportsRouter.patch('/logs/:id', adminController.dismissReport);
 // Gắn sub-router vào router chính
 router.use('/reports', reportsRouter);
-
+router.get('/analytics', adminController.getDashboardAnalytics);
 module.exports = router;

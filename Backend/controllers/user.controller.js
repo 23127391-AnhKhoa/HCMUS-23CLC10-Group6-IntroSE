@@ -341,12 +341,20 @@ const updateProfile = async (req, res) => {
         });
     }
 };
-
+const getPublicStats = async (req, res) => {
+    try {
+        const stats = await UserService.fetchPublicStats();
+        res.status(200).json({ status: 'success', data: stats });
+    } catch (error) {
+        res.status(500).json({ status: 'error', message: error.message });
+    }
+};
 module.exports = {
     getAllUsers,
     updateUser,
     deleteUser,
     becomeSeller,
+    getPublicStats,
     switchToBuying,
     reactivateSeller,
     getUserById,

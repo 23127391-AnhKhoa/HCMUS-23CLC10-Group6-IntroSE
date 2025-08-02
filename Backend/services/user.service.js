@@ -1,6 +1,6 @@
 const User = require('../models/user.model');
 const supabase = require('../config/supabaseClient');
-
+const Order = require('../models/order.model');
 // Từ nhánh HEAD
 const fetchAllUsers = async (searchTerm) => {
     const data = await User.findAll(searchTerm);
@@ -371,6 +371,23 @@ const getUserByUsername = async (username) => {
         throw new Error(`Error fetching user: ${error.message}`);
     }
 };
+const fetchPublicStats= async () => {
+        const [
+            buyerUsers,
+            favoriteGigs,
+            submittedOrders,
+        ] = await Promise.all([
+            User.getCount({ role: 'buyer' }),
+            User.getFavoriteCount(),
+            Order.getCount(),
+        ]);
+
+        return {
+            buyerUsers: buyerUsers || 0,
+            favoriteGigs: favoriteGigs || 0,
+            submittedOrders: submittedOrders || 0,
+        };
+}
 
 // Export tất cả
 module.exports = {
@@ -382,5 +399,6 @@ module.exports = {
     getUserByUsername,
     getSellerEarnings,
     getSellerRecentOrders,
-    updateUser
+    updateUser,
+    fetchPublicStats,
 };

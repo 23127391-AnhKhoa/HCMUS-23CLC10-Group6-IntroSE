@@ -9,7 +9,7 @@ const { authenticateToken } = require('../middleware/auth.middleware'); // Sử 
 
 // GET /api/users -> Lấy tất cả user (có thể tìm kiếm)
 router.get('/', /* authenticateToken, isAdmin, */ userController.getAllUsers); // Thêm middleware nếu cần
-
+router.get('/stats', userController.getPublicStats);
 // PATCH /api/users/:uuid -> Cập nhật thông tin user
 router.patch('/:uuid', /* authenticateToken, isAdmin, */ userController.updateUser);
 

@@ -123,7 +123,34 @@ const Order = {
     if (error) throw error;
     return data;
   },
+  getCount: async (filters = {}) => {
+  try {
+    let query = supabase
+      .from('Orders')
+      .select('*', { count: 'exact', head: true });
 
+    // Tự động thêm các điều kiện filter từ object filters
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) {
+        query = query.eq(key, value);
+      }
+    });
+
+    console.log('🔢 Executing Orders count query with filters:', filters);
+    const { count, error } = await query;
+
+    if (error) {
+      console.error('❌ Orders count query error:', error);
+      throw error;
+    }
+
+    console.log('✅ Orders count query successful, total records:', count);
+    return count || 0;
+  } catch (error) {
+    console.error('💥 Error in getCount:', error);
+    throw error;
+  }
+  },
   /**
    * Find orders by client ID
    * 
@@ -383,39 +410,7 @@ const Order = {
    * @param {Object} filters - Filter options
    * @returns {Promise<number>} Count of orders
    */
-  getCount: async (filters = {}) => {
-    try {
-      let query = supabase
-        .from('Orders')
-        .select('*', { count: 'exact', head: true });
-
-      if (filters.status) {
-        query = query.eq('status', filters.status);
-      }
-      
-      if (filters.client_id) {
-        query = query.eq('client_id', filters.client_id);
-      }
-      
-      if (filters.gig_id) {
-        query = query.eq('gig_id', filters.gig_id);
-      }
-
-      console.log('🔢 Executing Orders count query with filters:', filters);
-      const { count, error } = await query;
-      
-      if (error) {
-        console.error('❌ Orders count query error:', error);
-        throw error;
-      }
-      
-      console.log('✅ Orders count query successful, total records:', count);
-      return count || 0;
-    } catch (error) {
-      console.error('💥 Error in getCount:', error);
-      throw error;
-    }
-  },
+  
 
   /**
    * Update order status
