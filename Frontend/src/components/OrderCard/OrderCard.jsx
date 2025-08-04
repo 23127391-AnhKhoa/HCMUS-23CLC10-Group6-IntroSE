@@ -523,6 +523,12 @@ const OrderCard = ({
                 });
                 actions.push({
                     label: 'Leave Review',
+                    action: (event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    console.log('Navigating to review page for order:', safeOrder.id);
+                    navigate(`/order/${safeOrder.id}/review`);
+                },
                     className: 'bg-purple-600 hover:bg-purple-700 text-white',
                     icon: <FileTextOutlined />
                 });
