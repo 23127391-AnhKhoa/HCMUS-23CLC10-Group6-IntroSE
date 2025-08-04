@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { FiHome, FiList, FiTrendingUp, FiUsers, FiSettings, FiHelpCircle, FiBell, FiSearch, FiArrowUp, FiArrowDown, FiMoreVertical, FiShoppingCart, FiUser, FiBarChart, FiFileText, FiMessageSquare, FiAlertCircle } from 'react-icons/fi';
+import { FiHome, FiList, FiTrendingUp, FiUsers, FiSettings, FiHelpCircle, FiArrowUp, FiArrowDown, FiMoreVertical, FiShoppingCart, FiDollarSign, FiBarChart, FiFileText, FiAlertCircle } from 'react-icons/fi';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
 
 // Helper functions (đặt ở đầu file AdminDashboard.js)
@@ -106,31 +106,16 @@ const DashboardHeader = () => (
     {/* Left: Title */}
     <h1 className="text-3xl font-bold ">Admin Dashboard</h1>
 
-    {/* Right: Icons + Avatar */}
-    <div className="flex items-center space-x-4">
-      <FiMessageSquare className="text-gray-600 text-xl hover:text-blue-500 transition duration-200" />
-      <FiBell className="text-gray-600 text-xl hover:text-blue-500 transition duration-200" />
-      <img
-        src="https://i.pravatar.cc/40?img=3" // thay bằng avatar thật nếu có
-        alt="avatar"
-        className="w-10 h-10 rounded-full border-2 border-blue-500 shadow-sm cursor-pointer"
-      />
-    </div>
+   
   </div>
 );
 
-const StatCard = ({ title, value, change, changeType, icon }) => {
-    const isIncrease = changeType === 'increase';
+const StatCard = ({ title, value, icon }) => {
     return (
         <div className="bg-white p-5 rounded-xl shadow-md flex justify-between items-center">
             <div>
                 <p className="text-sm text-gray-500 font-semibold">{title}</p>
                 <p className="text-2xl font-bold text-gray-800">{value}</p>
-                <div className="flex items-center text-xs mt-1">
-                    {isIncrease ? <FiArrowUp className="text-green-500"/> : <FiArrowDown className="text-red-500"/>}
-                    <span className={`font-bold ${isIncrease ? 'text-green-500' : 'text-red-500'}`}>{change.slice(0, 1) === '+' || change.slice(0, 1) === '-' ? change.slice(1) : change}</span>
-                    <span className="text-gray-500 ml-1">Since yesterday</span>
-                </div>
             </div>
             <div className="bg-blue-500 p-3 rounded-full text-white">
                 {icon}
@@ -185,12 +170,16 @@ const AdminDashboard = () => {
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
-        const response = await fetch('/api/admin/stats');
+        const response = await fetch('/api/admin/dashboard-stats');
         if (!response.ok) {
           throw new Error('Failed to fetch dashboard data');
         }
-        const data = await response.json();
-        setDashboardData(data);
+        const result = await response.json();
+        if (result.status === 'success') {
+          setDashboardData(result.data);
+        } else {
+          throw new Error(result.message || 'Failed to fetch dashboard data');
+        }
       } catch (err) {
         setError(err.message);
       } finally {
@@ -209,13 +198,13 @@ const AdminDashboard = () => {
     return <div className="flex justify-center items-center h-screen text-red-500">{error}</div>;
   }
 
-  const { statCards, topBuyers, topServices } = dashboardData;
+  const { statCards, chartData, topBuyers, topServices } = dashboardData;
 
   const statsDataReal = [
-      { title: "Today's Sales", value: `$${statCards.totalSales.toFixed(2)}`, change: "+30%", changeType: "increase", icon: <FiShoppingCart /> },
-      { title: "Today's Users", value: statCards.totalNewUsers, change: "+20%", changeType: "increase", icon: <FiUser /> },
-      { title: "New Clients", value: `+${statCards.totalNewClients}`, change: "-20%", changeType: "decrease", icon: <FiUser /> },
-      { title: "New Orders", value: statCards.totalNewOrders, change: "+10%", changeType: "increase", icon: <FiFileText /> },
+      { title: "Today's Revenue", value: `$${statCards.totalSales.toFixed(2)}`, icon: <FiShoppingCart /> },
+      { title: "Today's Profit", value: `$${statCards.totalProfit.toFixed(2)}`, icon: <FiBarChart /> },
+      { title: "Today Deposit", value: `$${statCards.totalDeposits.toFixed(2)}`, icon: <FiDollarSign /> },
+      { title: "New Orders", value: statCards.totalNewOrders, icon: <FiFileText /> },
   ];
   
   // Format Y-axis tick cho biểu đồ Sales
@@ -232,42 +221,78 @@ const AdminDashboard = () => {
             {statsDataReal.map(stat => <StatCard key={stat.title} {...stat} />)}
         </div>
 
-        {/* Charts với trục thời gian động */}
+        {/* Charts với doanh thu và lợi nhuận */}
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 mb-6">
             <div className="lg:col-span-3">
-                <ChartCard title="Sales Overview" subTitle="(+5) more in 2022" change="">
-                    <AreaChart data={salesOverviewDataMock} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                <ChartCard title="Revenue & Profit Overview" subTitle="Daily revenue and profit analysis" change="Based on transactions">
+                    <AreaChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
                         <defs>
-                            <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="5%" stopColor="#8884d8" stopOpacity={0.8}/>
-                                <stop offset="95%" stopColor="#8884d8" stopOpacity={0}/>
+                            <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="5%" stopColor="#0ea5e9" stopOpacity={0.8}/>
+                                <stop offset="95%" stopColor="#0ea5e9" stopOpacity={0.1}/>
+                            </linearGradient>
+                            <linearGradient id="colorProfit" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="5%" stopColor="#10b981" stopOpacity={0.8}/>
+                                <stop offset="95%" stopColor="#10b981" stopOpacity={0.1}/>
                             </linearGradient>
                         </defs>
-                        <Tooltip formatter={(value) => `$${value}`}/>
-                        <Area type="monotone" dataKey="sales" stroke="#2563EB" fill="url(#colorSales)" strokeWidth={2} />
                         <XAxis dataKey="name" axisLine={false} tickLine={false} />
                         <YAxis axisLine={false} tickLine={false} tickFormatter={dollarFormatter}/>
+                        <Tooltip 
+                            formatter={(value, name) => [`$${value.toFixed(2)}`, name === 'revenue' ? 'Revenue' : 'Profit']}
+                            labelFormatter={(label) => `Day: ${label}`}
+                        />
+                        <Area 
+                            type="monotone" 
+                            dataKey="revenue" 
+                            stackId="1"
+                            stroke="#0ea5e9" 
+                            fill="url(#colorRevenue)" 
+                            strokeWidth={2} 
+                        />
+                        <Area 
+                            type="monotone" 
+                            dataKey="profit" 
+                            stackId="2"
+                            stroke="#10b981" 
+                            fill="url(#colorProfit)" 
+                            strokeWidth={2} 
+                        />
                     </AreaChart>
                 </ChartCard>
             </div>
             <div className="lg:col-span-2">
-                 <ChartCard title="Visitors Over Time" subTitle="" change="12.5% Since last week">
-                    <LineChart data={visitorsDataMock} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
-                        <Tooltip />
-                        <Line type="monotone" dataKey="dark" stroke="#2563EB" strokeWidth={2} dot={false} />
-                        <Line type="monotone" dataKey="light" stroke="#A0AEC0" strokeWidth={2} dot={false}/>
+                <ChartCard title="Daily Transactions" subTitle="Payment vs Received Payment" change="Real-time data">
+                    <LineChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
                         <XAxis dataKey="name" axisLine={false} tickLine={false} />
-                        <YAxis axisLine={false} tickLine={false}/>
+                        <YAxis axisLine={false} tickLine={false} tickFormatter={dollarFormatter}/>
+                        <Tooltip 
+                            formatter={(value, name) => [`$${value.toFixed(2)}`, name === 'payments' ? 'Payments' : 'Received']}
+                        />
+                        <Line 
+                            type="monotone" 
+                            dataKey="payments" 
+                            stroke="#3b82f6" 
+                            strokeWidth={3} 
+                            dot={{ fill: '#3b82f6', strokeWidth: 2, r: 4 }}
+                        />
+                        <Line 
+                            type="monotone" 
+                            dataKey="receivedPayments" 
+                            stroke="#ef4444" 
+                            strokeWidth={3} 
+                            dot={{ fill: '#ef4444', strokeWidth: 2, r: 4 }}
+                        />
                     </LineChart>
                 </ChartCard>
             </div>
         </div>
 
-        {/* Tables với dữ liệu thật */}
+        {/* Tables với dữ liệu thật từ transactions */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <TableCard
-                title="Top Buyers This Month"
-                headers={['Customer', 'Product', 'Invoice', 'Price']}
+                title="Top Buyers (Payment Transactions)"
+                headers={['Customer', 'Orders', 'Total Spent']}
                 data={topBuyers}
                 renderRow={(item, index) => (
                     <tr key={index}>
@@ -276,24 +301,27 @@ const AdminDashboard = () => {
                             {item.name}
                         </td>
                         <td>{item.product}</td>
-                        <td>{item.invoice}</td>
-                        <td>{item.price}</td>
+                        <td className="font-semibold text-green-600">{item.price}</td>
                     </tr>
                 )}
             />
              <TableCard
-                title="Top Selling Services"
-                headers={['Product', 'Price', 'Discount', 'Sold']}
+                title="Top Earners (Received Payments)"
+                headers={['Seller', 'Total Earned', 'Completed', 'Status']}
                 data={topServices}
                 renderRow={(item, index) => (
                     <tr key={index}>
                         <td className="py-3 flex items-center">
-                            <img src={item.image} alt={item.name} className="w-8 h-8 rounded-lg mr-3"/>
+                            <img src={item.image} alt={item.name} className="w-8 h-8 rounded-full mr-3"/>
                             {item.name}
                         </td>
-                        <td>{item.price}</td>
+                        <td className="font-semibold text-green-600">{item.price}</td>
                         <td>{item.discount}</td>
-                        <td>{item.sold}</td>
+                        <td>
+                            <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium">
+                                {item.sold}
+                            </span>
+                        </td>
                     </tr>
                 )}
             />

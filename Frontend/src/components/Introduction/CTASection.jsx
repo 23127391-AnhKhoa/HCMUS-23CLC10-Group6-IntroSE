@@ -44,13 +44,13 @@ const CTASection = () => {
               </li>
             </ul>
             
-            <a 
-              href="http://192.168.1.8:10000/explore" 
+            <Link 
+              to="/explore" 
               className="w-full bg-white text-purple-600 py-3 px-6 rounded-lg font-semibold hover:bg-purple-50 transition-colors duration-300 flex items-center justify-center"
             >
               Find Services
               <FiArrowRight className="w-5 h-5 ml-2" />
-            </a>
+            </Link>
           </div>
 
           {/* For Sellers */}

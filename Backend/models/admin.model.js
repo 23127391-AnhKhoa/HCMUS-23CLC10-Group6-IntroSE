@@ -341,6 +341,212 @@ const AdminModel = {
 
         return topSellers;
     },
+
+    /**
+     * Lấy dữ liệu dashboard với doanh thu và lợi nhuận theo ngày
+     */
+    getDashboardStats: async () => {
+        // 1. Lấy dữ liệu doanh thu và lợi nhuận 7 ngày gần nhất
+        const sevenDaysAgo = new Date();
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
+        sevenDaysAgo.setHours(0, 0, 0, 0);
+
+        const { data: dailyTransactions, error: transactionError } = await supabase
+            .from('Transactions')
+            .select('amount, created_at, type')
+            .in('type', ['payment', 'received_payment'])
+            .gte('created_at', sevenDaysAgo.toISOString())
+            .order('created_at', { ascending: true });
+
+        if (transactionError) throw transactionError;
+
+        // Xử lý dữ liệu theo ngày
+        const dailyStats = {};
+        const today = new Date();
+        
+        // Khởi tạo 7 ngày với dữ liệu rỗng
+        for (let i = 6; i >= 0; i--) {
+            const date = new Date(today);
+            date.setDate(date.getDate() - i);
+            const dateKey = date.toISOString().split('T')[0];
+            const dayLabel = date.getDate().toString();
+            const monthDay = `${date.getMonth() + 1}/${date.getDate()}`;
+            
+            dailyStats[dateKey] = {
+                name: i === 6 || date.getDate() === 1 ? monthDay : dayLabel,
+                revenue: 0,
+                profit: 0,
+                payments: 0,
+                receivedPayments: 0
+            };
+        }
+
+        // Điền dữ liệu thực tế
+        dailyTransactions.forEach(transaction => {
+            const date = new Date(transaction.created_at).toISOString().split('T')[0];
+            if (dailyStats[date]) {
+                const amount = parseFloat(transaction.amount);
+                if (transaction.type === 'payment') {
+                    dailyStats[date].revenue += amount;
+                    dailyStats[date].payments += amount;
+                } else if (transaction.type === 'received_payment') {
+                    dailyStats[date].receivedPayments += amount;
+                }
+            }
+        });
+
+        // Tính lợi nhuận (doanh thu - tiền trả cho seller)
+        const chartData = Object.values(dailyStats).map(day => ({
+            ...day,
+            profit: day.revenue - day.receivedPayments
+        }));
+
+        // 2. Thống kê hôm nay
+        const todayStart = new Date();
+        todayStart.setHours(0, 0, 0, 0);
+
+        const { data: todayTransactions, error: todayError } = await supabase
+            .from('Transactions')
+            .select('amount, type')
+            .in('type', ['payment', 'received_payment', 'deposit'])
+            .gte('created_at', todayStart.toISOString());
+
+        if (todayError) throw todayError;
+
+        let todaySales = 0;
+        let todayProfit = 0;
+        let todayOrders = 0;
+        let todayReceivedPayments = 0;
+        let todayDeposits = 0;
+
+        todayTransactions.forEach(transaction => {
+            const amount = parseFloat(transaction.amount);
+            if (transaction.type === 'payment') {
+                todaySales += amount;
+                todayOrders++;
+            } else if (transaction.type === 'received_payment') {
+                todayReceivedPayments += amount;
+            } else if (transaction.type === 'deposit') {
+                todayDeposits += amount;
+            }
+        });
+
+        todayProfit = todaySales - todayReceivedPayments;
+
+        // 3. Người dùng mới hôm nay
+        const { data: newUsers, error: usersError } = await supabase
+            .from('User')
+            .select('role')
+            .gte('created_at', todayStart.toISOString())
+            .neq('role', 'admin');
+
+        if (usersError) throw usersError;
+
+        const totalNewUsers = newUsers.length;
+        const newClients = newUsers.filter(user => user.role === 'buyer').length;
+
+        // 4. Top Buyers (dựa trên type=payment)
+        const { data: buyerTransactions, error: buyerError } = await supabase
+            .from('Transactions')
+            .select(`
+                user_id,
+                amount,
+                User!Transactions_user_id_fkey (
+                    fullname,
+                    username,
+                    avt_url
+                )
+            `)
+            .eq('type', 'payment')
+            .order('created_at', { ascending: false })
+            .limit(100);
+
+        if (buyerError) throw buyerError;
+
+        // Nhóm theo buyer
+        const buyerStats = {};
+        buyerTransactions.forEach(transaction => {
+            const userId = transaction.user_id;
+            if (!buyerStats[userId]) {
+                buyerStats[userId] = {
+                    user: transaction.User,
+                    totalSpent: 0,
+                    orderCount: 0
+                };
+            }
+            buyerStats[userId].totalSpent += parseFloat(transaction.amount);
+            buyerStats[userId].orderCount++;
+        });
+
+        const topBuyers = Object.values(buyerStats)
+            .sort((a, b) => b.totalSpent - a.totalSpent)
+            .slice(0, 5)
+            .map((buyer, index) => ({
+                name: buyer.user.fullname || buyer.user.username,
+                avatar: buyer.user.avt_url,
+                product: `${buyer.orderCount} orders`,
+                invoice: `#BUY${1000 + index}`,
+                price: `$${buyer.totalSpent.toFixed(2)}`
+            }));
+
+        // 5. Top Sellers (dựa trên type=received_payment)
+        const { data: sellerTransactions, error: sellerError } = await supabase
+            .from('Transactions')
+            .select(`
+                user_id,
+                amount,
+                User!Transactions_user_id_fkey (
+                    fullname,
+                    username,
+                    avt_url
+                )
+            `)
+            .eq('type', 'received_payment')
+            .order('created_at', { ascending: false })
+            .limit(100);
+
+        if (sellerError) throw sellerError;
+
+        // Nhóm theo seller
+        const sellerStats = {};
+        sellerTransactions.forEach(transaction => {
+            const userId = transaction.user_id;
+            if (!sellerStats[userId]) {
+                sellerStats[userId] = {
+                    user: transaction.User,
+                    totalEarned: 0,
+                    completedOrders: 0
+                };
+            }
+            sellerStats[userId].totalEarned += parseFloat(transaction.amount);
+            sellerStats[userId].completedOrders++;
+        });
+
+        const topServices = Object.values(sellerStats)
+            .sort((a, b) => b.totalEarned - a.totalEarned)
+            .slice(0, 5)
+            .map((seller, index) => ({
+                name: seller.user.fullname || seller.user.username,
+                image: seller.user.avt_url || `https://i.pravatar.cc/150?u=${seller.user.username}`,
+                price: `$${seller.totalEarned.toFixed(2)}`,
+                discount: `${seller.completedOrders} orders`,
+                sold: `Top Seller`
+            }));
+
+        return {
+            statCards: {
+                totalSales: todaySales,
+                totalProfit: todayProfit,
+                totalNewUsers: totalNewUsers,
+                totalNewOrders: todayOrders,
+                totalNewClients: newClients,
+                totalDeposits: todayDeposits
+            },
+            chartData,
+            topBuyers,
+            topServices
+        };
+    },
 };
 
 module.exports = AdminModel;

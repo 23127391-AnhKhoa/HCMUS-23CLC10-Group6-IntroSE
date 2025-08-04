@@ -16,6 +16,9 @@ router.get('/stats-section', adminController.getStatsSection);
 // GET /api/admin/top-sellers -> Lấy top sellers theo tổng thu nhập
 router.get('/top-sellers', adminController.getTopSellersByEarnings);
 
+// GET /api/admin/dashboard-stats -> Lấy dữ liệu dashboard với doanh thu và lợi nhuận
+router.get('/dashboard-stats', adminController.getDashboardStats);
+
 // POST /api/admin/log -> Thêm log vào AdminLog table
 router.post('/log', authenticateToken, adminController.createAdminLog);
 // Tạo một sub-router cho reports để có cấu trúc /admin/reports/...

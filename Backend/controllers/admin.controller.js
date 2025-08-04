@@ -154,6 +154,22 @@ const getTopSellersByEarnings = async (req, res) => {
     }
 };
 
+const getDashboardStats = async (req, res) => {
+    try {
+        const dashboardData = await AdminService.getDashboardStats();
+        res.status(200).json({ 
+            status: 'success', 
+            data: dashboardData 
+        });
+    } catch (error) {
+        console.error("Error fetching dashboard stats:", error);
+        res.status(500).json({ 
+            status: 'error', 
+            message: error.message 
+        });
+    }
+};
+
 module.exports = {
     getAdminStats,
     createAdminLog,
@@ -162,5 +178,6 @@ module.exports = {
     getUserReports,
     getHeroStats,
     getStatsSection,
-    getTopSellersByEarnings
+    getTopSellersByEarnings,
+    getDashboardStats
 };
