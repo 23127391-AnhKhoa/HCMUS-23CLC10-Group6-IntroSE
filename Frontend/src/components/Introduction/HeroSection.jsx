@@ -32,23 +32,35 @@ const HeroSection = () => {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        // Sửa đổi ở đây: Gọi đến endpoint mới và duy nhất
-        const response = await fetch('/api/gigs/public-stats');
-        if (!response.ok) {
-            throw new Error('Network response was not ok');
-        }
-        
-        const result = await response.json();
-        
-        if (result.status === 'success') {
-          setStats(result.data);
-        } else {
-          throw new Error(result.message || 'Failed to parse stats');
-        }
+        // Fetch total users
+        const usersResponse = await fetch('/api/users');
+        const usersData = await usersResponse.json();
+        const totalUsers = usersData?.data?.length || 0;
 
+        // Fetch total gigs
+        const gigsResponse = await fetch('/api/gigs');
+        const gigsData = await gigsResponse.json();
+        const totalGigs = gigsData?.data?.length || 0;
+
+        // Fetch completed orders
+        const ordersResponse = await fetch('/api/orders');
+        const ordersData = await ordersResponse.json();
+        const completedOrders = ordersData?.data?.filter(order => order.status === 'completed')?.length || 0;
+
+        // Fetch categories
+        const categoriesResponse = await fetch('/api/categories');
+        const categoriesData = await categoriesResponse.json();
+        const totalCategories = categoriesData?.data?.length || 0;
+
+        setStats({
+          totalUsers,
+          totalGigs,
+          completedOrders,
+          totalCategories
+        });
       } catch (error) {
         console.error('Error fetching hero stats:', error);
-        // Dữ liệu dự phòng nếu API lỗi
+        // Fallback data
         setStats({
           totalUsers: 1250,
           totalGigs: 850,
