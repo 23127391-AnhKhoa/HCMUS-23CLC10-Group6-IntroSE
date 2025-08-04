@@ -216,6 +216,131 @@ const AdminModel = {
         if (error) throw error;
         return data;
     },
+
+    /**
+     * Lấy thống kê tổng quan cho Hero Section
+     */
+    getHeroStats: async () => {
+        // Đếm số users có status active
+        const { count: activeUsers, error: usersError } = await supabase
+            .from('User')
+            .select('*', { count: 'exact', head: true })
+            .eq('status', 'active');
+        if (usersError) throw usersError;
+
+        // Đếm số gigs có status active
+        const { count: activeGigs, error: gigsError } = await supabase
+            .from('Gigs')
+            .select('*', { count: 'exact', head: true })
+            .eq('status', 'active');
+        if (gigsError) throw gigsError;
+
+        // Đếm số orders có status completed
+        const { count: completedOrders, error: ordersError } = await supabase
+            .from('Orders')
+            .select('*', { count: 'exact', head: true })
+            .eq('status', 'completed');
+        if (ordersError) throw ordersError;
+
+        // Đếm tổng số categories
+        const { count: totalCategories, error: categoriesError } = await supabase
+            .from('Categories')
+            .select('*', { count: 'exact', head: true });
+        if (categoriesError) throw categoriesError;
+
+        return {
+            totalUsers: activeUsers || 0,
+            totalGigs: activeGigs || 0,
+            completedOrders: completedOrders || 0,
+            totalCategories: totalCategories || 0
+        };
+    },
+
+    /**
+     * Lấy thống kê cho Stats Section
+     */
+    getStatsSection: async () => {
+        // Đếm số users có role buyer
+        const { count: buyerUsers, error: buyerError } = await supabase
+            .from('User')
+            .select('*', { count: 'exact', head: true })
+            .eq('role', 'buyer');
+        if (buyerError) throw buyerError;
+
+        // Đếm số dòng trong bảng UserFavorites
+        const { count: favoriteGigs, error: favoritesError } = await supabase
+            .from('UserFavorites')
+            .select('*', { count: 'exact', head: true });
+        if (favoritesError) throw favoritesError;
+
+        // Đếm tổng số orders (submitted orders)
+        const { count: submittedOrders, error: ordersError } = await supabase
+            .from('Orders')
+            .select('*', { count: 'exact', head: true });
+        if (ordersError) throw ordersError;
+
+        // Tính success rate (completed orders / total orders * 100)
+        const { count: completedOrders, error: completedError } = await supabase
+            .from('Orders')
+            .select('*', { count: 'exact', head: true })
+            .eq('status', 'completed');
+        if (completedError) throw completedError;
+
+        const successRate = submittedOrders > 0 
+            ? Math.round((completedOrders / submittedOrders) * 100) 
+            : 0;
+
+        return {
+            buyerUsers: buyerUsers || 0,
+            favoriteGigs: favoriteGigs || 0,
+            submittedOrders: submittedOrders || 0,
+            successRate: successRate
+        };
+    },
+
+    /**
+     * Lấy top sellers dựa trên tổng thu nhập từ received_payment
+     */
+    getTopSellersByEarnings: async (limit = 6) => {
+        // Lấy tất cả sellers
+        const { data: allSellers, error: sellersError } = await supabase
+            .from('User')
+            .select('uuid, fullname, username, avt_url, seller_headline, role')
+            .eq('role', 'seller');
+
+        if (sellersError) throw sellersError;
+
+        // Lấy tất cả transactions received_payment
+        const { data: earningsData, error: earningsError } = await supabase
+            .from('Transactions')
+            .select('user_id, amount')
+            .eq('type', 'received_payment');
+
+        if (earningsError) throw earningsError;
+
+        // Tính tổng earnings cho mỗi seller
+        const sellersEarnings = {};
+        earningsData.forEach(transaction => {
+            const userId = transaction.user_id;
+            if (!sellersEarnings[userId]) {
+                sellersEarnings[userId] = 0;
+            }
+            sellersEarnings[userId] += parseFloat(transaction.amount);
+        });
+
+        // Kết hợp seller info với earnings (bao gồm cả seller có 0 earnings)
+        const sellersWithEarnings = allSellers.map(seller => ({
+            ...seller,
+            totalEarnings: sellersEarnings[seller.uuid] || 0
+        }));
+
+        // Sắp xếp theo totalEarnings giảm dần và lấy theo limit
+        const topSellers = sellersWithEarnings
+            .sort((a, b) => b.totalEarnings - a.totalEarnings)
+            .slice(0, limit);
+
+        return topSellers;
+    },
 };
 
 module.exports = AdminModel;

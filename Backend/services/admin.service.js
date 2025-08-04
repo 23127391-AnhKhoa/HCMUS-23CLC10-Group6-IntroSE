@@ -107,11 +107,43 @@ const dismissReport = async (logId) => {
     return await AdminModel.updateLogStatus(logId, 'dismissed');
 };
 
+const getHeroStats = async () => {
+    try {
+        const stats = await AdminModel.getHeroStats();
+        return stats;
+    } catch (error) {
+        console.error('Error in getHeroStats service:', error);
+        throw error;
+    }
+};
+
+const getStatsSection = async () => {
+    try {
+        const stats = await AdminModel.getStatsSection();
+        return stats;
+    } catch (error) {
+        console.error('Error in getStatsSection service:', error);
+        throw error;
+    }
+};
+
+const getTopSellersByEarnings = async (limit = 6) => {
+    try {
+        const topSellers = await AdminModel.getTopSellersByEarnings(limit);
+        return topSellers;
+    } catch (error) {
+        console.error('Error in getTopSellersByEarnings service:', error);
+        throw error;
+    }
+};
 
 module.exports = {
     fetchAllAdminData,
     createAdminLog,
     fetchGigReports,
     dismissReport,
-    fetchUserReports
+    fetchUserReports,
+    getHeroStats,
+    getStatsSection,
+    getTopSellersByEarnings
 };

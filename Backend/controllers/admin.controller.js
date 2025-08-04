@@ -104,10 +104,63 @@ const getUserReports = async (req, res) => {
         res.status(500).json({ status: 'error', message: error.message });
     }
 };
+
+const getHeroStats = async (req, res) => {
+    try {
+        const stats = await AdminService.getHeroStats();
+        res.status(200).json({ 
+            status: 'success', 
+            data: stats 
+        });
+    } catch (error) {
+        console.error("Error fetching hero stats:", error);
+        res.status(500).json({ 
+            status: 'error', 
+            message: error.message 
+        });
+    }
+};
+
+const getStatsSection = async (req, res) => {
+    try {
+        const stats = await AdminService.getStatsSection();
+        res.status(200).json({ 
+            status: 'success', 
+            data: stats 
+        });
+    } catch (error) {
+        console.error("Error fetching stats section:", error);
+        res.status(500).json({ 
+            status: 'error', 
+            message: error.message 
+        });
+    }
+};
+
+const getTopSellersByEarnings = async (req, res) => {
+    try {
+        const limit = parseInt(req.query.limit) || 6;
+        const topSellers = await AdminService.getTopSellersByEarnings(limit);
+        res.status(200).json({ 
+            status: 'success', 
+            data: topSellers 
+        });
+    } catch (error) {
+        console.error("Error fetching top sellers by earnings:", error);
+        res.status(500).json({ 
+            status: 'error', 
+            message: error.message 
+        });
+    }
+};
+
 module.exports = {
     getAdminStats,
     createAdminLog,
     getGigReports,
     dismissReport,
-    getUserReports
+    getUserReports,
+    getHeroStats,
+    getStatsSection,
+    getTopSellersByEarnings
 };
