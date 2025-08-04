@@ -1,218 +1,293 @@
-/**
- * Notification Service - Handle notifications for order events
- * 
- * @file notification.service.js
- * @description Service for managing order-related notifications
- */
+// services/notification.service.js
+const NotificationModel = require('../models/notification.model');
+const { supabase } = require('../config/supabaseClient');
 
 const NotificationService = {
   /**
-   * Send order status update notification
-   * 
-   * @param {Object} order - Order object
-   * @param {string} oldStatus - Previous status
-   * @param {string} newStatus - New status
-   * @param {string} recipientRole - Recipient role (buyer/seller)
+   * Notification types
    */
-  sendOrderStatusUpdate: async (order, oldStatus, newStatus, recipientRole) => {
+  TYPES: {
+    ORDER_RECEIVED: 'order_received',
+    ORDER_ACCEPTED: 'order_accepted',
+    ORDER_REJECTED: 'order_rejected',
+    ORDER_DELIVERED: 'order_delivered',
+    ORDER_COMPLETED: 'order_completed',
+    ORDER_CANCELLED: 'order_cancelled',
+    PAYMENT_RECEIVED: 'payment_received',
+    REVIEW_RECEIVED: 'review_received',
+    GIG_APPROVED: 'gig_approved',
+    GIG_REJECTED: 'gig_rejected',
+    MESSAGE_RECEIVED: 'message_received',
+    SYSTEM_ANNOUNCEMENT: 'system_announcement'
+  },
+
+  /**
+   * Create and send notification with realtime
+   * @param {Object} notificationData - Notification data
+   * @returns {Promise<Object>} Created notification
+   */
+  async createAndSend(notificationData) {
     try {
-      console.log('📧 Sending order status notification:', {
-        orderId: order.id,
-        oldStatus,
-        newStatus,
-        recipientRole
-      });
+      // Create notification in database
+      const notification = await NotificationModel.create(notificationData);
 
-      const notifications = [];
+      // Send realtime notification
+      await this.sendRealtimeNotification(notificationData.user_id, notification);
 
-      // Determine notification content based on status change
+      return notification;
+    } catch (error) {
+      console.error('❌ Error creating and sending notification:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Send realtime notification using Supabase broadcast
+   * @param {string} userId - Target user ID
+   * @param {Object} notification - Notification data
+   */
+  async sendRealtimeNotification(userId, notification) {
+    try {
+      await supabase
+        .channel('notifications')
+        .send({
+          type: 'broadcast',
+          event: 'new_notification',
+          payload: {
+            user_id: userId,
+            notification
+          }
+        });
+
+      console.log(`📡 Realtime notification sent to user ${userId}`);
+    } catch (error) {
+      console.warn('⚠️ Failed to send realtime notification:', error);
+      // Don't throw error as this is not critical
+    }
+  },
+
+  /**
+   * Create notification when new order is received
+   * @param {Object} order - Order data
+   * @param {Object} gig - Gig data
+   * @param {Object} buyer - Buyer data
+   */
+  async notifyNewOrder(order, gig, buyer) {
+    try {
+      const notification = {
+        user_id: gig.user_id, // Seller/gig owner
+        type: this.TYPES.ORDER_RECEIVED,
+        title: 'New Order Received! 🎉',
+        message: `${buyer.full_name || buyer.email} has ordered your "${gig.title}" service for $${order.price_at_purchase}`,
+        data: {
+          order_id: order.id,
+          gig_id: gig.id,
+          buyer_id: buyer.id,
+          buyer_name: buyer.full_name || buyer.email,
+          gig_title: gig.title,
+          price: order.price_at_purchase
+        }
+      };
+
+      return await this.createAndSend(notification);
+    } catch (error) {
+      console.error('❌ Error notifying new order:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Create notification when order status changes
+   * @param {Object} order - Order data
+   * @param {string} newStatus - New order status
+   * @param {Object} gig - Gig data
+   * @param {Object} seller - Seller data
+   * @param {Object} buyer - Buyer data
+   */
+  async notifyOrderStatusChange(order, newStatus, gig, seller, buyer) {
+    try {
+      let notification;
+
       switch (newStatus) {
+        case 'accepted':
         case 'in_progress':
-          if (recipientRole === 'buyer') {
-            notifications.push({
-              type: 'order_accepted',
-              title: 'Order Accepted',
-              message: `Your order #${order.id} has been accepted and is now in progress.`,
-              recipient_id: order.client_id,
-              order_id: order.id
-            });
-          }
-          break;
-
-        case 'delivered':
-          if (recipientRole === 'buyer') {
-            notifications.push({
-              type: 'order_delivered',
-              title: 'Order Delivered',
-              message: `Your order #${order.id} has been delivered. Review the delivery and complete payment.`,
-              recipient_id: order.client_id,
-              order_id: order.id
-            });
-          }
-          break;
-
-        case 'completed':
-          notifications.push({
-            type: 'order_completed',
-            title: 'Order Completed',
-            message: `Order #${order.id} has been completed successfully.`,
-            recipient_id: order.client_id,
-            order_id: order.id
-          });
-          
-          notifications.push({
-            type: 'payment_received',
-            title: 'Payment Received',
-            message: `You have received payment for order #${order.id}.`,
-            recipient_id: order.gig_owner_id,
-            order_id: order.id
-          });
-          break;
-
-        case 'revision_requested':
-          if (recipientRole === 'seller') {
-            notifications.push({
-              type: 'revision_requested',
-              title: 'Revision Requested',
-              message: `The buyer has requested a revision for order #${order.id}.`,
-              recipient_id: order.gig_owner_id,
-              order_id: order.id
-            });
-          }
+          notification = {
+            user_id: buyer.id,
+            type: this.TYPES.ORDER_ACCEPTED,
+            title: 'Order Accepted! ✅',
+            message: `${seller.full_name || seller.email} has accepted your order for "${gig.title}"`,
+            data: {
+              order_id: order.id,
+              gig_id: gig.id,
+              seller_id: seller.id,
+              seller_name: seller.full_name || seller.email,
+              gig_title: gig.title
+            }
+          };
           break;
 
         case 'cancelled':
-          const cancelledRecipient = recipientRole === 'buyer' ? order.gig_owner_id : order.client_id;
-          notifications.push({
-            type: 'order_cancelled',
-            title: 'Order Cancelled',
-            message: `Order #${order.id} has been cancelled.`,
-            recipient_id: cancelledRecipient,
-            order_id: order.id
-          });
+        case 'rejected':
+          notification = {
+            user_id: buyer.id,
+            type: this.TYPES.ORDER_REJECTED,
+            title: 'Order Cancelled ❌',
+            message: `Your order for "${gig.title}" has been cancelled`,
+            data: {
+              order_id: order.id,
+              gig_id: gig.id,
+              seller_id: seller.id,
+              seller_name: seller.full_name || seller.email,
+              gig_title: gig.title
+            }
+          };
           break;
+
+        case 'delivered':
+          notification = {
+            user_id: buyer.id,
+            type: this.TYPES.ORDER_DELIVERED,
+            title: 'Order Delivered! 📦',
+            message: `${seller.full_name || seller.email} has delivered your order for "${gig.title}"`,
+            data: {
+              order_id: order.id,
+              gig_id: gig.id,
+              seller_id: seller.id,
+              seller_name: seller.full_name || seller.email,
+              gig_title: gig.title
+            }
+          };
+          break;
+
+        case 'completed':
+          // Notify seller about payment
+          notification = {
+            user_id: seller.id,
+            type: this.TYPES.ORDER_COMPLETED,
+            title: 'Payment Received! 💰',
+            message: `Payment received for order "${gig.title}" - $${order.price_at_purchase}`,
+            data: {
+              order_id: order.id,
+              gig_id: gig.id,
+              buyer_id: buyer.id,
+              buyer_name: buyer.full_name || buyer.email,
+              gig_title: gig.title,
+              amount: order.price_at_purchase
+            }
+          };
+          break;
+
+        default:
+          console.log(`⚠️ No notification configured for status: ${newStatus}`);
+          return null;
       }
 
-      // In a real application, you would save these notifications to database
-      // and possibly send real-time notifications via WebSocket, push notifications, etc.
-      
-      // For now, just log them
-      notifications.forEach(notification => {
-        console.log('📨 Notification:', notification);
-      });
-
-      return notifications;
-
+      if (notification) {
+        return await this.createAndSend(notification);
+      }
     } catch (error) {
-      console.error('❌ Error sending order status notification:', error);
+      console.error('❌ Error notifying order status change:', error);
       throw error;
     }
   },
 
   /**
-   * Send payment notification
-   * 
-   * @param {Object} order - Order object
-   * @param {number} amount - Payment amount
+   * Create notification for new message
+   * @param {Object} message - Message data
+   * @param {Object} sender - Sender data
+   * @param {Object} recipient - Recipient data
    */
-  sendPaymentNotification: async (order, amount) => {
+  async notifyNewMessage(message, sender, recipient) {
     try {
-      console.log('💳 Sending payment notification:', {
-        orderId: order.id,
-        amount
-      });
-
-      const notifications = [
-        {
-          type: 'payment_processed',
-          title: 'Payment Processed',
-          message: `Payment of $${amount} for order #${order.id} has been processed successfully.`,
-          recipient_id: order.client_id,
-          order_id: order.id
-        },
-        {
-          type: 'payment_received',
-          title: 'Payment Received',
-          message: `You have received $${amount} for order #${order.id}.`,
-          recipient_id: order.gig_owner_id,
-          order_id: order.id
+      const notification = {
+        user_id: recipient.id,
+        type: this.TYPES.MESSAGE_RECEIVED,
+        title: 'New Message 💬',
+        message: `${sender.full_name || sender.email} sent you a message`,
+        data: {
+          message_id: message.id,
+          conversation_id: message.conversation_id,
+          sender_id: sender.id,
+          sender_name: sender.full_name || sender.email,
+          preview: message.content.substring(0, 100)
         }
-      ];
+      };
 
-      // Log notifications (in real app, save to database)
-      notifications.forEach(notification => {
-        console.log('📨 Payment Notification:', notification);
-      });
-
-      return notifications;
-
+      return await this.createAndSend(notification);
     } catch (error) {
-      console.error('❌ Error sending payment notification:', error);
+      console.error('❌ Error notifying new message:', error);
       throw error;
     }
   },
 
   /**
-   * Send file upload notification (files uploaded but not delivered yet)
-   * 
-   * @param {Object} order - Order object
-   * @param {number} fileCount - Number of files uploaded
+   * Create notification for gig approval/rejection
+   * @param {Object} gig - Gig data
+   * @param {string} status - 'approved' or 'rejected'
+   * @param {string} reason - Reason for rejection (optional)
    */
-  sendFileUploadNotification: async (order, fileCount) => {
+  async notifyGigStatus(gig, status, reason = null) {
     try {
-      console.log('📁 Sending file upload notification:', {
-        orderId: order.id,
-        fileCount,
-        status: order.status
-      });
+      let notification;
 
-      const notification = {
-        type: 'files_uploaded',
-        title: 'Files Uploaded',
-        message: `Seller has uploaded ${fileCount} file(s) for order #${order.id}. Waiting for delivery confirmation.`,
-        recipient_id: order.client_id,
-        order_id: order.id
-      };
+      if (status === 'active') {
+        notification = {
+          user_id: gig.user_id,
+          type: this.TYPES.GIG_APPROVED,
+          title: 'Gig Approved! 🎉',
+          message: `Your gig "${gig.title}" has been approved and is now live`,
+          data: {
+            gig_id: gig.id,
+            gig_title: gig.title,
+            status: 'approved'
+          }
+        };
+      } else if (status === 'rejected' || status === 'denied') {
+        notification = {
+          user_id: gig.user_id,
+          type: this.TYPES.GIG_REJECTED,
+          title: 'Gig Rejected ❌',
+          message: `Your gig "${gig.title}" has been rejected${reason ? ': ' + reason : ''}`,
+          data: {
+            gig_id: gig.id,
+            gig_title: gig.title,
+            status: 'rejected',
+            reason: reason
+          }
+        };
+      }
 
-      // Log notification (in real app, save to database)
-      console.log('📨 File Upload Notification:', notification);
-
-      return [notification];
-
+      if (notification) {
+        return await this.createAndSend(notification);
+      }
     } catch (error) {
-      console.error('❌ Error sending file upload notification:', error);
+      console.error('❌ Error notifying gig status:', error);
       throw error;
     }
   },
 
   /**
-   * Send delivery upload notification
-   * 
-   * @param {Object} order - Order object
-   * @param {number} fileCount - Number of files uploaded
+   * Create notification for payment received
+   * @param {Object} transaction - Transaction data
+   * @param {Object} user - User receiving payment
    */
-  sendDeliveryUploadNotification: async (order, fileCount) => {
+  async notifyPaymentReceived(transaction, user) {
     try {
-      console.log('📁 Sending delivery upload notification:', {
-        orderId: order.id,
-        fileCount
-      });
-
       const notification = {
-        type: 'delivery_uploaded',
-        title: 'Delivery Files Uploaded',
-        message: `${fileCount} delivery file(s) have been uploaded for order #${order.id}.`,
-        recipient_id: order.client_id,
-        order_id: order.id
+        user_id: user.id,
+        type: this.TYPES.PAYMENT_RECEIVED,
+        title: 'Payment Received! 💰',
+        message: `You received $${transaction.amount} payment`,
+        data: {
+          transaction_id: transaction.id,
+          amount: transaction.amount,
+          order_id: transaction.order_id
+        }
       };
 
-      // Log notification (in real app, save to database)
-      console.log('📨 Delivery Upload Notification:', notification);
-
-      return [notification];
-
+      return await this.createAndSend(notification);
     } catch (error) {
-      console.error('❌ Error sending delivery upload notification:', error);
+      console.error('❌ Error notifying payment received:', error);
       throw error;
     }
   }

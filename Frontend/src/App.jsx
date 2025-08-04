@@ -16,6 +16,7 @@ import InboxPage from './pages/InboxPage';
 import SellerInfo from './pages/SellerInfo';
 import Payment from './pages/Payment';
 import PaymentSuccess from './pages/PaymentSuccess';
+import ReviewPage from './pages/ReviewPage';
 import Footer from './Common/Footer';
 import BecomeSellerPage from './pages/BecomeSeller';
 import UserManagement from './pages/Admin/UserManagement';
@@ -27,7 +28,8 @@ import GigDetailContent from './pages/Admin/AdminGigContent';
 import AdminSellerInfor from './pages/Admin/AdminSellerInfor'; 
 import ManageReportedGigs from './pages/Admin/ManageReportedGigs'; 
 import ReportUserPage from './pages/ReportUserPage';
-import ReportGigPage from './pages/ReportGigPage'; // Assuming you have a ReportGigPage component
+import NotificationPage from './pages/NotificationPage';
+import ReportGigPage from './pages/ReportGigPage'; 
 
 function App() {
   return (
@@ -40,11 +42,9 @@ function App() {
             <Route path="/" element={<Introduction />} />
 
             <Route path="admin/AdminDashboard" element={<AdminDashboard />} />
-
             <Route path="/admin/manage-reported-gigs" element={<ManageReportedGigs />} />
             {/* Route for signup page */}
-
-            <Route path="/admin/manage-reported-gigs" element={<ManageReportedGigs />} />
+            
             {/* Route for authentication page */}
             <Route path="/auth" element={<AuthPage />} />
 
@@ -78,6 +78,8 @@ function App() {
             <Route path="/payment/:orderId" element={<Payment />} />
             <Route path="/payment/success/:orderId" element={<PaymentSuccess />} />
 
+             <Route path="/order/:orderId/review" element={<ReviewPage />} />
+
             <Route path="/become-seller" element={<BecomeSellerPage />} />
 
             <Route path="/deposit" element={<WalletPage />} />
@@ -89,6 +91,9 @@ function App() {
             <Route path="/inbox" element={<InboxPage />} />
 
             <Route path="/messages" element={<InboxPage />} />
+            
+            <Route path="/notifications" element={<NotificationPage />} />
+            
             <Route path="/admin/seller/:sellerId" element={<AdminSellerInfor />} />
 
             {/* Admin routes */}

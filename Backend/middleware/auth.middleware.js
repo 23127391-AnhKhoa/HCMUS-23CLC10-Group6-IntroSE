@@ -51,7 +51,7 @@ const authenticateToken = (req, res, next) => {
             next();
         });
     } catch (error) {
-        console.error('Auth Middleware Error:', error);
+        console.error('❌ Auth Middleware Error:', error);
         res.status(500).json({
             status: 'error',
             message: 'Internal server error during authentication'

@@ -6,12 +6,14 @@ import NavBar from '../Common/NavBar_Buyer';
 import Footer from '../Common/Footer';
 import CreateOrderModal from '../components/CreateOrderModal/CreateOrderModal';
 import { useAuth } from '../contexts/AuthContext';
+import { useOrderNotification } from '../hooks/useOrderNotification';
 import ReportButton from '../components/ReportButton';
 
 const GigDetail = () => {
     const { id } = useParams();
     const navigate = useNavigate();
     const { token, authUser, isLoading: authLoading } = useAuth();
+    const { notifyOrderCreated } = useOrderNotification();
     const [gig, setGig] = useState(null);
     const [sellerDetails, setSellerDetails] = useState(null);
     const [gigMedia, setGigMedia] = useState([]);
@@ -179,6 +181,32 @@ const GigDetail = () => {
             const data = await response.json();
             
             if (data.status === 'success') {
+                console.log('✅ Order created successfully:', data.data);
+                
+                // Create notification for gig owner
+                try {
+                    const orderNotificationData = {
+                        id: data.data.id,
+                        gig_owner_id: gig.owner_id,
+                        gig_id: gig.id,
+                        gig_title: gig.title,
+                        client_name: authUser.fullname || authUser.username || 'Client',
+                        price_at_purchase: orderPayload.price_at_purchase
+                    };
+                    
+                    console.log('🔔 Creating notification for gig owner:', orderNotificationData);
+                    const notificationResult = await notifyOrderCreated(orderNotificationData);
+                    
+                    if (notificationResult) {
+                        console.log('✅ Order notification sent successfully');
+                    } else {
+                        console.log('⚠️ Order notification failed to send');
+                    }
+                } catch (notificationError) {
+                    console.error('❌ Error sending order notification:', notificationError);
+                    // Don't fail the order creation if notification fails
+                }
+                
                 // Indicate success
                 setOrderCreated(true);
             } else {

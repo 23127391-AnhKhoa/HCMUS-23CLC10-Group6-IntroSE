@@ -32,6 +32,7 @@ const LoginForm = () => {
         throw new Error(data.message || 'Login failed.');
       }
 
+      // Set Supabase session với access token từ backend để có thể dùng realtime
       await supabase.auth.setSession({
         access_token: data.token,
         refresh_token: ''

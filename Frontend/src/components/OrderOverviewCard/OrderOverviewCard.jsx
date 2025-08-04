@@ -6,7 +6,6 @@
  */
 
 import React from 'react';
-import AutoPaymentTimer from '../AutoPaymentTimer/AutoPaymentTimer';
 import { 
     CalendarOutlined, 
     DollarCircleOutlined, 
@@ -117,17 +116,6 @@ const OrderOverviewCard = ({ order, userRole, onClick }) => {
                         <span>{formatDate(order.created_at)}</span>
                     </div>
                 </div>
-
-                {/* Auto Payment Timer (compact version for overview) */}
-                {order.status === 'delivered' && order.auto_payment_deadline && (
-                    <div className="mt-2">
-                        <AutoPaymentTimer
-                            deadline={order.auto_payment_deadline}
-                            userRole={userRole}
-                            compact={true}
-                        />
-                    </div>
-                )}
             </div>
         </div>
     );

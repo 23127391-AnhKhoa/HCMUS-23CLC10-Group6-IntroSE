@@ -21,7 +21,6 @@ import { EyeOutlined, ClockCircleOutlined, CheckCircleOutlined, CloseCircleOutli
 import Footer from '../Common/Footer';
 import OrderCard from '../components/OrderCard/OrderCard';
 import OrderOverviewCard from '../components/OrderOverviewCard/OrderOverviewCard';
-import AutoPaymentWidget from '../components/AutoPaymentWidget/AutoPaymentWidget';
 import { useAuth } from '../contexts/AuthContext';
 import ApiService from '../services/apiService';
 
@@ -37,7 +36,7 @@ const Orders = () => {
     const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
-    const [activeTab, setActiveTab] = useState('buyer'); // 'buyer' or 'seller'
+    const [activeTab, setActiveTab] = useState(authUser?.role || 'buyer'); // 'buyer' or 'seller'
     const [statusFilter, setStatusFilter] = useState('all');
     const [viewMode, setViewMode] = useState('overview'); // 'overview' or 'detailed'
     const [selectedOrderId, setSelectedOrderId] = useState(null);
@@ -72,15 +71,14 @@ const Orders = () => {
 
     useEffect(() => {
         if (!authLoading && authUser) {
-            if (authUser.role === 'buyer') {
-                setActiveTab('buyer');
-            } else {
-                setActiveTab('seller');
+            const correctTab = authUser.role === 'seller' ? 'seller' : 'buyer';
+            if (activeTab !== correctTab) {
+                setActiveTab(correctTab);
+                setCurrentPage(1);
+                setViewMode('overview');
             }
-            setCurrentPage(1);
-            setViewMode('overview');
         }
-    }, [authUser, authLoading]);
+    }, [authUser, authLoading, activeTab]);
 
     /**
      * Fetch orders from API based on current filters
@@ -196,19 +194,9 @@ const Orders = () => {
         console.log('📥 File downloaded from modal - updating order data');
         
         try {
-            // If we received an updated order object, update it in our orders list
-            if (orderOrFile && orderOrFile.id && orderOrFile.auto_payment_deadline) {
-                setOrders(prevOrders => 
-                    prevOrders.map(order => 
-                        order.id === orderOrFile.id ? { ...order, ...orderOrFile } : order
-                    )
-                );
-                console.log('Order updated with auto-payment deadline:', orderOrFile.auto_payment_deadline);
-            } else {
-                // Otherwise, refresh all orders data
-                await loadOrders();
-                console.log('Orders data refreshed after file download');
-            }
+            // Refresh all orders data after download
+            await loadOrders();
+            console.log('Orders data refreshed after file download');
         } catch (error) {
             console.error('Error updating orders after download:', error);
         }
@@ -604,16 +592,6 @@ const Orders = () => {
 
             <Footer />
 
-            {/* Auto Payment Widget - Floating countdown timer */}
-            {/* Temporarily disabled for debugging */}
-            {/*
-            <AutoPaymentWidget
-                orders={orders}
-                userRole={userRole}
-                onOrderClick={(orderId) => navigate(`/orders/${orderId}`)}
-                position="bottom-right"
-            />
-            */}
         </div>
     );
 };

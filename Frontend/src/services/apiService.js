@@ -309,35 +309,6 @@ class ApiService {
     }
   }
 
-  // Notification API methods
-  static async fetchNotifications() {
-    try {
-      const response = await fetch(`${API_BASE_URL}/notifications`, {
-        method: 'GET',
-        headers: this.getAuthHeaders()
-      });
-      
-      return await this.handleApiResponse(response);
-    } catch (error) {
-      console.error('Error fetching notifications:', error);
-      throw error;
-    }
-  }
-
-  static async markNotificationAsRead(notificationId) {
-    try {
-      const response = await fetch(`${API_BASE_URL}/notifications/${notificationId}/read`, {
-        method: 'PUT',
-        headers: this.getAuthHeaders()
-      });
-      
-      return await this.handleApiResponse(response);
-    } catch (error) {
-      console.error('Error marking notification as read:', error);
-      throw error;
-    }
-  }
-
   // File upload API methods
   static async uploadFile(file, category) {
     try {
@@ -563,6 +534,78 @@ class ApiService {
       return await this.handleApiResponse(response);
     } catch (error) {
       console.error('Error tracking file download:', error);
+      throw error;
+    }
+  }
+  // Review-related methods
+  static async checkCanReview(orderId) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/reviews/order/${orderId}/can-review`, {
+        method: 'GET',
+        headers: this.getAuthHeaders()
+      });
+      
+      return await this.handleApiResponse(response);
+    } catch (error) {
+      console.error('Error checking can review:', error);
+      throw error;
+    }
+  }
+
+  static async fetchOrderWithDetails(orderId) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/orders/${orderId}`, {
+        method: 'GET',
+        headers: this.getAuthHeaders()
+      });
+      
+      return await this.handleApiResponse(response);
+    } catch (error) {
+      console.error('Error fetching order details:', error);
+      throw error;
+    }
+  }
+
+  static async createReview(reviewData) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/reviews`, {
+        method: 'POST',
+        headers: this.getAuthHeaders(),
+        body: JSON.stringify(reviewData)
+      });
+      
+      return await this.handleApiResponse(response);
+    } catch (error) {
+      console.error('Error creating review:', error);
+      throw error;
+    }
+  }
+
+  static async fetchExistingReview(orderId) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/reviews/order/${orderId}`, {
+        method: 'GET',
+        headers: this.getAuthHeaders()
+      });
+      
+      return await this.handleApiResponse(response);
+    } catch (error) {
+      console.error('Error fetching existing review:', error);
+      throw error;
+    }
+  }
+
+  static async updateReview(reviewId, reviewData) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/reviews/${reviewId}`, {
+        method: 'PUT',
+        headers: this.getAuthHeaders(),
+        body: JSON.stringify(reviewData)
+      });
+      
+      return await this.handleApiResponse(response);
+    } catch (error) {
+      console.error('Error updating review:', error);
       throw error;
     }
   }

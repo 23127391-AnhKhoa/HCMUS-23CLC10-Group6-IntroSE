@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { FiHome, FiList, FiTrendingUp, FiUsers, FiSettings, FiHelpCircle, FiBell, FiSearch, FiArrowUp, FiArrowDown, FiMoreVertical, FiShoppingCart, FiUser, FiBarChart, FiFileText,FiMessageSquare } from 'react-icons/fi';
+import { FiHome, FiList, FiTrendingUp, FiUsers, FiSettings, FiHelpCircle, FiBell, FiSearch, FiArrowUp, FiArrowDown, FiMoreVertical, FiShoppingCart, FiUser, FiBarChart, FiFileText, FiMessageSquare, FiAlertCircle } from 'react-icons/fi';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
 
 // Helper functions (đặt ở đầu file AdminDashboard.js)
@@ -72,27 +72,20 @@ const visitorsDataMock = getDayLabels().map(day => ({
 const Sidebar = () => (
     <div className="w-64 bg-white h-screen flex flex-col justify-between p-4 shadow-lg">
       <div>
-        <div className="flex items-center space-x-2 mb-10 p-2">
-          <img src="https://i.pravatar.cc/150?u=freeland-logo" alt="Logo" className="w-10 h-10 rounded-full" />
-          <span className="font-bold text-xl text-gray-800">FREELAND</span>
+        <div className="flex items-center justify-center mb-10 p-2">
+          <img src="/logo.svg" alt="Logo" className="h-12 w-auto" />
         </div>
         <nav className="flex flex-col space-y-2">
-          <a href="#" className="flex items-center p-3 bg-blue-500 text-white font-bold rounded-lg transition-smooth shadow">
+          <a href="/admin/admindashboard" className="flex items-center p-3 bg-gray-100 text-gray-800 font-bold rounded-lg transition-smooth">
             <FiHome className="mr-3" /> Dashboard
           </a>
-          <a href="#" className="flex items-center p-3 text-gray-600 hover:bg-gray-100 rounded-lg transition-smooth">
-            <FiList className="mr-3" /> Orders
+          <a href="/admin/manage-reported-gigs" className="flex items-center p-3 text-gray-600 hover:bg-gray-100 rounded-lg transition-smooth">
+            <FiAlertCircle className="mr-3" /> Report
           </a>
           <a href="/admin/servicemanagement" className="flex items-center p-3 text-gray-600 hover:bg-gray-100 rounded-lg transition-smooth">
             <FiTrendingUp className="mr-3" /> Services Management
           </a>
-          <a href="#" className="flex items-center p-3 text-gray-600 hover:bg-gray-100 rounded-lg transition-smooth">
-            <FiUsers className="mr-3" /> Earnings
-          </a>
-          <a href="#" className="flex items-center p-3 text-gray-600 hover:bg-gray-100 rounded-lg transition-smooth">
-            <FiUsers className="mr-3" /> Community
-          </a>
-          <a href="/admin/Usermanagement" className="flex items-center p-3 text-gray-600 hover:bg-gray-100 rounded-lg transition-smooth">
+          <a href="/admin/usermanagement" className="flex items-center p-3 text-gray-600 hover:bg-gray-100 rounded-lg transition-smooth">
             <FiUsers className="mr-3" /> User Management
           </a>
         </nav>

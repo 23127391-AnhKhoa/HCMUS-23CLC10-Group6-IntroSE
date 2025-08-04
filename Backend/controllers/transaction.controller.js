@@ -1,8 +1,7 @@
 // controllers/transaction.controller.js
 const User = require('../models/user.model');
-const Transaction = require('../models/transaction.model');
+const Transaction = require('../models/transactions.model');
 const jwt = require('jsonwebtoken');
-const TransactionModel = require('../models/transactions.model');
 /**
  * JWT Token Generation Best Practices:
  * 
@@ -73,7 +72,7 @@ const TransactionController = {
       };
 
       // ✅ Ghi vào bảng Transactions
-      const { error: insertError } = await TransactionModel.create({
+      const { error: insertError } = await Transaction.create({
         user_id: userUuid,
         amount: parseFloat(amount),
         description: 'Deposit to account',
@@ -158,7 +157,7 @@ const TransactionController = {
       };
 
       // ✅ Ghi vào bảng Transactions
-      const { error: insertError } = await TransactionModel.create({
+      const { error: insertError } = await Transaction.create({
         user_id: userUuid,
         amount: parseFloat(amount),
         description: 'Withdraw from account',
@@ -219,7 +218,7 @@ const TransactionController = {
       }
 
       // Get transaction history with pagination
-      const { data: transactions, error } = await TransactionModel.getByUserId(
+      const { data: transactions, error } = await Transaction.getByUserId(
         userUuid, 
         { 
           ...typeFilter,
@@ -233,7 +232,7 @@ const TransactionController = {
       }
 
       // Get total count for pagination
-      const { data: totalCount, error: countError } = await TransactionModel.getTotalCount(
+      const { data: totalCount, error: countError } = await Transaction.getTotalCount(
         userUuid, 
         typeFilter
       );

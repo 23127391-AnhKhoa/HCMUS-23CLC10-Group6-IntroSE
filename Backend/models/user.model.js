@@ -11,7 +11,7 @@ const User = {
         if (!ids || ids.length === 0) return [];
         const { data, error } = await supabase
             .from('User')
-            .select('uuid, username') // Chỉ lấy các trường cần thiết
+            .select('uuid, username, status, ban_reason, banned_until') // Thêm các field cần thiết cho ban
             .in('uuid', ids);
         if (error) throw error;
         return data;
