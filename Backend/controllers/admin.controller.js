@@ -104,21 +104,10 @@ const getUserReports = async (req, res) => {
         res.status(500).json({ status: 'error', message: error.message });
     }
 };
-
-
-const getDashboardAnalytics = async (req, res) => {
-    try {
-        const analytics = await AdminService.fetchDashboardAnalytics();
-        res.status(200).json({ status: 'success', data: analytics });
-    } catch (error) {
-        res.status(500).json({ status: 'error', message: error.message });
-    }
-};
 module.exports = {
     getAdminStats,
     createAdminLog,
     getGigReports,
     dismissReport,
-    getUserReports,
-    getDashboardAnalytics
+    getUserReports
 };

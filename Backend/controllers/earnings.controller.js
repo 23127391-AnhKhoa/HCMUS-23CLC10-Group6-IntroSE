@@ -1,6 +1,5 @@
 // controllers/earnings.controller.js
 const OrderService = require('../services/order.service');
-const UserService = require('../services/user.service');
 
 /**
  * Earnings Controller
@@ -62,10 +61,25 @@ const EarningsController = {
 
       console.log('📅 Date range:', { startDate, endDate });
 
-      // Use UserService to get earnings from Transactions table
-      const earningsData = await UserService.getSellerEarnings(sellerId, period);
+      // Get orders for this seller
+      const allOrders = await OrderService.getOwnerOrders(sellerId, { limit: 1000 });
+      console.log('📦 Total orders found:', allOrders?.length || 0);
+
+      // Filter orders by date range if specified
+      let filteredOrders = allOrders;
+      if (startDate && endDate) {
+        filteredOrders = allOrders.filter(order => {
+          const orderDate = new Date(order.created_at);
+          return orderDate >= startDate && orderDate <= endDate;
+        });
+      }
+
+      console.log('📦 Filtered orders for period:', filteredOrders?.length || 0);
+
+      // Calculate statistics
+      const stats = calculateEarningsStats(filteredOrders);
       
-      console.log('� [DEBUG] Earnings data from UserService:', earningsData);
+      console.log('📊 Calculated stats:', stats);
 
       res.status(200).json({
         status: 'success',
@@ -75,7 +89,7 @@ const EarningsController = {
             startDate: startDate?.toISOString() || null,
             endDate: endDate?.toISOString() || null
           },
-          ...earningsData
+          ...stats
         }
       });
 
@@ -119,11 +133,11 @@ const EarningsController = {
         });
       }
 
-      // Use UserService to get earnings data including monthly breakdown
-      const earningsData = await UserService.getSellerEarnings(sellerId, 'allTime');
-      
-      // Extract monthly breakdown from earnings data
-      const monthlyData = earningsData.monthlyBreakdown || [];
+      // Get all orders for this seller
+      const allOrders = await OrderService.getOwnerOrders(sellerId, { limit: 1000 });
+
+      // Generate monthly breakdown
+      const monthlyData = generateMonthlyBreakdown(allOrders, parseInt(months));
 
       res.status(200).json({
         status: 'success',
@@ -169,8 +183,8 @@ const EarningsController = {
         });
       }
 
-      // Get recent orders using the UserService function
-      const recentOrders = await UserService.getSellerRecentOrders(sellerId, parseInt(limit));
+      // Get recent orders using the service function
+      const recentOrders = await OrderService.getSellerRecentOrders(sellerId, parseInt(limit));
       
       res.status(200).json({
         status: 'success',
@@ -213,10 +227,10 @@ function calculateEarningsStats(orders) {
 
   const completedOrders = orders.filter(order => order.status === 'completed');
   const activeOrders = orders.filter(order => 
-    [ 'in_progress'].includes(order.status?.toLowerCase())
+    ['pending', 'in_progress', 'accepted'].includes(order.status?.toLowerCase())
   );
   const pendingOrders = orders.filter(order => 
-    ['pending'].includes(order.status?.toLowerCase())
+    ['pending', 'accepted'].includes(order.status?.toLowerCase())
   );
 
   // Calculate total earnings from completed orders
