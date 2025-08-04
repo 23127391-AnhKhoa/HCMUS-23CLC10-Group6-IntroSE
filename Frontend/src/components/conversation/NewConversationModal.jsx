@@ -23,6 +23,20 @@ const NewConversationModal = ({
       return;
     }
 
+    // Don't search if less than 2 characters
+    if (searchTerm.trim().length < 2) {
+      setAvailableUsers([]);
+      return;
+    }
+
+    // Debug logs
+    console.log('🔍 Search users called with:', {
+      searchTerm,
+      searchTermLength: searchTerm.trim().length,
+      token: token ? 'Token exists' : 'No token',
+      tokenLength: token ? token.length : 0
+    });
+
     setSearchingUsers(true);
     try {
       const response = await fetch(`http://localhost:8000/api/users/search?q=${encodeURIComponent(searchTerm)}`, {
@@ -31,11 +45,24 @@ const NewConversationModal = ({
         }
       });
 
+      console.log('🔍 Search response:', {
+        status: response.status,
+        ok: response.ok,
+        statusText: response.statusText
+      });
+
       if (response.ok) {
-        const data = await response.json();
-        setAvailableUsers(data || []);
+        const result = await response.json();
+        console.log('🔍 Search result:', result);
+        // Backend returns { status: 'success', data: [...] }
+        setAvailableUsers(result.data || []);
       } else {
-        console.error('Error searching users:', response.status);
+        const errorData = await response.json().catch(() => ({ message: 'Unknown error' }));
+        console.error('Error searching users:', {
+          status: response.status,
+          statusText: response.statusText,
+          error: errorData
+        });
         setAvailableUsers([]);
       }
     } catch (error) {
@@ -77,7 +104,7 @@ const NewConversationModal = ({
             Search for users
           </label>
           <Input
-            placeholder="Enter username or full name..."
+            placeholder="Enter username or full name (minimum 2 characters)..."
             value={userSearchTerm}
             onChange={(e) => handleUserSearch(e.target.value)}
             prefix={<MagnifyingGlassIcon className="h-4 w-4 text-gray-400" />}
@@ -119,7 +146,7 @@ const NewConversationModal = ({
             </div>
           ) : !userSearchTerm ? (
             <div className="text-center py-8 text-gray-500">
-              Start typing to search for users
+              Enter at least 2 characters to search for users
             </div>
           ) : (
             <div className="text-center py-8 text-gray-500">

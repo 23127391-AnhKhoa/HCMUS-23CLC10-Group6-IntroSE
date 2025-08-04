@@ -238,6 +238,7 @@ const searchUsers = async (req, res) => {
         const result = await User.searchUsers(q.trim());
         res.status(200).json(result);
     } catch (error) {
+        console.error('❌ searchUsers error:', error);
         res.status(500).json({ 
             status: 'error', 
             message: error.message 
