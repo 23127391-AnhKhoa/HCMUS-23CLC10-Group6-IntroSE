@@ -523,7 +523,6 @@ const OrderCard = ({
                 });
                 actions.push({
                     label: 'Leave Review',
-                    action: () => navigate(`/review/${safeOrder.id}`),
                     className: 'bg-purple-600 hover:bg-purple-700 text-white',
                     icon: <FileTextOutlined />
                 });
@@ -841,7 +840,7 @@ const OrderCard = ({
                     {availableActions.map((action, index) => (
                         <button
                             key={index}
-                            onClick={action.action}
+                            onClick={(e) => action.action(e)}
                             className={`px-4 py-2 rounded-lg font-medium transition-colors flex items-center ${action.className}`}
                         >
                             {action.icon}

@@ -16,6 +16,7 @@ import InboxPage from './pages/InboxPage';
 import SellerInfo from './pages/SellerInfo';
 import Payment from './pages/Payment';
 import PaymentSuccess from './pages/PaymentSuccess';
+import ReviewPage from './pages/ReviewPage';
 import Footer from './Common/Footer';
 import BecomeSellerPage from './pages/BecomeSeller';
 import UserManagement from './pages/Admin/UserManagement';
@@ -76,6 +77,8 @@ function App() {
 
             <Route path="/payment/:orderId" element={<Payment />} />
             <Route path="/payment/success/:orderId" element={<PaymentSuccess />} />
+
+             <Route path="/order/:orderId/review" element={<ReviewPage />} />
 
             <Route path="/become-seller" element={<BecomeSellerPage />} />
 
