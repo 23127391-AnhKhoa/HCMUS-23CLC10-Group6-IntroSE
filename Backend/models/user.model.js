@@ -224,7 +224,27 @@ const User = {
       console.error('Error in toggleFavorite:', error);
       throw error;
     }
-  }
+  },
+  getCount: async (filters = {}) => {
+        let query = supabase
+            .from('User')
+            .select('*', { count: 'exact', head: true });
+
+        if (filters.role) {
+            query = query.eq('role', filters.role);
+        }
+
+        const { count, error } = await query;
+        if (error) throw error;
+        return count;
+    },
+    getFavoriteCount: async () => {
+        const { count, error } = await supabase
+            .from('UserFavorites')
+            .select('*', { count: 'exact', head: true });
+        if (error) throw error;
+        return count;
+    },
 };
 
 module.exports = User;

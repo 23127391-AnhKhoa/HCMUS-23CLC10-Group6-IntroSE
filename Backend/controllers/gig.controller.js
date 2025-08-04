@@ -265,12 +265,20 @@ const getSellerGigsWithStats = async (req, res) => {
     });
   }
 };
-
+const getPublicStats = async (req, res) => {
+    try {
+        const stats = await GigService.fetchPublicStats();
+        res.status(200).json({ status: 'success', data: stats });
+    } catch (error) {
+        res.status(500).json({ status: 'error', message: error.message });
+    }
+};
 module.exports = {
   healthCheck,
   getAllGigs,
   getRecommendedGigs,  // THÊM MỚI
   getSellerGigsWithStats, // NEW
+  getPublicStats,
   getGigById,
   createGig,
   updateGig,

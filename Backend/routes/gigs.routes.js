@@ -29,6 +29,9 @@ const optionalAuth = (req, res, next) => {
 // GET /api/gigs/health - Health check endpoint
 router.get('/health', gigController.healthCheck);
 
+// PUBLIC STATS endpoint - MUST be before /:id route
+router.get('/public-stats', gigController.getPublicStats);
+
 // THÊM MỚI: Endpoint cho recommendations
 router.get('/recommendations', gigController.getRecommendedGigs);
 

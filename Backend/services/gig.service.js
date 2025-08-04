@@ -1,5 +1,8 @@
 // services/gig.service.js
 const Gig = require('../models/gig.model');
+const User = require('../models/user.model');
+const Order = require('../models/order.model');
+const Category = require('../models/category.model');
 const supabase = require('../config/supabaseClient');
 
 const GigService = {
@@ -496,7 +499,27 @@ const GigService = {
       console.error('💥 [Gig Service] Error in getSellerGigsWithStats:', error);
       throw new Error(`Error fetching seller gigs with stats: ${error.message}`);
     }
-  }
+  },
+  fetchPublicStats: async () => {
+        const [
+            totalUsers,
+            totalGigs,
+            completedOrders,
+            totalCategories
+        ] = await Promise.all([
+            User.getCount(),
+            Gig.getCount(),
+            Order.getCount({ status: 'completed' }),
+            Category.getCount()
+        ]);
+
+        return {
+            totalUsers: totalUsers || 0,
+            totalGigs: totalGigs || 0,
+            completedOrders: completedOrders || 0,
+            totalCategories: totalCategories || 0,
+        };
+    }
 };
 
 module.exports = GigService;

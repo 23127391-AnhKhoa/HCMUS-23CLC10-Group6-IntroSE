@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import AuthPage from './pages/AuthPage';
@@ -16,6 +16,7 @@ import InboxPage from './pages/InboxPage';
 import SellerInfo from './pages/SellerInfo';
 import Payment from './pages/Payment';
 import PaymentSuccess from './pages/PaymentSuccess';
+import ReviewPage from './pages/ReviewPage';
 import Footer from './Common/Footer';
 import BecomeSellerPage from './pages/BecomeSeller';
 import UserManagement from './pages/Admin/UserManagement';
@@ -27,10 +28,15 @@ import GigDetailContent from './pages/Admin/AdminGigContent';
 import AdminSellerInfor from './pages/Admin/AdminSellerInfor'; 
 import ManageReportedGigs from './pages/Admin/ManageReportedGigs'; 
 import ReportUserPage from './pages/ReportUserPage';
+import ReportGigPage from './pages/ReportGigPage';
 import NotificationPage from './pages/NotificationPage';
-import ReportGigPage from './pages/ReportGigPage'; 
+
 
 function App() {
+  useEffect(() => {
+    // Không cần chờ kết quả, chỉ cần gửi đi
+    fetch('/api/visits/log', { method: 'POST' });
+  }, []); // Mảng rỗng đảm bảo nó chỉ chạy 1 lần khi App được mount
   return (
     <AuthProvider>
       <Router>
@@ -76,6 +82,7 @@ function App() {
 
             <Route path="/payment/:orderId" element={<Payment />} />
             <Route path="/payment/success/:orderId" element={<PaymentSuccess />} />
+            <Route path="/order/:orderId/review" element={<ReviewPage />} />
 
             <Route path="/become-seller" element={<BecomeSellerPage />} />
 
