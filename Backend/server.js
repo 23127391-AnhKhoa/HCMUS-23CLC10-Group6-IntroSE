@@ -46,6 +46,7 @@ const conversationRoutes = require('./routes/conversations.routes');
 const categoriesRoutes = require('./routes/categories.routes');
 const notificationRoutes = require('./routes/notifications.routes');
 const pageVisitRoutes = require('./routes/pageVisit.routes');
+const reviewRoutes = require('./routes/reviews.routes');
 
 // API routes
 app.use('/api/auth', authRoutes);
@@ -59,6 +60,7 @@ app.use('/api/upload', uploadRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/categories', categoriesRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/reviews', reviewRoutes);
 
 //app.use('/api/admin', adminRoutes);
 // Xài cái api thì nhớ bỏ // ở đầu, ví dụ xài gigs thì bỏ //, tại bây giờ chưa định nghĩa mà để dô thì nó không được hiểu là function, nó sẽ bị lỗi

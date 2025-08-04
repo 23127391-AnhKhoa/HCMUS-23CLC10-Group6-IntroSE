@@ -5,12 +5,15 @@ import Navbar from '../Common/NavBar_Buyer';
 import { useAuth } from '../contexts/AuthContext';
 import ReportButton from '../components/ReportButton';
 import ServCard from '../Common/ServCard';
+import ReviewList from '../components/ReviewList/ReviewList';
+import ReviewSummary from '../components/ReviewSummary/ReviewSummary';
 const SellerInfo = () => {
     const { sellerId } = useParams();
     const [sellerDetails, setSellerDetails] = useState(null);
     const [sellerGigs, setSellerGigs] = useState([]);
     const [sellerStats, setSellerStats] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [activeTab, setActiveTab] = useState('gigs'); // 'gigs' or 'reviews'
     const { token } = useAuth();
     const navigate = useNavigate();
     
@@ -255,38 +258,82 @@ const SellerInfo = () => {
                         </div>
                     </div>
 
-                    {/* Gigs Section */}
-                    <div className="lg:col-span-2">
-                        <div className="mb-6">
-                            <h2 className="text-2xl font-semibold text-gray-900 mb-2 flex items-center">
-                                <TrendingUp className="w-6 h-6 mr-2 text-blue-600" />
-                                Services by {sellerDetails.fullname?.split(' ')[0]}
-                            </h2>
-                            <p className="text-gray-600">Discover amazing services offered by this talented seller</p>
+                    {/* Tabs Navigation */}
+                    <div className="lg:col-span-2 mb-6">
+                        <div className="flex space-x-1 bg-gray-100 rounded-lg p-1">
+                            <button
+                                onClick={() => setActiveTab('gigs')}
+                                className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
+                                    activeTab === 'gigs'
+                                        ? 'bg-white text-blue-600 shadow-sm'
+                                        : 'text-gray-600 hover:text-gray-900'
+                                }`}
+                            >
+                                <TrendingUp className="w-4 h-4 inline mr-2" />
+                                Dịch vụ ({sellerGigs.length})
+                            </button>
+                            <button
+                                onClick={() => setActiveTab('reviews')}
+                                className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
+                                    activeTab === 'reviews'
+                                        ? 'bg-white text-blue-600 shadow-sm'
+                                        : 'text-gray-600 hover:text-gray-900'
+                                }`}
+                            >
+                                <Star className="w-4 h-4 inline mr-2" />
+                                Đánh giá
+                            </button>
                         </div>
+                    </div>
 
-                        {sellerGigs.length > 0 ? (
+                    {/* Content based on active tab */}
+                    <div className="lg:col-span-2">
+                        {activeTab === 'gigs' ? (
                             <>
-                                
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    {sellerGigs.map((gig, index) => (
-                                        <div key={gig.id || index} className="transform hover:scale-105 transition-transform duration-200">
-                                            <ServCard gig={gig} />
-                                        </div>
-                                    ))}
+                                <div className="mb-6">
+                                    <h2 className="text-2xl font-semibold text-gray-900 mb-2 flex items-center">
+                                        <TrendingUp className="w-6 h-6 mr-2 text-blue-600" />
+                                        Services by {sellerDetails.fullname?.split(' ')[0]}
+                                    </h2>
+                                    <p className="text-gray-600">Discover amazing services offered by this talented seller</p>
                                 </div>
+
+                                {sellerGigs.length > 0 ? (
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        {sellerGigs.map((gig, index) => (
+                                            <div key={gig.id || index} className="transform hover:scale-105 transition-transform duration-200">
+                                                <ServCard gig={gig} />
+                                            </div>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <div className="bg-white rounded-xl shadow-lg p-12 text-center">
+                                        <div className="w-24 h-24 mx-auto mb-6 bg-gray-100 rounded-full flex items-center justify-center">
+                                            <TrendingUp className="w-12 h-12 text-gray-400" />
+                                        </div>
+                                        <h3 className="text-xl font-semibold text-gray-900 mb-2">No Services Yet</h3>
+                                        <p className="text-gray-600">
+                                            This seller hasn't created any services yet. Check back later for exciting offerings!
+                                        </p>
+                                    </div>
+                                )}
                             </>
                         ) : (
-                            <div className="bg-white rounded-xl shadow-lg p-12 text-center">
-                                <div className="w-24 h-24 mx-auto mb-6 bg-gray-100 rounded-full flex items-center justify-center">
-                                    <TrendingUp className="w-12 h-12 text-gray-400" />
-                                </div>
-                                <h3 className="text-xl font-semibold text-gray-900 mb-2">No Services Yet</h3>
-                                <p className="text-gray-600">
-                                    This seller hasn't created any services yet. Check back later for exciting offerings!
-                                </p>
+                            <div className="space-y-6">
+                                {/* Review Summary */}
+                                <ReviewSummary sellerId={sellerId} />
+                                
+                                {/* Review List */}
+                                <ReviewList sellerId={sellerId} showHeader={false} />
                             </div>
                         )}
+                    </div>
+
+                    {/* Sidebar - moved to right column */}
+                    <div className="lg:col-span-1">
+                        <div className="sticky top-6">
+                            <ReviewSummary sellerId={sellerId} compact={true} />
+                        </div>
                     </div>
                 </div>
             </div>

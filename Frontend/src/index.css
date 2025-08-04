@@ -236,8 +236,36 @@
   }
 }
 
+@keyframes fadeIn {
+  from { 
+    opacity: 0; 
+  }
+  to { 
+    opacity: 1; 
+  }
+}
+
+@keyframes scaleIn {
+  from { 
+    opacity: 0; 
+    transform: scale(0.9);
+  }
+  to { 
+    opacity: 1; 
+    transform: scale(1);
+  }
+}
+
 .animate-review-card {
   animation: reviewCardIn 0.6s ease-out;
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out;
+}
+
+.animate-scale-in {
+  animation: scaleIn 0.4s ease-out;
 }
 
 /* Staggered animation for review cards */
@@ -246,6 +274,28 @@
 .animate-review-card:nth-child(3) { animation-delay: 0.3s; }
 .animate-review-card:nth-child(4) { animation-delay: 0.4s; }
 .animate-review-card:nth-child(5) { animation-delay: 0.5s; }
+
+/* Star rating hover effects */
+.star-rating button:hover {
+  transform: scale(1.1);
+  transition: transform 0.2s ease;
+}
+
+/* Review form animations */
+.review-form-slide {
+  animation: slideUp 0.5s ease-out;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
 
 /* Improved toast animations */
 @keyframes toastBounceIn {
@@ -391,4 +441,55 @@ body {
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background: linear-gradient(45deg, #2563EB, #7C3AED);
   transform: scale(1.05);
+}
+
+/* Review Page Specific Animations */
+@keyframes review-card-entrance {
+  from { 
+    opacity: 0; 
+    transform: translateY(30px) scale(0.95); 
+  }
+  to { 
+    opacity: 1; 
+    transform: translateY(0) scale(1); 
+  }
+}
+
+.animate-review-card {
+  animation: review-card-entrance 0.6s ease-out forwards;
+}
+
+@keyframes star-bounce {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.2); }
+}
+
+.animate-star-bounce {
+  animation: star-bounce 0.3s ease-in-out;
+}
+
+@keyframes gradient-shift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.animate-gradient {
+  background-size: 200% 200%;
+  animation: gradient-shift 3s ease infinite;
+}
+
+/* Text utilities */
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.line-clamp-3 {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
