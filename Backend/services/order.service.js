@@ -1171,6 +1171,38 @@ getClientOrders: async (clientId, options = {}) => {
       console.error('💥 [Order Service] Error processing order payment:', error);
       throw error;
     }
+  },
+
+  /**
+   * Get user's available balance information
+   * 
+   * @param {string} userId - User UUID
+   * @returns {Promise<Object>} Balance information with user-friendly messages
+   */
+  getUserBalanceInfo: async (userId) => {
+    try {
+      console.log('💰 [Order Service] Getting balance info for user:', userId);
+      
+      const balanceInfo = await Order.calculateAvailableBalance(userId);
+      
+      // Create user-friendly message
+      let message;
+      if (balanceInfo.reservedAmount > 0) {
+        message = `You have $${balanceInfo.availableBalance.toFixed(2)} available to spend. $${balanceInfo.reservedAmount.toFixed(2)} is reserved for ${balanceInfo.pendingOrders} pending order(s).`;
+      } else {
+        message = `You have $${balanceInfo.availableBalance.toFixed(2)} available to spend.`;
+      }
+      
+      return {
+        ...balanceInfo,
+        message: message,
+        canAfford: (amount) => balanceInfo.availableBalance >= amount
+      };
+      
+    } catch (error) {
+      console.error('💥 [Order Service] Error getting balance info:', error);
+      throw error;
+    }
   }
 };
 
