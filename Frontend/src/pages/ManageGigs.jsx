@@ -4,6 +4,8 @@ import { useNavigate } from 'react-router-dom';
 import NavBar_Seller from '../Common/NavBar_Seller';
 import Footer from '../Common/Footer';
 import { createSafeHtml, truncateHtml } from '../utils/htmlSanitizer';
+import GigService from '../services/gigService';
+import ConfirmationModal from '../components/ConfirmationModal';
 
 const ManageGigs = () => {
   const { authUser, token } = useAuth();
@@ -12,6 +14,10 @@ const ManageGigs = () => {
   const [gigs, setGigs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  
+  // Modal state for delete confirmation
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [gigToDelete, setGigToDelete] = useState(null);
 
   // Get seller ID from auth context
   const getSellerId = () => {
@@ -24,7 +30,7 @@ const ManageGigs = () => {
 
   const sellerId = getSellerId();
 
-  // Fetch seller's gigs from backend with statistics
+  // Fetch seller's gigs from backend with statistics using service layer
   const fetchGigs = async () => {
     if (!sellerId) {
       setError('Please log in to view your gigs');
@@ -34,37 +40,23 @@ const ManageGigs = () => {
 
     try {
       setLoading(true);
-      console.log('🔍 Fetching gigs with stats for seller:', sellerId);
-
-      const response = await fetch(`http://localhost:8000/api/gigs/seller/${sellerId}/stats`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      console.log('✅ Gigs data with stats received:', data);
-
-      if (data.status === 'success') {
-        setGigs(data.data || []);
-        console.log('📊 All gigs loaded:', data.data?.length || 0);
+      
+      const result = await GigService.getSellerGigsWithStats(sellerId, token);
+      
+      if (result.success) {
+        setGigs(result.data);
+        console.log('📊 All gigs loaded:', result.data?.length || 0);
         
         // Debug: Log gig statuses
-        if (data.data) {
-          const statusCounts = data.data.reduce((acc, gig) => {
+        if (result.data) {
+          const statusCounts = result.data.reduce((acc, gig) => {
             acc[gig.status] = (acc[gig.status] || 0) + 1;
             return acc;
           }, {});
           console.log('📈 Gig status breakdown:', statusCounts);
         }
       } else {
-        throw new Error(data.message || 'Failed to fetch gigs');
+        throw new Error(result.error || 'Failed to fetch gigs');
       }
     } catch (error) {
       console.error('💥 Error fetching gigs:', error);
@@ -78,35 +70,12 @@ const ManageGigs = () => {
     fetchGigs();
   }, [sellerId, token]);
 
-  // Filter gigs based on active tab
-  const filteredGigs = gigs.filter(gig => {
-    switch (activeTab) {
-      case 'active':
-        return gig.status === 'active';
-      case 'paused':
-        return gig.status === 'paused' ;
-      case 'denied':
-        return gig.status === 'denied';
-      default:
-        return true;
-    }
-  });
+  // Filter gigs based on active tab using service layer
+  const filteredGigs = GigService.filterGigsByStatus(gigs, activeTab);
 
-  // Get gig statistics (now from API response)
+  // Get gig statistics using service layer
   const getGigStats = (gig) => {
-    // Return real statistics from API if available, otherwise fallback to mock data
-    if (gig.statistics) {
-      return gig.statistics;
-    }
-    
-    // Fallback mock data
-    return {
-      impressions: Math.floor(Math.random() * 2000) + 500,
-      clicks: Math.floor(Math.random() * 500) + 100,
-      orders: Math.floor(Math.random() * 50) + 5,
-      cancellations: Math.floor(Math.random() * 5),
-      earnings: Math.floor(Math.random() * 1000) + 200
-    };
+    return GigService.getGigStats(gig);
   };
 
   // Handle tab change
@@ -114,33 +83,20 @@ const ManageGigs = () => {
     setActiveTab(tab);
   };
 
-  // Handle gig actions
+  // Handle gig actions using service layer
   const handleEdit = (gigId) => {
     navigate(`/gigs/edit/${gigId}`);
   };
 
   const handlePause = async (gigId) => {
     try {
-      console.log('🔄 Pausing gig:', gigId);
+      const result = await GigService.pauseGig(gigId, token);
       
-      const response = await fetch(`http://localhost:8000/api/gigs/${gigId}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ status: 'paused' })
-      });
-
-      console.log('📡 Response status:', response.status);
-      
-      if (response.ok) {
-        const data = await response.json();
-        console.log('✅ Pause response:', data);
+      if (result.success) {
         fetchGigs(); // Refresh gigs list
       } else {
-        const errorData = await response.json();
-        console.error('❌ Pause failed:', errorData);
+        console.error('❌ Pause failed:', result.error);
+        // You could show a toast notification here
       }
     } catch (error) {
       console.error('💥 Error pausing gig:', error);
@@ -149,56 +105,47 @@ const ManageGigs = () => {
 
   const handleActivate = async (gigId) => {
     try {
-      const response = await fetch(`http://localhost:8000/api/gigs/${gigId}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ status: 'active' })
-      });
-
-      if (response.ok) {
+      const result = await GigService.activateGig(gigId, token);
+      
+      if (result.success) {
         fetchGigs(); // Refresh gigs list
+      } else {
+        console.error('❌ Activate failed:', result.error);
+        // You could show a toast notification here
       }
     } catch (error) {
-      console.error('Error activating gig:', error);
+      console.error('💥 Error activating gig:', error);
     }
   };
 
   const handleDelete = async (gigId) => {
-    // Show confirmation dialog
-    const confirmed = window.confirm(
-      'Are you sure you want to delete this gig? This action cannot be undone.'
-    );
-    
-    if (!confirmed) return;
+    // Show confirmation modal instead of alert
+    setGigToDelete(gigId);
+    setShowDeleteModal(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!gigToDelete) return;
 
     try {
-      console.log('🗑️ Deleting gig:', gigId);
+      const result = await GigService.deleteGig(gigToDelete, token);
       
-      const response = await fetch(`http://localhost:8000/api/gigs/${gigId}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ status: 'deleted' })
-      });
-
-      console.log('📡 Delete response status:', response.status);
-      
-      if (response.ok) {
-        const data = await response.json();
-        console.log('✅ Delete response:', data);
+      if (result.success) {
         fetchGigs(); // Refresh gigs list
+        setShowDeleteModal(false);
+        setGigToDelete(null);
       } else {
-        const errorData = await response.json();
-        console.error('❌ Delete failed:', errorData);
+        console.error('❌ Delete failed:', result.error);
+        // You could show a toast notification here
       }
     } catch (error) {
       console.error('💥 Error deleting gig:', error);
     }
+  };
+
+  const cancelDelete = () => {
+    setShowDeleteModal(false);
+    setGigToDelete(null);
   };
 
   if (loading) {
@@ -258,26 +205,25 @@ const ManageGigs = () => {
         </div>
 
         {/* Summary Stats */}
-        {filteredGigs.length > 0 && (
-          <div className="mb-8 grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="bg-white p-6 rounded-lg shadow-sm">
-              <h3 className="text-lg font-medium text-gray-900">Total Gigs</h3>
-              <p className="text-3xl font-bold text-green-600 mt-2">{filteredGigs.length}</p>
+        {filteredGigs.length > 0 && (() => {
+          const summaryStats = GigService.calculateSummaryStats(filteredGigs);
+          return (
+            <div className="mb-8 grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="bg-white p-6 rounded-lg shadow-sm">
+                <h3 className="text-lg font-medium text-gray-900">Total Gigs</h3>
+                <p className="text-3xl font-bold text-green-600 mt-2">{summaryStats.totalGigs}</p>
+              </div>
+              <div className="bg-white p-6 rounded-lg shadow-sm">
+                <h3 className="text-lg font-medium text-gray-900">Total Orders</h3>
+                <p className="text-3xl font-bold text-green-600 mt-2">{summaryStats.totalOrders}</p>
+              </div>
+              <div className="bg-white p-6 rounded-lg shadow-sm">
+                <h3 className="text-lg font-medium text-gray-900">Total Earnings</h3>
+                <p className="text-3xl font-bold text-green-600 mt-2">${summaryStats.totalEarnings.toLocaleString()}</p>
+              </div>
             </div>
-            <div className="bg-white p-6 rounded-lg shadow-sm">
-              <h3 className="text-lg font-medium text-gray-900">Total Orders</h3>
-              <p className="text-3xl font-bold text-green-600 mt-2">
-                {filteredGigs.reduce((sum, gig) => sum + (getGigStats(gig).orders || 0), 0)}
-              </p>
-            </div>
-            <div className="bg-white p-6 rounded-lg shadow-sm">
-              <h3 className="text-lg font-medium text-gray-900">Total Earnings</h3>
-              <p className="text-3xl font-bold text-green-600 mt-2">
-                ${filteredGigs.reduce((sum, gig) => sum + (getGigStats(gig).earnings || 0), 0).toLocaleString()}
-              </p>
-            </div>
-          </div>
-        )}
+          );
+        })()}
 
         {/* Gigs Table */}
         <div className="bg-white shadow-sm rounded-lg overflow-hidden">
@@ -428,6 +374,19 @@ const ManageGigs = () => {
         </div>
         </div>
       </div>
+      
+      {/* Delete Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={showDeleteModal}
+        onClose={cancelDelete}
+        onConfirm={confirmDelete}
+        title="Delete Gig"
+        message="Are you sure you want to delete this gig? This action cannot be undone and will permanently remove the gig from your account."
+        confirmText="Delete"
+        cancelText="Cancel"
+        type="danger"
+      />
+      
       <Footer />
     </>
   );
