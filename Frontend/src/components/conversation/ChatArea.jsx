@@ -98,31 +98,7 @@ const ChatArea = ({
 
         {/* Skeleton Messages Area */}
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
-          {/* Skeleton Message 1 - Other user */}
-          <div className="flex justify-start">
-            <div className="max-w-xs lg:max-w-md p-4 bg-gray-200 rounded-lg animate-pulse">
-              <div className="h-4 bg-gray-300 rounded w-48 mb-2"></div>
-              <div className="h-4 bg-gray-300 rounded w-32 mb-2"></div>
-              <div className="h-3 bg-gray-300 rounded w-16"></div>
-            </div>
-          </div>
-
-          {/* Skeleton Message 2 - Own message */}
-          <div className="flex justify-end">
-            <div className="max-w-xs lg:max-w-md p-4 bg-gray-300 rounded-lg animate-pulse">
-              <div className="h-4 bg-gray-400 rounded w-40 mb-2"></div>
-              <div className="h-3 bg-gray-400 rounded w-16"></div>
-            </div>
-          </div>
-
-          {/* Skeleton Message 3 - Other user */}
-          <div className="flex justify-start">
-            <div className="max-w-xs lg:max-w-md p-4 bg-gray-200 rounded-lg animate-pulse">
-              <div className="h-4 bg-gray-300 rounded w-56 mb-2"></div>
-              <div className="h-3 bg-gray-300 rounded w-16"></div>
-            </div>
-          </div>
-
+          
           {/* Skeleton Message 4 - Own message */}
           <div className="flex justify-end">
             <div className="max-w-xs lg:max-w-md p-4 bg-gray-300 rounded-lg animate-pulse">

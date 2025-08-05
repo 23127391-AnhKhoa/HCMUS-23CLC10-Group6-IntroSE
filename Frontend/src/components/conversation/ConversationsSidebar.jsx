@@ -28,8 +28,8 @@ const ConversationsSidebar = ({
   return (
     <div className="w-1/3 bg-white border-r border-gray-200 flex flex-col">
       {/* Header */}
-      <div className="p-4 border-b border-gray-200">
-        <div className="flex items-center justify-between mb-4">
+      <div className="p-2 border-b border-gray-200">
+        <div className="flex items-center justify-between mb-2">
           <div className="flex items-center space-x-3 h-10">
             <button
               onClick={onBack}
@@ -54,7 +54,7 @@ const ConversationsSidebar = ({
         
         {/* Search Bar */}
         <div className="relative">
-          <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+          <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
           <input
             type="text"
             placeholder="Search conversations..."
