@@ -2,6 +2,7 @@
 const User = require('../models/user.model');
 const Transaction = require('../models/transactions.model');
 const jwt = require('jsonwebtoken');
+const { parse } = require('dotenv');
 /**
  * JWT Token Generation Best Practices:
  * 
@@ -106,6 +107,7 @@ const TransactionController = {
   withdraw: async (req, res) => {
     try {
       const { amount } = req.body;
+      const { type } = req.body; // Có thể dùng để phân biệt withdraw types
       const userUuid = req.user.uuid;
 
       // Validation
@@ -161,11 +163,8 @@ const TransactionController = {
         user_id: userUuid,
         amount: parseFloat(amount),
         description: 'Withdraw from account',
-        type: 'withdraw',
+        type: type === 'admin_withdraw' ? 'admin_withdraw' : 'withdraw',
       });
-
-      if (insertError) throw insertError;
-
 
       if (insertError) throw insertError;
 
