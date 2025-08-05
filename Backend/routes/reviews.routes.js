@@ -23,4 +23,7 @@ router.get('/buyer/:buyerId', reviewController.getBuyerReviews);
 // Routes cho order reviews
 router.get('/order/:orderId/can-review', reviewController.canReviewOrder);
 
+// Routes cho gig reviews
+router.get('/gig/:gigId', reviewController.getGigReviews);
+
 module.exports = router;
