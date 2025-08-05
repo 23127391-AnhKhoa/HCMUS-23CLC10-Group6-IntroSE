@@ -9,7 +9,6 @@
  */
 
 const supabase = require('../config/supabaseClient');
-const Transaction = require('./transactions.model');
 
 const Order = {
   /**
@@ -58,7 +57,7 @@ const Order = {
   },
 
   /**
-   * Create a new order with balance deduction
+   * Create a new order
    * 
    * @param {Object} orderData - Order data object
    * @param {string} orderData.client_id - UUID of the client
@@ -69,106 +68,20 @@ const Order = {
    * @returns {Promise<Object>} Created order object
    */
   create: async (orderData) => {
-    try {
-      // Start a transaction-like process
-      console.log('🏦 [Order Model] Starting order creation with balance check...');
-      
-      // 1. Check user's current balance
-      const { data: user, error: userError } = await supabase
-        .from('User')
-        .select('balance, username')
-        .eq('uuid', orderData.client_id)
-        .single();
-      
-      if (userError) {
-        console.error('❌ [Order Model] Error fetching user:', userError);
-        throw new Error('User not found');
-      }
-      
-      // 2. Validate sufficient balance
-      if (user.balance < orderData.price_at_purchase) {
-        console.log('❌ [Order Model] Insufficient balance:', {
-          userBalance: user.balance,
-          requiredAmount: orderData.price_at_purchase
-        });
-        throw new Error(`Insufficient balance. Current balance: $${user.balance}, Required: $${orderData.price_at_purchase}`);
-      }
-      
-      // 3. Calculate new balance
-      const newBalance = user.balance - orderData.price_at_purchase;
-      console.log('💰 [Order Model] Balance calculation:', {
-        currentBalance: user.balance,
-        orderAmount: orderData.price_at_purchase,
-        newBalance: newBalance
-      });
-      
-      // 4. Create the order
-      const { data: order, error: orderError } = await supabase
-        .from('Orders')
-        .insert([{
-          client_id: orderData.client_id,
-          gig_id: orderData.gig_id,
-          price_at_purchase: orderData.price_at_purchase,
-          requirement: orderData.requirement,
-          status: orderData.status || 'pending'
-        }])
-        .select()
-        .single();
-      
-      if (orderError) {
-        console.error('❌ [Order Model] Error creating order:', orderError);
-        throw orderError;
-      }
-      
-      console.log('✅ [Order Model] Order created successfully:', order.id);
-      
-      // 5. Deduct balance from user
-      const { error: balanceError } = await supabase
-        .from('User')
-        .update({ balance: newBalance })
-        .eq('uuid', orderData.client_id);
-      
-      if (balanceError) {
-        console.error('❌ [Order Model] Error updating balance, rolling back order...');
-        // Rollback: Delete the created order
-        await supabase
-          .from('Orders')
-          .delete()
-          .eq('id', order.id);
-        throw new Error('Failed to deduct balance: ' + balanceError.message);
-      }
-      
-      console.log('✅ [Order Model] Balance deducted successfully. New balance:', newBalance);
-      
-      // 7. Create transaction record for balance deduction
-      try {
-        await Transaction.create({
-          user_id: orderData.client_id,
-          order_id: order.id,
-          amount: -orderData.price_at_purchase, // Negative for deduction
-          type: 'order_payment',
-          description: `Balance deducted for order #${order.id}`
-        });
-        console.log('✅ [Order Model] Transaction record created successfully');
-      } catch (transactionError) {
-        console.error('❌ [Order Model] Failed to create transaction record:', transactionError);
-        // Don't fail the order creation if transaction record fails
-      }
-      
-      // 8. Return order with balance info for notification purposes
-      order._balanceDeducted = {
-        previousBalance: user.balance,
-        newBalance: newBalance,
-        deductedAmount: orderData.price_at_purchase,
-        username: user.username
-      };
-      
-      return order;
-      
-    } catch (error) {
-      console.error('💥 [Order Model] Error in create:', error);
-      throw error;
-    }
+    const { data, error } = await supabase
+      .from('Orders')
+      .insert([{
+        client_id: orderData.client_id,
+        gig_id: orderData.gig_id,
+        price_at_purchase: orderData.price_at_purchase,
+        requirement: orderData.requirement,
+        status: orderData.status || 'pending'
+      }])
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return data;
   },
 
   /**
