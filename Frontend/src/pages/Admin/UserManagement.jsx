@@ -437,20 +437,6 @@ const Header = ({ searchTerm, onSearchChange }) => {
             className="w-full bg-gray-100 rounded-lg py-3 pl-12 pr-4 focus:outline-none focus:ring-2 focus:ring-blue-500" 
           />
         </div>
-        <button className="bg-blue-600 text-white font-semibold px-5 py-3 rounded-lg hover:bg-blue-700 transition-colors">
-          Add User
-        </button>
-        <FiBell className="text-gray-500 w-6 h-6 cursor-pointer hover:text-blue-500 transition-colors"/>
-        <Dropdown overlay={userMenu} trigger={['click']}>
-          <div className="flex items-center cursor-pointer space-x-2">
-            <Avatar 
-              src={authUser?.avt_url} 
-              icon={!authUser?.avt_url && <UserOutlined />}
-              className="bg-gray-300"
-              size={40}
-            />
-          </div>
-        </Dropdown>
       </div>
     </header>
   );
