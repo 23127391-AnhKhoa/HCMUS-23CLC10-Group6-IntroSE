@@ -1,5 +1,6 @@
 // src/pages/InboxPage.jsx
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useRealtimeChat } from '../hooks/useRealtimeChat';
 import { useRealtimeConversations } from '../hooks/useRealtimeConversations';
@@ -12,6 +13,7 @@ import {
 
 const InboxPage = () => {
   const { authUser, token } = useAuth();
+  const navigate = useNavigate();
   const [selectedConversation, setSelectedConversation] = useState(null);
   const [messageInput, setMessageInput] = useState('');
   const [showNewConversationModal, setShowNewConversationModal] = useState(false);
@@ -27,13 +29,18 @@ const InboxPage = () => {
     }
   }, [conversations, selectedConversation]);
 
-  // Handle sending messages
-  const handleSendMessage = async () => {
-    if (!messageInput.trim() || !selectedConversation) return;
+  // Handle sending messages (supports both text and file URLs)
+  const handleSendMessage = async (content = null) => {
+    const messageContent = content || messageInput;
+    
+    if (!messageContent || (!messageContent.trim && !messageContent) || !selectedConversation) return;
 
-    const success = await sendRealtimeMessage(messageInput);
+    const success = await sendRealtimeMessage(messageContent);
     if (success) {
-      setMessageInput('');
+      // Only clear input if it was a text message
+      if (!content) {
+        setMessageInput('');
+      }
     } else {
       antdMessage.error('Failed to send message');
     }
@@ -60,6 +67,11 @@ const InboxPage = () => {
     }
   };
 
+  // Handle back navigation
+  const handleBack = () => {
+    navigate(-1); // Go back to previous page
+  };
+
   return (
     <div className="h-screen bg-gray-50 flex">
       {/* Left Sidebar - Conversations List */}
@@ -69,6 +81,7 @@ const InboxPage = () => {
         onSelectConversation={setSelectedConversation}
         onNewConversation={() => setShowNewConversationModal(true)}
         authUser={authUser}
+        onBack={handleBack}
       />
 
       {/* Right Side - Chat Area */}

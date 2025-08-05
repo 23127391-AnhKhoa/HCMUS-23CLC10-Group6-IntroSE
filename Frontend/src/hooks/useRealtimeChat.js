@@ -68,7 +68,19 @@ export const useRealtimeChat = (conversationId, authUser) => {
             sender: sender
           };
 
-          setMessages(prevMessages => [...prevMessages, messageWithSender]);
+          setMessages(prevMessages => {
+            // Remove any optimistic message from the same sender with similar content
+            const filteredMessages = prevMessages.filter(msg => {
+              if (msg.isOptimistic && 
+                  msg.sender_id === messageWithSender.sender_id && 
+                  msg.content === messageWithSender.content) {
+                return false; // Remove optimistic message
+              }
+              return true; // Keep other messages
+            });
+            
+            return [...filteredMessages, messageWithSender];
+          });
         }
       )
       .subscribe();
@@ -80,9 +92,28 @@ export const useRealtimeChat = (conversationId, authUser) => {
     };
   }, [conversationId, fetchMessages]);
 
-  // Send message function using backend API
+  // Send message function with optimistic update
   const sendMessage = async (content) => {
-    if (!content.trim() || !conversationId || !authUser) return;
+    if (!content.trim() || !conversationId || !authUser) return false;
+
+    // Create optimistic message
+    const optimisticMessage = {
+      id: `temp-${Date.now()}`, // Temporary ID
+      conversation_id: conversationId,
+      sender_id: authUser.uuid,
+      content: content.trim(),
+      created_at: new Date().toISOString(),
+      sender: {
+        uuid: authUser.uuid,
+        fullname: authUser.fullname,
+        username: authUser.username,
+        avt_url: authUser.avt_url
+      },
+      isOptimistic: true // Flag to identify optimistic messages
+    };
+
+    // Add optimistic message immediately
+    setMessages(prevMessages => [...prevMessages, optimisticMessage]);
 
     try {
       const token = localStorage.getItem('token');
@@ -98,13 +129,22 @@ export const useRealtimeChat = (conversationId, authUser) => {
       });
 
       if (response.ok) {
-        // The realtime subscription will handle updating the UI
+        // Remove optimistic message when real message arrives via realtime
+        // The realtime subscription will handle adding the real message
         return true;
       } else {
+        // Remove optimistic message on failure
+        setMessages(prevMessages => 
+          prevMessages.filter(msg => msg.id !== optimisticMessage.id)
+        );
         console.error('Error sending message:', response.status);
         return false;
       }
     } catch (error) {
+      // Remove optimistic message on error
+      setMessages(prevMessages => 
+        prevMessages.filter(msg => msg.id !== optimisticMessage.id)
+      );
       console.error('Error sending message:', error);
       return false;
     }

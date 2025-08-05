@@ -2,7 +2,8 @@
 import React, { useState } from 'react';
 import { 
   MagnifyingGlassIcon,
-  PlusIcon
+  PlusIcon,
+  ArrowLeftIcon
 } from '@heroicons/react/24/outline';
 import { Avatar } from 'antd';
 import { UserOutlined } from '@ant-design/icons';
@@ -13,7 +14,8 @@ const ConversationsSidebar = ({
   selectedConversation, 
   onSelectConversation, 
   onNewConversation, 
-  authUser 
+  authUser,
+  onBack
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -28,7 +30,17 @@ const ConversationsSidebar = ({
       {/* Header */}
       <div className="p-4 border-b border-gray-200">
         <div className="flex items-center justify-between mb-4">
-          <h1 className="text-2xl font-bold text-gray-900">Messages</h1>
+          <div className="flex items-center space-x-3 h-10">
+            <button
+              onClick={onBack}
+              className="flex items-center justify-center w-10 h-10 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-full transition-colors"
+              title="Go back"
+            >
+              <ArrowLeftIcon className="h-5 w-5 relative top-[1px]" />
+            </button>
+            <h1 className="text-2xl font-bold text-gray-900 pt-3.5">Messages</h1>
+          </div>
+
           <div className="flex items-center space-x-2">
             <button
               onClick={onNewConversation}
