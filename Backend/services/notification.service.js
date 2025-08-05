@@ -223,7 +223,7 @@ const NotificationService = {
   /**
    * Create notification for gig approval/rejection
    * @param {Object} gig - Gig data
-   * @param {string} status - 'approved' or 'rejected'
+   * @param {string} status - 'active', 'denied', 'paused', or 'pending'
    * @param {string} reason - Reason for rejection (optional)
    */
   async notifyGigStatus(gig, status, reason = null) {
@@ -242,7 +242,46 @@ const NotificationService = {
             status: 'approved'
           }
         };
-      } else if (status === 'rejected' || status === 'denied') {
+      } else if (status === 'denied') {
+        notification = {
+          user_id: gig.user_id,
+          type: this.TYPES.GIG_REJECTED,
+          title: 'Gig Denied ❌',
+          message: `Your gig "${gig.title}" has been denied${reason ? ': ' + reason : ''}`,
+          data: {
+            gig_id: gig.id,
+            gig_title: gig.title,
+            status: 'denied',
+            reason: reason
+          }
+        };
+      } else if (status === 'paused') {
+        notification = {
+          user_id: gig.user_id,
+          type: this.TYPES.SYSTEM_ANNOUNCEMENT,
+          title: 'Gig Paused ⏸️',
+          message: `Your gig "${gig.title}" has been paused${reason ? ': ' + reason : ''}`,
+          data: {
+            gig_id: gig.id,
+            gig_title: gig.title,
+            status: 'paused',
+            reason: reason
+          }
+        };
+      } else if (status === 'pending') {
+        notification = {
+          user_id: gig.user_id,
+          type: this.TYPES.SYSTEM_ANNOUNCEMENT,
+          title: 'Gig Under Review 📋',
+          message: `Your gig "${gig.title}" is now under review`,
+          data: {
+            gig_id: gig.id,
+            gig_title: gig.title,
+            status: 'pending'
+          }
+        };
+      } else if (status === 'rejected') {
+        // Keep backward compatibility with old 'rejected' status
         notification = {
           user_id: gig.user_id,
           type: this.TYPES.GIG_REJECTED,

@@ -14,6 +14,7 @@ import { HeartFilled } from '@ant-design/icons';
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from '../contexts/AuthContext';
+import StarRating from '../components/Reviews/StarRating';
 
 /**
  * ServCard - A card component for displaying gig/service information
@@ -63,7 +64,9 @@ const ServCard = ({ gig, isPreview = false }) => {
         owner_username: 'username',
         owner_fullname: 'Seller Name',
         owner_avatar: 'https://placehold.co/300x300',
-        category_name: 'Category'
+        category_name: 'Category',
+        avg_review: 0,
+        total_review: 0
     };
 
     // Merge provided gig data with defaults to ensure all required fields exist
@@ -257,11 +260,22 @@ const ServCard = ({ gig, isPreview = false }) => {
                             {gigData.delivery_days} day{gigData.delivery_days !== 1 ? 's' : ''}
                         </span>
                     </div>
-                    {/* Rating placeholder - can be enhanced with real data */}
+                    
+                    {/* Real Rating Display */}
                     <div className="flex items-center">
-                        <span className="text-yellow-400 text-sm">⭐</span>
-                        <span className="text-sm font-semibold text-gray-700 ml-1">4.9</span>
-                        <span className="text-xs text-gray-500 ml-1">(127)</span>
+                        {gigData.total_review > 0 ? (
+                            <>
+                                <StarRating rating={gigData.avg_review || 0} size={14} />
+                                <span className="text-sm font-semibold text-gray-700 ml-1">
+                                    {(gigData.avg_review || 0).toFixed(1)}
+                                </span>
+                                <span className="text-xs text-gray-500 ml-1">
+                                    ({gigData.total_review})
+                                </span>
+                            </>
+                        ) : (
+                            <span className="text-xs text-gray-400 italic">No reviews yet</span>
+                        )}
                     </div>
                 </div>
             </div>

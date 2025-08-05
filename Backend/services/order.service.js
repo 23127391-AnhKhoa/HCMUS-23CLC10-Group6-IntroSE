@@ -218,7 +218,7 @@ const OrderService = {
       }
 
       if (gig.status !== 'active') {
-        throw new Error('Cannot order from inactive gig');
+        throw new Error(`Cannot order from gig with status '${gig.status}'. Only active gigs can be ordered.`);
       }
 
       // Validate that user cannot order their own gig

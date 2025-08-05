@@ -5,6 +5,7 @@ import { HeartFilled } from '@ant-design/icons';
 import NavBar from '../Common/NavBar_Buyer';
 import Footer from '../Common/Footer';
 import CreateOrderModal from '../components/CreateOrderModal/CreateOrderModal';
+import ReviewSection from '../components/Reviews/ReviewSection';
 import { useAuth } from '../contexts/AuthContext';
 import { useOrderNotification } from '../hooks/useOrderNotification';
 import ReportButton from '../components/ReportButton';
@@ -307,6 +308,11 @@ const GigDetail = () => {
         } finally {
             setLoading(false);
         }
+    };
+
+    // Refresh gig data after review submission
+    const handleReviewSubmitted = () => {
+        fetchGigDetail(); // Refresh gig data to get updated rating
     };
 
     // Helper function to get all images and videos (cover + additional media)
@@ -775,6 +781,16 @@ const GigDetail = () => {
                                     }}
                                 ></div>
                             </div>
+                        </div>
+
+                        {/* Reviews Section */}
+                        <div className="mb-6">
+                            <ReviewSection 
+                                gigId={gig.id}
+                                avgRating={gig.avg_review || 0}
+                                totalReviews={gig.total_review || 0}
+                                onSubmitReview={handleReviewSubmitted}
+                            />
                         </div>
                     </div>
                 </div>
