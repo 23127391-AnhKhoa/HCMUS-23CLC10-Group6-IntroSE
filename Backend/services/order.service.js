@@ -12,6 +12,7 @@
 const Order = require('../models/order.model');
 const User = require('../models/user.model');
 const Transaction = require('../models/transactions.model');
+const NotificationService = require('./notification.service');
 const supabase = require('../config/supabaseClient');
 
 const OrderService = {
@@ -242,9 +243,36 @@ const OrderService = {
         throw new Error('Client not found');
       }
 
-      // Create the order
+      // Create the order (this will automatically deduct balance)
       const order = await Order.create(orderData);
       console.log('✅ Order created successfully:', order.id);
+      
+      // Send balance deduction notification if balance was deducted
+      if (order._balanceDeducted) {
+        try {
+          console.log('📱 Sending balance deduction notification...');
+          await NotificationService.createAndSend({
+            user_id: orderData.client_id,
+            type: NotificationService.TYPES.PAYMENT_RECEIVED,
+            title: 'Payment Processed',
+            message: `$${order._balanceDeducted.deductedAmount} has been deducted from your wallet for order #${order.id}. New balance: $${order._balanceDeducted.newBalance}`,
+            data: {
+              order_id: order.id,
+              amount_deducted: order._balanceDeducted.deductedAmount,
+              previous_balance: order._balanceDeducted.previousBalance,
+              new_balance: order._balanceDeducted.newBalance,
+              transaction_type: 'order_payment'
+            }
+          });
+          console.log('✅ Balance deduction notification sent successfully');
+        } catch (notificationError) {
+          console.error('❌ Failed to send balance deduction notification:', notificationError);
+          // Don't fail the order creation if notification fails
+        }
+        
+        // Clean up the temporary balance info
+        delete order._balanceDeducted;
+      }
       
       return order;
     } catch (error) {
@@ -465,6 +493,90 @@ getClientOrders: async (clientId, options = {}) => {
 
       const oldStatus = existingOrder.status;
       console.log('📊 Existing order found:', existingOrder.id, 'Current status:', oldStatus);
+      
+      // Handle balance refund when order is cancelled
+      if (status === 'cancelled' && oldStatus !== 'cancelled') {
+        console.log('💰 [Order Service] Processing balance refund for cancelled order...');
+        
+        try {
+          // Get user's current balance
+          const { data: user, error: userError } = await supabase
+            .from('User')
+            .select('balance, username')
+            .eq('uuid', existingOrder.client_id)
+            .single();
+          
+          if (userError || !user) {
+            console.error('❌ [Order Service] Error fetching user for refund:', userError);
+            throw new Error('User not found for refund');
+          }
+          
+          // Calculate new balance (refund the order amount)
+          const refundAmount = existingOrder.price_at_purchase;
+          const newBalance = user.balance + refundAmount;
+          
+          console.log('💸 [Order Service] Balance refund calculation:', {
+            currentBalance: user.balance,
+            refundAmount: refundAmount,
+            newBalance: newBalance,
+            orderId: orderId
+          });
+          
+          // Update user balance
+          const { error: balanceError } = await supabase
+            .from('User')
+            .update({ balance: newBalance })
+            .eq('uuid', existingOrder.client_id);
+          
+          if (balanceError) {
+            console.error('❌ [Order Service] Error updating balance for refund:', balanceError);
+            throw new Error('Failed to process refund: ' + balanceError.message);
+          }
+          
+          console.log('✅ [Order Service] Balance refunded successfully. New balance:', newBalance);
+          
+          // Create transaction record for refund
+          try {
+            await Transaction.create({
+              user_id: existingOrder.client_id,
+              order_id: orderId,
+              amount: refundAmount, // Positive for refund
+              type: 'order_refund',
+              description: `Refund for cancelled order #${orderId}`
+            });
+            console.log('✅ [Order Service] Refund transaction record created successfully');
+          } catch (transactionError) {
+            console.error('❌ [Order Service] Failed to create refund transaction record:', transactionError);
+            // Don't fail the cancellation if transaction record fails
+          }
+          
+          // Send refund notification
+          try {
+            await NotificationService.createAndSend({
+              user_id: existingOrder.client_id,
+              type: NotificationService.TYPES.PAYMENT_RECEIVED,
+              title: 'Order Cancelled & Refund Processed',
+              message: `Your order #${orderId} has been cancelled and $${refundAmount} has been refunded to your wallet. New balance: $${newBalance}`,
+              data: {
+                order_id: orderId,
+                refund_amount: refundAmount,
+                previous_balance: user.balance,
+                new_balance: newBalance,
+                transaction_type: 'order_refund'
+              }
+            });
+            console.log('✅ [Order Service] Cancellation and refund notification sent successfully');
+          } catch (notificationError) {
+            console.error('❌ [Order Service] Failed to send cancellation notification:', notificationError);
+            // Don't fail the cancellation if notification fails
+          }
+          
+        } catch (refundError) {
+          console.error('❌ [Order Service] Error processing refund:', refundError);
+          // Continue with status update even if refund fails, but log the error
+          console.error('⚠️ [Order Service] Continuing with cancellation despite refund error');
+        }
+      }
       
       const updatedOrder = await Order.updateStatus(orderId, status);
       console.log('✅ [Order Service] Order status updated successfully');
