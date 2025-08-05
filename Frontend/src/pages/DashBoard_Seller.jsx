@@ -51,6 +51,12 @@ const DashBoardSeller = () => {
           username: data.data.username || '',
           avt_url: data.data.avt_url || data.data.avatar_url || ''
         });
+
+        // Cập nhật rating từ profile
+        setStats(prevStats => ({
+          ...prevStats,
+          rating: data.data.rating || 0
+        }));
       } catch (err) {
         setError(err.message);
       } finally {
@@ -123,7 +129,6 @@ const DashBoardSeller = () => {
         setStats(prevStats => ({
           ...prevStats,
           totalEarnings: earningsData.totalEarnings || 0, // Now from received_payment transactions
-          rating: 0, // Placeholder, as rating fetch is commented out
           responseRate: 95, // This would come from messaging/response data
           deliveryTime: '2-3 days' // This would be calculated from order completion times
         }));

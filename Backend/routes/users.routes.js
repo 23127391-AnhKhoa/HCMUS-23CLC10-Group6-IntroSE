@@ -90,4 +90,12 @@ router.get('/favorite/:userId', authenticateToken, UserFavoritesController.getUs
 // GET /api/favorites/check/:userId/:gigId - Kiểm tra favorite status
 router.get('/favorite/check/:userId/:gigId', authenticateToken, UserFavoritesController.checkFavorite);
 
+// ========== Rating endpoints ==========
+
+// PUT /api/users/rating/:userId - Cập nhật rating cho một user
+router.put('/rating/:userId', authenticateToken, userController.updateUserRating);
+
+// PUT /api/users/rating/update-all - Cập nhật rating cho tất cả users
+router.put('/rating/update-all', authenticateToken, userController.updateAllUsersRating);
+
 module.exports = router;

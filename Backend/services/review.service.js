@@ -2,6 +2,7 @@
 const Review = require('../models/review.model');
 const Order = require('../models/order.model');
 const Gig = require('../models/gig.model');
+const User = require('../models/user.model');
 const notificationService = require('./notification.service');
 const { v4: uuidv4 } = require('uuid');
 
@@ -65,6 +66,15 @@ const reviewService = {
       });
     } catch (notificationError) {
       console.error('Error sending notification:', notificationError);
+      // Không throw error ở đây vì review đã được tạo thành công
+    }
+
+    // Cập nhật rating trung bình cho seller
+    try {
+      const ratingUpdate = await User.updateUserRating(gig.owner_id);
+      console.log('Seller rating updated:', ratingUpdate);
+    } catch (ratingError) {
+      console.error('Error updating seller rating:', ratingError);
       // Không throw error ở đây vì review đã được tạo thành công
     }
 
