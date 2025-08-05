@@ -14,6 +14,7 @@ import { HeartFilled } from '@ant-design/icons';
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from '../contexts/AuthContext';
+import { createSafeHtml } from '../utils/htmlSanitizer';
 
 /**
  * ServCard - A card component for displaying gig/service information
@@ -238,9 +239,9 @@ const ServCard = ({ gig, isPreview = false }) => {
                     {isPreview ? (
                         <div 
                             className="text-base text-gray-700 leading-relaxed font-medium"
-                            dangerouslySetInnerHTML={{
-                                __html: gigData.title || gigData.description || 'No description'
-                            }}
+                            dangerouslySetInnerHTML={createSafeHtml(
+                                gigData.title || gigData.description || 'No description'
+                            )}
                         />
                     ) : (
                         <p className="text-base text-gray-700 line-clamp-3 leading-relaxed max-h-[60px] min-h-[26px] font-medium">
