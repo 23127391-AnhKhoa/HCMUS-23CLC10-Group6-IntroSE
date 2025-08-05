@@ -7,6 +7,7 @@ import ReportButton from '../components/ReportButton';
 import ServCard from '../Common/ServCard';
 import ReviewList from '../components/ReviewList/ReviewList';
 import ReviewSummary from '../components/ReviewSummary/ReviewSummary';
+import GigService from '../services/gigService';
 const SellerInfo = () => {
     const { sellerId } = useParams();
     const [sellerDetails, setSellerDetails] = useState(null);
@@ -44,10 +45,35 @@ const SellerInfo = () => {
                 console.log('👤 Seller data received:', sellerData);
                 setSellerDetails(sellerData.data || sellerData);
                 
-                // Try to fetch gigs using multiple approaches
+                // Try to fetch gigs using the modern GigService first
                 try {
-                    // First try the stats API
-                    console.log('📊 Trying to fetch gigs with stats...');
+                    console.log('📊 Trying to fetch gigs with GigService...');
+                    const gigsResult = await GigService.getSellerGigsWithStats(sellerId, token);
+                    
+                    if (gigsResult.success && gigsResult.data) {
+                        console.log('✅ GigService: Gigs data received:', gigsResult.data);
+                        setSellerGigs(gigsResult.data);
+                        
+                        // Calculate stats from gigs
+                        const totalGigs = gigsResult.data.length;
+                        const gigsWithRatings = gigsResult.data.filter(gig => gig.statistics && gig.statistics.averageRating);
+                        const avgRating = gigsWithRatings.length > 0 ? 
+                            (gigsWithRatings.reduce((sum, gig) => sum + (gig.statistics?.averageRating || 0), 0) / gigsWithRatings.length).toFixed(1) : 
+                            null;
+                        const totalOrders = gigsResult.data.reduce((sum, gig) => sum + (gig.statistics?.totalOrders || 0), 0);
+                        
+                        setSellerStats({
+                            totalGigs,
+                            avgRating,
+                            totalOrders
+                        });
+                    } else {
+                        throw new Error('GigService returned no data');
+                    }
+                } catch (gigServiceError) {
+                    console.log('⚠️ GigService failed, trying legacy API...');
+                    
+                    // Fallback to legacy stats API
                     const gigsResponse = await fetch(`http://localhost:8000/api/gigs/seller/${sellerId}/stats`, {
                         headers: {
                             Authorization: token ? `Bearer ${token}` : '',
@@ -56,7 +82,7 @@ const SellerInfo = () => {
                     
                     if (gigsResponse.ok) {
                         const gigsData = await gigsResponse.json();
-                        console.log('📊 Gigs data with stats:', gigsData);
+                        console.log('📊 Legacy gigs data with stats:', gigsData);
                         
                         if (gigsData.status === 'success' && gigsData.data) {
                             setSellerGigs(gigsData.data);
@@ -75,8 +101,8 @@ const SellerInfo = () => {
                             });
                         }
                     } else {
-                        // Fallback: try regular gigs API
-                        console.log('⚠️ Stats API failed, trying regular gigs API...');
+                        // Final fallback: try regular gigs API
+                        console.log('❌ Legacy stats API failed, trying regular gigs API...');
                         const fallbackResponse = await fetch(`http://localhost:8000/api/gigs?filter_by_owner_id=${sellerId}`, {
                             headers: {
                                 Authorization: token ? `Bearer ${token}` : '',
@@ -97,8 +123,6 @@ const SellerInfo = () => {
                             }
                         }
                     }
-                } catch (gigsError) {
-                    console.error('❌ Error fetching gigs:', gigsError);
                 }
 
             } catch (error) {
@@ -229,11 +253,11 @@ const SellerInfo = () => {
             </div>
 
             {/* Content Section */}
-            <div className="max-w-6xl mx-auto px-6 pb-12">
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-12">
+                <div className="grid grid-cols-1 xl:grid-cols-4 gap-8">
                     {/* About Section */}
-                    <div className="lg:col-span-1">
-                        <div className="bg-white rounded-xl shadow-lg p-6 h-fit">
+                    <div className="xl:col-span-1">
+                        <div className="bg-white rounded-xl shadow-lg p-6 h-fit sticky top-6">
                             <h2 className="text-xl font-semibold mb-4 flex items-center">
                                 <Eye className="w-5 h-5 mr-2 text-blue-600" />
                                 About {sellerDetails.fullname?.split(' ')[0]}
@@ -255,39 +279,45 @@ const SellerInfo = () => {
                                     </div>
                                 )}
                             </div>
+                            
+                            {/* Review Summary in Sidebar */}
+                            <div className="mt-6 pt-6 border-t border-gray-200">
+                                <ReviewSummary sellerId={sellerId} compact={true} />
+                            </div>
                         </div>
                     </div>
 
-                    {/* Tabs Navigation */}
-                    <div className="lg:col-span-2 mb-6">
-                        <div className="flex space-x-1 bg-gray-100 rounded-lg p-1">
-                            <button
-                                onClick={() => setActiveTab('gigs')}
-                                className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
-                                    activeTab === 'gigs'
-                                        ? 'bg-white text-blue-600 shadow-sm'
-                                        : 'text-gray-600 hover:text-gray-900'
-                                }`}
-                            >
-                                <TrendingUp className="w-4 h-4 inline mr-2" />
-                                Dịch vụ ({sellerGigs.length})
-                            </button>
-                            <button
-                                onClick={() => setActiveTab('reviews')}
-                                className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
-                                    activeTab === 'reviews'
-                                        ? 'bg-white text-blue-600 shadow-sm'
-                                        : 'text-gray-600 hover:text-gray-900'
-                                }`}
-                            >
-                                <Star className="w-4 h-4 inline mr-2" />
-                                Đánh giá
-                            </button>
+                    {/* Main Content */}
+                    <div className="xl:col-span-3">
+                        {/* Tabs Navigation */}
+                        <div className="mb-6">
+                            <div className="flex space-x-1 bg-gray-100 rounded-lg p-1">
+                                <button
+                                    onClick={() => setActiveTab('gigs')}
+                                    className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
+                                        activeTab === 'gigs'
+                                            ? 'bg-white text-blue-600 shadow-sm'
+                                            : 'text-gray-600 hover:text-gray-900'
+                                    }`}
+                                >
+                                    <TrendingUp className="w-4 h-4 inline mr-2" />
+                                    Dịch vụ ({sellerGigs.length})
+                                </button>
+                                <button
+                                    onClick={() => setActiveTab('reviews')}
+                                    className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
+                                        activeTab === 'reviews'
+                                            ? 'bg-white text-blue-600 shadow-sm'
+                                            : 'text-gray-600 hover:text-gray-900'
+                                    }`}
+                                >
+                                    <Star className="w-4 h-4 inline mr-2" />
+                                    Đánh giá
+                                </button>
+                            </div>
                         </div>
-                    </div>
 
-                    {/* Content based on active tab */}
-                    <div className="lg:col-span-2">
+                        {/* Content based on active tab */}
                         {activeTab === 'gigs' ? (
                             <>
                                 <div className="mb-6">
@@ -299,9 +329,9 @@ const SellerInfo = () => {
                                 </div>
 
                                 {sellerGigs.length > 0 ? (
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 lg:gap-6">
                                         {sellerGigs.map((gig, index) => (
-                                            <div key={gig.id || index} className="transform hover:scale-105 transition-transform duration-200">
+                                            <div key={gig.id || index} className="w-full max-w-sm mx-auto transform hover:scale-105 transition-transform duration-200">
                                                 <ServCard gig={gig} />
                                             </div>
                                         ))}
@@ -327,13 +357,6 @@ const SellerInfo = () => {
                                 <ReviewList sellerId={sellerId} showHeader={false} />
                             </div>
                         )}
-                    </div>
-
-                    {/* Sidebar - moved to right column */}
-                    <div className="lg:col-span-1">
-                        <div className="sticky top-6">
-                            <ReviewSummary sellerId={sellerId} compact={true} />
-                        </div>
                     </div>
                 </div>
             </div>
