@@ -567,19 +567,17 @@ const AdminModel = {
             
             if (receivedError) throw receivedError;
             
-            // Lấy tổng tiền admin đã withdraw
+            // Lấy tổng tiền admin đã withdraw (sử dụng type='admin_withdraw')
             const { data: adminWithdrawData, error: withdrawError } = await supabase
                 .from('Transactions')
-                .select('amount, User!Transactions_user_id_fkey(role)')
-                .eq('type', 'withdraw');
+                .select('amount')
+                .eq('type', 'admin_withdraw');
             
             if (withdrawError) throw withdrawError;
             
             const totalRevenue = paymentData.reduce((sum, t) => sum + parseFloat(t.amount), 0);
             const totalPaidToSellers = receivedPaymentData.reduce((sum, t) => sum + parseFloat(t.amount), 0);
-            const totalAdminWithdraws = adminWithdrawData
-                .filter(t => t.User && t.User.role === 'admin')
-                .reduce((sum, t) => sum + parseFloat(t.amount), 0);
+            const totalAdminWithdraws = adminWithdrawData.reduce((sum, t) => sum + parseFloat(t.amount), 0);
             
             // Lợi nhuận = Doanh thu - Tiền trả cho sellers - Tiền admin đã rút
             const totalProfit = totalRevenue - totalPaidToSellers;
@@ -597,9 +595,25 @@ const AdminModel = {
         }
     },
 
-    // Lấy lịch sử giao dịch của admin (profit + withdraw)
+    // Lấy lịch sử giao dịch của admin (profit + admin_withdraw)
     getAdminTransactionHistory: async () => {
         try {
+            // Lấy giao dịch admin_withdraw trực tiếp
+            const { data: adminWithdraws, error: withdrawError } = await supabase
+                .from('Transactions')
+                .select(`
+                    id,
+                    amount,
+                    type,
+                    created_at,
+                    description,
+                    User!Transactions_user_id_fkey(role, fullname, username)
+                `)
+                .eq('type', 'admin_withdraw')
+                .order('created_at', { ascending: false });
+            
+            if (withdrawError) throw withdrawError;
+            
             // Lấy tất cả giao dịch payment và received_payment để tính profit theo ngày
             const { data: allTransactions, error: allError } = await supabase
                 .from('Transactions')
@@ -610,19 +624,10 @@ const AdminModel = {
                     created_at,
                     User!Transactions_user_id_fkey(role, fullname, username)
                 `)
-                .in('type', ['payment', 'received_payment', 'withdraw'])
+                .in('type', ['payment', 'received_payment'])
                 .order('created_at', { ascending: false });
             
             if (allError) throw allError;
-            
-            // Tách các giao dịch withdraw của admin
-            const adminWithdraws = allTransactions
-                .filter(t => t.type === 'withdraw' && t.User && t.User.role === 'admin')
-                .map(t => ({
-                    ...t,
-                    type: 'admin_withdraw',
-                    description: 'Admin withdrawal from website profits'
-                }));
             
             // Tính profit theo ngày từ payment và received_payment
             const dailyProfits = {};
@@ -666,7 +671,7 @@ const AdminModel = {
                     description: `Daily profit from ${day.transactionCount} transactions (Revenue: $${day.revenue.toFixed(2)} - Sellers: $${day.paidToSellers.toFixed(2)})`
                 }));
             
-            // Kết hợp profit và withdraw transactions
+            // Kết hợp profit và admin withdraw transactions
             const combinedTransactions = [...profitTransactions, ...adminWithdraws]
                 .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
             
