@@ -147,6 +147,26 @@ const getDashboardStats = async () => {
     }
 };
 
+const getAdminEarnings = async () => {
+    try {
+        const earningsData = await AdminModel.getAdminEarnings();
+        return earningsData;
+    } catch (error) {
+        console.error('Error in getAdminEarnings service:', error);
+        throw error;
+    }
+};
+
+const getAdminTransactionHistory = async () => {
+    try {
+        const transactions = await AdminModel.getAdminTransactionHistory();
+        return transactions;
+    } catch (error) {
+        console.error('Error in getAdminTransactionHistory service:', error);
+        throw error;
+    }
+};
+
 module.exports = {
     fetchAllAdminData,
     createAdminLog,
@@ -156,5 +176,7 @@ module.exports = {
     getHeroStats,
     getStatsSection,
     getTopSellersByEarnings,
-    getDashboardStats
+    getDashboardStats,
+    getAdminEarnings,
+    getAdminTransactionHistory
 };

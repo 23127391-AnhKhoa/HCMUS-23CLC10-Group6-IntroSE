@@ -1,6 +1,338 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { FiSearch, FiHome, FiAlertCircle, FiTrendingUp, FiUsers, FiHelpCircle, FiSettings, FiEye, FiEdit2, FiTrash2, FiLock } from 'react-icons/fi';
+import { FiSearch, FiHome, FiAlertCircle, FiTrendingUp, FiUsers, FiHelpCircle, FiSettings, FiEye, FiEdit2, FiTrash2, FiLock, FiDollarSign, FiUser, FiLogOut, FiKey, FiChevronDown } from 'react-icons/fi';
 import { useAuth } from '../../contexts/AuthContext'; // QUAN TRỌNG: Hãy chắc chắn đường dẫn này đúng
+import { Modal, message, Dropdown } from 'antd';
+
+// --- Settings Dropdown Component ---
+const SettingsDropdown = () => {
+  const { authUser, logout } = useAuth();
+  const [profileModalVisible, setProfileModalVisible] = useState(false);
+
+  const settingsItems = [
+    {
+      key: 'profile',
+      label: (
+        <div className="flex items-center px-3 py-2 hover:bg-gray-50 rounded transition-colors">
+          <FiUser className="mr-3 text-gray-600" />
+          <span>Admin Profile</span>
+        </div>
+      ),
+      onClick: () => setProfileModalVisible(true)
+    },
+    {
+      type: 'divider'
+    },
+    {
+      key: 'logout',
+      label: (
+        <div className="flex items-center px-3 py-2 hover:bg-red-50 rounded transition-colors text-red-600">
+          <FiLogOut className="mr-3" />
+          <span>Logout</span>
+        </div>
+      ),
+      onClick: () => {
+        logout();
+        window.location.href = '/auth';
+      }
+    }
+  ];
+
+  return (
+    <>
+      <Dropdown
+        menu={{ items: settingsItems }}
+        trigger={['click']}
+        placement="topLeft"
+      >
+        <button className="flex items-center p-3 text-gray-600 hover:bg-gray-100 rounded-lg transition-smooth w-full">
+          <FiSettings className="mr-3" />
+          <span className="flex-1 text-left">Settings</span>
+          <FiChevronDown className="text-sm" />
+        </button>
+      </Dropdown>
+
+      <AdminProfileModal 
+        visible={profileModalVisible}
+        onClose={() => setProfileModalVisible(false)}
+        admin={authUser}
+      />
+    </>
+  );
+};
+
+const AdminProfileModal = ({ visible, onClose, admin }) => {
+  if (!admin) return null;
+
+  return (
+    <Modal
+      title={
+        <div className="flex items-center space-x-2">
+          <FiUser className="text-blue-600" />
+          <span className="text-xl font-bold">Admin Profile</span>
+        </div>
+      }
+      open={visible}
+      onCancel={onClose}
+      footer={null}
+      width={500}
+    >
+      <div className="p-4">
+        <div className="flex items-center space-x-4 mb-6">
+          <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center">
+            <FiUser className="text-2xl text-blue-600" />
+          </div>
+          <div>
+            <h3 className="text-xl font-bold text-gray-800">{admin.fullname || admin.username}</h3>
+            <p className="text-gray-600">{admin.email}</p>
+            <span className="inline-block bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full mt-1">
+              Administrator
+            </span>
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          <div className="bg-gray-50 p-4 rounded-lg">
+            <h4 className="font-semibold text-gray-700 mb-2">Account Information</h4>
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div>
+                <p className="text-gray-600">Username:</p>
+                <p className="font-medium">{admin.username}</p>
+              </div>
+              <div>
+                <p className="text-gray-600">Role:</p>
+                <p className="font-medium capitalize">{admin.role}</p>
+              </div>
+              <div>
+                <p className="text-gray-600">User ID:</p>
+                <p className="font-medium text-xs">{admin.uuid}</p>
+              </div>
+              <div>
+                <p className="text-gray-600">Balance:</p>
+                <p className="font-medium">${admin.balance?.toFixed(2) || '0.00'}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex justify-end mt-6">
+          <button
+            onClick={onClose}
+            className="px-6 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </Modal>
+  );
+};
+
+const ChangePasswordModal = ({ visible, onClose }) => {
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState({});
+  const { token } = useAuth();
+
+  // Reset form khi modal đóng/mở
+  const resetForm = () => {
+    setCurrentPassword('');
+    setNewPassword('');
+    setConfirmPassword('');
+    setErrors({});
+  };
+
+  // Validate form
+  const validateForm = () => {
+    const newErrors = {};
+
+    // Kiểm tra current password
+    if (!currentPassword || currentPassword.trim() === '') {
+      newErrors.currentPassword = 'Current password is required';
+    }
+
+    // Kiểm tra new password
+    if (!newPassword || newPassword.trim() === '') {
+      newErrors.newPassword = 'New password is required';
+    } else if (newPassword.length < 6) {
+      newErrors.newPassword = 'New password must be at least 6 characters long';
+    } else if (newPassword === currentPassword) {
+      newErrors.newPassword = 'New password must be different from current password';
+    }
+
+    // Kiểm tra confirm password
+    if (!confirmPassword || confirmPassword.trim() === '') {
+      newErrors.confirmPassword = 'Please confirm your new password';
+    } else if (newPassword !== confirmPassword) {
+      newErrors.confirmPassword = 'Passwords do not match';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleChangePassword = async () => {
+    // Validate form trước
+    if (!validateForm()) {
+      message.error('Please fix the errors before submitting');
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      console.log('Sending password change request...');
+      const response = await fetch('/api/auth/change-password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          currentPassword: currentPassword.trim(),
+          newPassword: newPassword.trim()
+        })
+      });
+
+      const data = await response.json();
+      console.log('Password change response:', data);
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to change password');
+      }
+
+      message.success('Password changed successfully! Please log in again with your new password.');
+      resetForm();
+      onClose();
+
+    } catch (error) {
+      console.error('Error changing password:', error);
+      message.error(error.message || 'Failed to change password. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Xử lý khi modal đóng
+  const handleClose = () => {
+    resetForm();
+    onClose();
+  };
+
+  return (
+    <Modal
+      title={
+        <div className="flex items-center space-x-2">
+          <FiKey className="text-orange-600" />
+          <span className="text-xl font-bold">Change Password</span>
+        </div>
+      }
+      open={visible}
+      onCancel={handleClose}
+      footer={null}
+      width={500}
+    >
+      <div className="p-4">
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Current Password
+            </label>
+            <input
+              type="password"
+              value={currentPassword}
+              onChange={(e) => {
+                setCurrentPassword(e.target.value);
+                if (errors.currentPassword) {
+                  setErrors(prev => ({ ...prev, currentPassword: null }));
+                }
+              }}
+              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                errors.currentPassword ? 'border-red-500' : 'border-gray-300'
+              }`}
+              placeholder="Enter current password"
+            />
+            {errors.currentPassword && (
+              <p className="text-red-500 text-xs mt-1">{errors.currentPassword}</p>
+            )}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              New Password
+            </label>
+            <input
+              type="password"
+              value={newPassword}
+              onChange={(e) => {
+                setNewPassword(e.target.value);
+                if (errors.newPassword) {
+                  setErrors(prev => ({ ...prev, newPassword: null }));
+                }
+              }}
+              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                errors.newPassword ? 'border-red-500' : 'border-gray-300'
+              }`}
+              placeholder="Enter new password"
+            />
+            {errors.newPassword && (
+              <p className="text-red-500 text-xs mt-1">{errors.newPassword}</p>
+            )}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Confirm New Password
+            </label>
+            <input
+              type="password"
+              value={confirmPassword}
+              onChange={(e) => {
+                setConfirmPassword(e.target.value);
+                if (errors.confirmPassword) {
+                  setErrors(prev => ({ ...prev, confirmPassword: null }));
+                }
+              }}
+              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                errors.confirmPassword ? 'border-red-500' : 'border-gray-300'
+              }`}
+              placeholder="Confirm new password"
+            />
+            {errors.confirmPassword && (
+              <p className="text-red-500 text-xs mt-1">{errors.confirmPassword}</p>
+            )}
+          </div>
+
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+            <p className="text-sm text-yellow-800">
+              <strong>Password Requirements:</strong>
+              <br />• Minimum 6 characters
+              <br />• Must be different from current password
+              <br />• Use a strong, unique password
+            </p>
+          </div>
+        </div>
+
+        <div className="flex space-x-3 mt-6">
+          <button
+            onClick={handleClose}
+            className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleChangePassword}
+            disabled={loading}
+            className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+          >
+            {loading ? 'Changing...' : 'Change Password'}
+          </button>
+        </div>
+      </div>
+    </Modal>
+  );
+};
 
 // --- Component Sidebar ---
 const Sidebar = () => (
@@ -28,37 +360,27 @@ const Sidebar = () => (
           </a>
 
 
-          <a href="/admin/usermanagement" className="flex items-center p-3 text-gray-600 hover:bg-gray-100 rounded-lg transition-smooth">
+          <a href="/admin/usermanagement" className="flex items-center p-3 text-gray-600 hover:bg-gray-100 rounded-lg transition-smooth">
 
-            <FiUsers className="mr-3" /> User Management
+            <FiUsers className="mr-3" /> User Management
 
-          </a>
+          </a>
 
-        </nav>
+          <a href="/admin/earnings" className="flex items-center p-3 text-gray-600 hover:bg-gray-100 rounded-lg transition-smooth">
 
-      </div>
+            <FiDollarSign className="mr-3" /> Earnings
 
-       <div className="flex flex-col space-y-2">
+          </a>
 
-        <a href="#" className="flex items-center p-3 text-gray-600 hover:bg-gray-100 rounded-lg transition-smooth">
+        </nav>      </div>
 
-          <FiHelpCircle className="mr-3" /> Help
+       <div className="flex flex-col space-y-2">
+        <SettingsDropdown />
+      </div>
 
-        </a>
+    </div>
 
-        <a href="#" className="flex items-center p-3 text-gray-600 hover:bg-gray-100 rounded-lg transition-smooth">
-
-          <FiSettings className="mr-3" /> Settings
-
-        </a>
-
-      </div>
-
-    </div>
-
-);
-
-// --- Component Bảng ---
+);// --- Component Bảng ---
 const ReportsTable = ({ title, headers, data, renderRow }) => (
     <div className="mb-10">
         <h2 className="text-xl font-bold text-gray-700 mb-4">{title}</h2>

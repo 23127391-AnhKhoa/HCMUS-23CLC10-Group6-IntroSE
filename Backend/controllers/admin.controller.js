@@ -170,6 +170,38 @@ const getDashboardStats = async (req, res) => {
     }
 };
 
+const getAdminEarnings = async (req, res) => {
+    try {
+        const earningsData = await AdminService.getAdminEarnings();
+        res.status(200).json({ 
+            status: 'success', 
+            data: earningsData 
+        });
+    } catch (error) {
+        console.error("Error fetching admin earnings:", error);
+        res.status(500).json({ 
+            status: 'error', 
+            message: error.message 
+        });
+    }
+};
+
+const getAdminTransactionHistory = async (req, res) => {
+    try {
+        const transactions = await AdminService.getAdminTransactionHistory();
+        res.status(200).json({ 
+            status: 'success', 
+            transactions: transactions 
+        });
+    } catch (error) {
+        console.error("Error fetching admin transaction history:", error);
+        res.status(500).json({ 
+            status: 'error', 
+            message: error.message 
+        });
+    }
+};
+
 module.exports = {
     getAdminStats,
     createAdminLog,
@@ -179,5 +211,7 @@ module.exports = {
     getHeroStats,
     getStatsSection,
     getTopSellersByEarnings,
-    getDashboardStats
+    getDashboardStats,
+    getAdminEarnings,
+    getAdminTransactionHistory
 };

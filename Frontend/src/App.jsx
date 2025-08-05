@@ -27,6 +27,7 @@ import ServicesManagement from './pages/Admin/ServiceManagement';
 import GigDetailContent from './pages/Admin/AdminGigContent';
 import AdminSellerInfor from './pages/Admin/AdminSellerInfor'; 
 import ManageReportedGigs from './pages/Admin/ManageReportedGigs'; 
+import AdminEarnings from './pages/Admin/AdminEarnings'; 
 import ReportUserPage from './pages/ReportUserPage';
 import NotificationPage from './pages/NotificationPage';
 import ReportGigPage from './pages/ReportGigPage'; 
@@ -43,6 +44,7 @@ function App() {
 
             <Route path="admin/AdminDashboard" element={<AdminDashboard />} />
             <Route path="/admin/manage-reported-gigs" element={<ManageReportedGigs />} />
+            <Route path="/admin/earnings" element={<AdminEarnings />} />
             {/* Route for signup page */}
             
             {/* Route for authentication page */}

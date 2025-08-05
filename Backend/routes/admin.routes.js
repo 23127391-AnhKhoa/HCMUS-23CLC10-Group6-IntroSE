@@ -19,6 +19,12 @@ router.get('/top-sellers', adminController.getTopSellersByEarnings);
 // GET /api/admin/dashboard-stats -> Lấy dữ liệu dashboard với doanh thu và lợi nhuận
 router.get('/dashboard-stats', adminController.getDashboardStats);
 
+// GET /api/admin/earnings -> Lấy thông tin lợi nhuận và balance admin
+router.get('/earnings', authenticateToken, adminController.getAdminEarnings);
+
+// GET /api/admin/transaction-history -> Lấy lịch sử withdraw của admin
+router.get('/transaction-history', authenticateToken, adminController.getAdminTransactionHistory);
+
 // POST /api/admin/log -> Thêm log vào AdminLog table
 router.post('/log', authenticateToken, adminController.createAdminLog);
 // Tạo một sub-router cho reports để có cấu trúc /admin/reports/...

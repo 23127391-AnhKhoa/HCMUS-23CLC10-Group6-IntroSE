@@ -547,6 +547,134 @@ const AdminModel = {
             topServices
         };
     },
+
+    // Tính tổng lợi nhuận website để làm admin balance
+    getAdminEarnings: async () => {
+        try {
+            // Lấy tổng doanh thu từ payments (tiền người mua trả)
+            const { data: paymentData, error: paymentError } = await supabase
+                .from('Transactions')
+                .select('amount')
+                .eq('type', 'payment');
+            
+            if (paymentError) throw paymentError;
+            
+            // Lấy tổng tiền đã trả cho sellers
+            const { data: receivedPaymentData, error: receivedError } = await supabase
+                .from('Transactions')
+                .select('amount')
+                .eq('type', 'received_payment');
+            
+            if (receivedError) throw receivedError;
+            
+            // Lấy tổng tiền admin đã withdraw
+            const { data: adminWithdrawData, error: withdrawError } = await supabase
+                .from('Transactions')
+                .select('amount, User!Transactions_user_id_fkey(role)')
+                .eq('type', 'withdraw');
+            
+            if (withdrawError) throw withdrawError;
+            
+            const totalRevenue = paymentData.reduce((sum, t) => sum + parseFloat(t.amount), 0);
+            const totalPaidToSellers = receivedPaymentData.reduce((sum, t) => sum + parseFloat(t.amount), 0);
+            const totalAdminWithdraws = adminWithdrawData
+                .filter(t => t.User && t.User.role === 'admin')
+                .reduce((sum, t) => sum + parseFloat(t.amount), 0);
+            
+            // Lợi nhuận = Doanh thu - Tiền trả cho sellers - Tiền admin đã rút
+            const totalProfit = totalRevenue - totalPaidToSellers;
+            const availableBalance = totalProfit - totalAdminWithdraws;
+            
+            return {
+                totalProfit,
+                availableBalance,
+                totalRevenue,
+                totalPaidToSellers,
+                totalAdminWithdraws
+            };
+        } catch (error) {
+            throw error;
+        }
+    },
+
+    // Lấy lịch sử giao dịch của admin (profit + withdraw)
+    getAdminTransactionHistory: async () => {
+        try {
+            // Lấy tất cả giao dịch payment và received_payment để tính profit theo ngày
+            const { data: allTransactions, error: allError } = await supabase
+                .from('Transactions')
+                .select(`
+                    id,
+                    amount,
+                    type,
+                    created_at,
+                    User!Transactions_user_id_fkey(role, fullname, username)
+                `)
+                .in('type', ['payment', 'received_payment', 'withdraw'])
+                .order('created_at', { ascending: false });
+            
+            if (allError) throw allError;
+            
+            // Tách các giao dịch withdraw của admin
+            const adminWithdraws = allTransactions
+                .filter(t => t.type === 'withdraw' && t.User && t.User.role === 'admin')
+                .map(t => ({
+                    ...t,
+                    type: 'admin_withdraw',
+                    description: 'Admin withdrawal from website profits'
+                }));
+            
+            // Tính profit theo ngày từ payment và received_payment
+            const dailyProfits = {};
+            
+            allTransactions.forEach(transaction => {
+                if (transaction.type === 'payment' || transaction.type === 'received_payment') {
+                    const date = new Date(transaction.created_at).toISOString().split('T')[0];
+                    
+                    if (!dailyProfits[date]) {
+                        dailyProfits[date] = {
+                            date: date,
+                            revenue: 0,
+                            paidToSellers: 0,
+                            profit: 0,
+                            transactionCount: 0
+                        };
+                    }
+                    
+                    if (transaction.type === 'payment') {
+                        dailyProfits[date].revenue += parseFloat(transaction.amount);
+                        dailyProfits[date].transactionCount++;
+                    } else if (transaction.type === 'received_payment') {
+                        dailyProfits[date].paidToSellers += parseFloat(transaction.amount);
+                    }
+                }
+            });
+            
+            // Tạo profit transactions cho mỗi ngày có profit > 0
+            const profitTransactions = Object.values(dailyProfits)
+                .map(day => {
+                    day.profit = day.revenue - day.paidToSellers;
+                    return day;
+                })
+                .filter(day => day.profit > 0)
+                .map(day => ({
+                    id: `profit_${day.date}`,
+                    amount: day.profit,
+                    type: 'profit',
+                    created_at: `${day.date}T23:59:59.000Z`,
+                    User: { role: 'admin', fullname: 'Website', username: 'system' },
+                    description: `Daily profit from ${day.transactionCount} transactions (Revenue: $${day.revenue.toFixed(2)} - Sellers: $${day.paidToSellers.toFixed(2)})`
+                }));
+            
+            // Kết hợp profit và withdraw transactions
+            const combinedTransactions = [...profitTransactions, ...adminWithdraws]
+                .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+            
+            return combinedTransactions;
+        } catch (error) {
+            throw error;
+        }
+    }
 };
 
 module.exports = AdminModel;
