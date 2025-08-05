@@ -6,7 +6,7 @@ import Footer from '../Common/Footer';
 import AvatarUpload from '../components/AvatarUpload';
 
 const DashBoardSeller = () => {
-  const { authUser, token } = useAuth();
+  const { authUser, token, updateUser } = useAuth();
   const navigate = useNavigate();
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -26,10 +26,7 @@ const DashBoardSeller = () => {
   const [formData, setFormData] = useState({
     fullname: '',
     username: '',
-    email: '',
-    bio: '',
-    skills: '',
-    hourlyRate: '',
+    avt_url: ''
   });
 
   useEffect(() => {
@@ -52,10 +49,7 @@ const DashBoardSeller = () => {
         setFormData({
           fullname: data.data.fullname || '',
           username: data.data.username || '',
-          email: data.data.email || authUser?.email || '',
-          bio: data.data.bio || '',
-          skills: data.data.skills || '',
-          hourlyRate: data.data.hourlyRate || ''
+          avt_url: data.data.avt_url || data.data.avatar_url || ''
         });
       } catch (err) {
         setError(err.message);
@@ -105,7 +99,7 @@ const DashBoardSeller = () => {
       try {
         if (!token || !authUser?.uuid) return;
 
-        // Fetch earnings overview
+        // Fetch earnings overview from new transactions-based endpoint
         const earningsResponse = await fetch(`http://localhost:8000/api/users/${authUser.uuid}/earnings/stats`, {
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -124,15 +118,15 @@ const DashBoardSeller = () => {
           earningsData = earningsResult.data || earningsData;
         }
 
-        // Update stats with real data
-        setStats({
-          totalEarnings: earningsData.totalEarnings || 0,
-          pendingOrders: pendingOrders.length,
-          activeOrders: inProgressOrders.length,
+        // Update stats with real data from received_payment transactions
+        // Don't override pendingOrders and activeOrders here - let useEffect handle them
+        setStats(prevStats => ({
+          ...prevStats,
+          totalEarnings: earningsData.totalEarnings || 0, // Now from received_payment transactions
           rating: 0, // Placeholder, as rating fetch is commented out
           responseRate: 95, // This would come from messaging/response data
           deliveryTime: '2-3 days' // This would be calculated from order completion times
-        });
+        }));
 
       } catch (err) {
         console.error('Failed to fetch seller stats:', err);
@@ -165,27 +159,30 @@ const DashBoardSeller = () => {
   };
 
   const handleAvatarChange = (avatarUrl) => {
+    // Only update formData for the form - don't save to database yet
     setFormData(prev => ({
       ...prev,
       avt_url: avatarUrl
-    }));
-    // Also update the profile state to reflect changes immediately
-    setProfile(prev => ({
-      ...prev,
-      avatar_url: avatarUrl
     }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
+      // Only send fields that can be updated (fullname, username, avt_url)
+      const updateData = {
+        fullname: formData.fullname,
+        username: formData.username,
+        avt_url: formData.avt_url
+      };
+
       const response = await fetch('http://localhost:8000/api/users/profile', {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify(formData)
+        body: JSON.stringify(updateData)
       });
 
       if (!response.ok) {
@@ -194,6 +191,12 @@ const DashBoardSeller = () => {
 
       const data = await response.json();
       setProfile(data.data);
+      
+      // Update AuthContext with the new profile data
+      if (updateUser) {
+        updateUser(data.data);
+      }
+      
       setIsEditing(false);
       alert('Profile updated successfully!');
     } catch (err) {
@@ -241,7 +244,7 @@ const DashBoardSeller = () => {
               
               <div className="text-center mb-2">
                 <AvatarUpload 
-                  currentAvatar={profile?.avatar_url || formData.avt_url}
+                  currentAvatar={isEditing ? formData.avt_url || profile?.avatar_url : profile?.avatar_url}
                   onAvatarChange={handleAvatarChange}
                   size="medium"
                 />
@@ -379,6 +382,7 @@ const DashBoardSeller = () => {
                   currentAvatar={formData.avt_url}
                   onAvatarChange={handleAvatarChange}
                   size="xlarge"
+                  saveImmediately={false}
                 />
                 <p className="text-xs text-gray-500 mt-2">Click to upload a new avatar</p>
               </div>
@@ -404,55 +408,6 @@ const DashBoardSeller = () => {
                     onChange={handleInputChange}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     required
-                  />
-                </div>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
-                <input
-                  type="email"
-                  name="email"
-                  value={formData.email}
-                  onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  required
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Bio</label>
-                <textarea
-                  name="bio"
-                  value={formData.bio}
-                  onChange={handleInputChange}
-                  rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-                  placeholder="Tell us about yourself and your expertise..."
-                />
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Skills</label>
-                  <input
-                    type="text"
-                    name="skills"
-                    value={formData.skills}
-                    onChange={handleInputChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="e.g., React, Node.js, UI/UX Design"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Hourly Rate ($)</label>
-                  <input
-                    type="number"
-                    name="hourlyRate"
-                    value={formData.hourlyRate}
-                    onChange={handleInputChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="25"
                   />
                 </div>
               </div>
