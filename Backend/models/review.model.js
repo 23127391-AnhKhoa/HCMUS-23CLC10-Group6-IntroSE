@@ -46,7 +46,12 @@ const Review = {
         *,
         seller:seller_id(uuid, username, fullname, avt_url),
         buyer:buyer_id(uuid, username, fullname, avt_url),
-        order:order_id(id, gig_id, price_at_purchase)
+        order:order_id(
+          id, 
+          gig_id, 
+          price_at_purchase,
+          gig:gig_id(id, title, cover_image, price)
+        )
       `, { count: 'exact' })
       .eq('seller_id', sellerId)
       .order('created_at', { ascending: false })
