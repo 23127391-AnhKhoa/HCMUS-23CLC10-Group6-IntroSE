@@ -307,41 +307,6 @@ const reviewController = {
         message: error.message || 'Lỗi server khi xóa đánh giá'
       });
     }
-  },
-
-  // Get reviews for a specific gig
-  getGigReviews: async (req, res) => {
-    try {
-      const { gigId } = req.params;
-      const { page = 1, limit = 10 } = req.query;
-
-      const offset = (parseInt(page) - 1) * parseInt(limit);
-
-      const result = await reviewService.getGigReviews(gigId, {
-        limit: parseInt(limit),
-        offset: offset
-      });
-
-      res.json({
-        success: true,
-        data: {
-          reviews: result.reviews,
-          pagination: {
-            total: result.total,
-            page: parseInt(page),
-            limit: parseInt(limit),
-            pages: Math.ceil(result.total / parseInt(limit))
-          }
-        }
-      });
-
-    } catch (error) {
-      console.error('Error getting gig reviews:', error);
-      res.status(500).json({
-        success: false,
-        message: error.message || 'Lỗi server khi lấy đánh giá'
-      });
-    }
   }
 };
 

@@ -2,8 +2,7 @@
 import React, { useState } from 'react';
 import { 
   MagnifyingGlassIcon,
-  PlusIcon,
-  ArrowLeftIcon
+  PlusIcon
 } from '@heroicons/react/24/outline';
 import { Avatar } from 'antd';
 import { UserOutlined } from '@ant-design/icons';
@@ -14,8 +13,7 @@ const ConversationsSidebar = ({
   selectedConversation, 
   onSelectConversation, 
   onNewConversation, 
-  authUser,
-  onBack
+  authUser 
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -28,19 +26,9 @@ const ConversationsSidebar = ({
   return (
     <div className="w-1/3 bg-white border-r border-gray-200 flex flex-col">
       {/* Header */}
-      <div className="p-2 border-b border-gray-200">
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center space-x-3 h-10">
-            <button
-              onClick={onBack}
-              className="flex items-center justify-center w-10 h-10 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-full transition-colors"
-              title="Go back"
-            >
-              <ArrowLeftIcon className="h-5 w-5 relative top-[1px]" />
-            </button>
-            <h1 className="text-2xl font-bold text-gray-900 pt-3.5">Messages</h1>
-          </div>
-
+      <div className="p-4 border-b border-gray-200">
+        <div className="flex items-center justify-between mb-4">
+          <h1 className="text-2xl font-bold text-gray-900">Messages</h1>
           <div className="flex items-center space-x-2">
             <button
               onClick={onNewConversation}
@@ -54,7 +42,7 @@ const ConversationsSidebar = ({
         
         {/* Search Bar */}
         <div className="relative">
-          <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
+          <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
           <input
             type="text"
             placeholder="Search conversations..."

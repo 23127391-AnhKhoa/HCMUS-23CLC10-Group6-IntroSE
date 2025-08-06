@@ -44,9 +44,6 @@ router.use('/', gigMediaRoutes);
 // GET /api/gigs/:id - Get a single gig by ID
 router.get('/:id', gigController.getGigById);
 
-// GET /api/gigs/:id/reviews - Get gig with reviews
-router.get('/:id/reviews', gigController.getGigWithReviews);
-
 // POST /api/gigs - Create a new gig (with optional authentication)
 router.post('/', optionalAuth, gigController.createGig);
 

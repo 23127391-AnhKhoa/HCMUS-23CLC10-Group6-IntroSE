@@ -7,7 +7,6 @@ import NavBar_Buyer from '../Common/NavBar_Buyer';
 import Footer from '../Common/Footer';
 import { useAuth } from '../contexts/AuthContext';
 import ApiService from '../services/apiService';
-import { createSafeHtml, truncateHtml } from '../utils/htmlSanitizer';
 
 const ReviewPage = () => {
   const { orderId } = useParams();
@@ -286,12 +285,9 @@ const ReviewPage = () => {
                       </h4>
                       
                       {(gig.description || order?.gig_description) && (
-                        <div 
-                          className="text-gray-600 text-sm line-clamp-3"
-                          dangerouslySetInnerHTML={createSafeHtml(
-                            truncateHtml(gig.description || order?.gig_description, 150)
-                          )}
-                        />
+                        <p className="text-gray-600 text-sm line-clamp-3">
+                          {gig.description || order?.gig_description}
+                        </p>
                       )}
                       
                       <div className="flex items-center justify-between pt-3 border-t border-gray-100">
