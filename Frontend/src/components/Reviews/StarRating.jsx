@@ -49,3 +49,4 @@ const StarRating = ({ rating, size = 20, showEmpty = true, className = "" }) => 
 };
 
 export default StarRating;
+//

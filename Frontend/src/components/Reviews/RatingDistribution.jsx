@@ -42,3 +42,4 @@ const RatingDistribution = ({ ratings = {}, totalReviews = 0 }) => {
 };
 
 export default RatingDistribution;
+//

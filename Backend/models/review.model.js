@@ -11,7 +11,13 @@ const Review = {
         *,
         seller:seller_id(uuid, username, fullname, avt_url),
         buyer:buyer_id(uuid, username, fullname, avt_url),
-        order:order_id(id, gig_id, price_at_purchase, requirement)
+        order:order_id(
+          id, 
+          gig_id, 
+          price_at_purchase, 
+          requirement,
+          gig:gig_id(id, title, description)
+        )
       `);
 
     if (error) throw error;
@@ -29,7 +35,13 @@ const Review = {
           *,
           seller:seller_id(uuid, username, fullname, avt_url),
           buyer:buyer_id(uuid, username, fullname, avt_url),
-          order:order_id(id, gig_id, price_at_purchase, requirement)
+          order:order_id(
+            id, 
+            gig_id, 
+            price_at_purchase, 
+            requirement,
+            gig:gig_id(id, title, description)
+          )
         `)
         .eq('order.gig_id', gigId)
         .order('created_at', { ascending: sort_order === 'asc' })
@@ -114,7 +126,12 @@ const Review = {
         *,
         seller:seller_id(uuid, username, fullname, avt_url),
         buyer:buyer_id(uuid, username, fullname, avt_url),
-        order:order_id(id, gig_id, price_at_purchase)
+        order:order_id(
+          id, 
+          gig_id, 
+          price_at_purchase,
+          gig:gig_id(id, title, description)
+        )
       `, { count: 'exact' })
       .eq('seller_id', sellerId)
       .order('created_at', { ascending: false })
@@ -135,7 +152,12 @@ const Review = {
         *,
         seller:seller_id(uuid, username, fullname, avt_url),
         buyer:buyer_id(uuid, username, fullname, avt_url),
-        order:order_id(id, gig_id, price_at_purchase)
+        order:order_id(
+          id, 
+          gig_id, 
+          price_at_purchase,
+          gig:gig_id(id, title, description)
+        )
       `, { count: 'exact' })
       .eq('buyer_id', buyerId)
       .order('created_at', { ascending: false })
