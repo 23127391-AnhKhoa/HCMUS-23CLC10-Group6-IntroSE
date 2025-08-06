@@ -107,7 +107,8 @@ const DashBoardSeller = () => {
         if (!token || !authUser?.uuid) return;
         
         setOrdersLoading(true);
-        const response = await fetch(`http://localhost:8000/api/orders/seller?status=in_progress&limit=5`, {
+        // Use the correct API endpoint - filter orders by current user and status
+        const response = await fetch(`http://localhost:8000/api/orders?status=in_progress&limit=5`, {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json',
@@ -116,9 +117,17 @@ const DashBoardSeller = () => {
 
         if (response.ok) {
           const result = await response.json();
-          if (result.success && result.data) {
-            setActiveOrders(result.data);
+          console.log('📋 Orders API response:', result);
+          if (result.status === 'success' && result.data) {
+            // Filter orders to only show ones where current user is the seller
+            const sellerOrders = result.data.filter(order => 
+              order.gig_owner_id === authUser.uuid || 
+              order.seller_id === authUser.uuid
+            );
+            setActiveOrders(sellerOrders);
           }
+        } else {
+          console.error('Orders API error:', response.status, response.statusText);
         }
       } catch (err) {
         console.error('Failed to fetch active orders:', err);
@@ -152,10 +161,6 @@ const DashBoardSeller = () => {
       }
     };
 
-    const handleGigClick = (gigId) => {
-      navigate(`/gig/${gigId}`);
-    };
-
     if (authUser && token) {
       fetchProfile();
       fetchSellerStats();
@@ -163,6 +168,16 @@ const DashBoardSeller = () => {
       fetchRecentReviews();
     }
   }, [authUser, token]);
+
+  // Function to handle order click
+  const handleOrderClick = (orderId) => {
+    navigate('/orders');
+  };
+
+  // Function to handle gig click
+  const handleGigClick = (gigId) => {
+    navigate(`/gig/${gigId}`);
+  };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -527,24 +542,22 @@ const DashBoardSeller = () => {
               ) : (
                 <div className="space-y-4">
                   {activeOrders.map((order, index) => (
-                    <div key={order.id || index} className="border border-gray-200 rounded-lg p-4 hover:shadow-sm transition-shadow">
+                    <div key={order.id || index} className="border border-gray-200 rounded-lg p-4 hover:shadow-sm transition-shadow cursor-pointer"
+                         onClick={() => handleOrderClick(order.id)}>
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
                           <div className="flex items-center justify-between mb-2">
                             <h4 className="font-medium text-gray-900 truncate">
-                              {order.gig?.title || `Order #${order.id}`}
+                              {order.gig?.title || order.gig_title || `Order #${order.id}`}
                             </h4>
                             {getStatusBadge(order.status)}
                           </div>
-                          <p className="text-sm text-gray-600 mb-2">
-                            Customer: {order.buyer?.username || 'N/A'}
-                          </p>
-                          <div className="flex items-center justify-between text-sm">
-                            <span className="text-gray-500">
-                              Due: {order.deadline ? new Date(order.deadline).toLocaleDateString() : 'N/A'}
-                            </span>
+                          <div className="flex items-center justify-between">
+                            <p className="text-sm text-gray-600">
+                              Customer: {order.buyer?.username || order.client_username || order.buyer_username || 'N/A'}
+                            </p>
                             <span className="font-semibold text-green-600">
-                              ${order.total_amount || 0}
+                              ${order.price_at_purchase || order.total_amount || order.amount || order.price || 0}
                             </span>
                           </div>
                         </div>
@@ -564,12 +577,6 @@ const DashBoardSeller = () => {
                   </svg>
                   Recent Reviews
                 </h2>
-                <button
-                  onClick={() => navigate(`/seller/${authUser?.uuid}`)}
-                  className="text-blue-600 hover:text-blue-800 text-sm font-medium"
-                >
-                  View All →
-                </button>
               </div>
 
               {reviewsLoading ? (
@@ -640,7 +647,7 @@ const DashBoardSeller = () => {
                                 className="text-sm text-blue-600 hover:text-blue-800 hover:underline font-medium transition-colors"
                               >
                                 {(() => {
-                                  // Try to get gig title from review data structure
+                                  // Try to get gig title from nested gig data first
                                   if (review.gig?.title) {
                                     return review.gig.title;
                                   }
@@ -650,8 +657,11 @@ const DashBoardSeller = () => {
                                   if (review.order?.gig_title) {
                                     return review.order.gig_title;
                                   }
-                                  // Fallback to gig ID
-                                  return `Service #${review.order.gig_id}`;
+                                  if (review.gig_title) {
+                                    return review.gig_title;
+                                  }
+                                  // Generic fallback
+                                  return "Completed Service";
                                 })()}
                               </button>
                             </div>
