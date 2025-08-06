@@ -12,11 +12,6 @@ const DashBoardSeller = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
-  const [activeOrders, setActiveOrders] = useState([]);
-  const [recentReviews, setRecentReviews] = useState([]);
-  const [ordersLoading, setOrdersLoading] = useState(false);
-  const [reviewsLoading, setReviewsLoading] = useState(false);
-  const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
   const [stats, setStats] = useState({
     totalEarnings: 0,
     totalOrders: 0,
@@ -30,6 +25,11 @@ const DashBoardSeller = () => {
     seller_headline: '',
     seller_description: ''
   });
+  const [activeOrders, setActiveOrders] = useState([]);
+  const [recentReviews, setRecentReviews] = useState([]);
+  const [ordersLoading, setOrdersLoading] = useState(false);
+  const [reviewsLoading, setReviewsLoading] = useState(false);
+  const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
 
   const showToast = (message, type = 'success') => {
     setToast({ show: true, message, type });
@@ -63,7 +63,7 @@ const DashBoardSeller = () => {
           seller_description: data.data.seller_description || ''
         });
 
-        // Cập nhật rating từ profile
+        // Update rating from profile
         setStats(prevStats => ({
           ...prevStats,
           rating: data.data.rating || 0
@@ -75,12 +75,11 @@ const DashBoardSeller = () => {
       }
     };
 
-    
     const fetchSellerStats = async () => {
       try {
         if (!token || !authUser?.uuid) return;
 
-        // Fetch earnings overview from new transactions-based endpoint
+        // Fetch earnings overview
         const earningsResponse = await fetch(`http://localhost:8000/api/users/${authUser.uuid}/earnings/stats`, {
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -88,29 +87,18 @@ const DashBoardSeller = () => {
           },
         });
 
-        let earningsData = {
-          totalEarnings: 0,
-          totalOrders: 0,
-          monthlyOrders: 0
-        };
-
         if (earningsResponse.ok) {
           const earningsResult = await earningsResponse.json();
-          earningsData = earningsResult.data || earningsData;
+          const earningsData = earningsResult.data || {};
+          
+          setStats(prevStats => ({
+            ...prevStats,
+            totalEarnings: earningsData.totalEarnings || 0,
+            totalOrders: earningsData.totalOrders || 0
+          }));
         }
-
-        // Update stats with real data from received_payment transactions
-        // Don't override pendingOrders and activeOrders here - let useEffect handle them
-        setStats(prevStats => ({
-          ...prevStats,
-          totalEarnings: earningsData.totalEarnings || 0, // Now from received_payment transactions
-          responseRate: 95, // This would come from messaging/response data
-          deliveryTime: '2-3 days' // This would be calculated from order completion times
-        }));
-
       } catch (err) {
         console.error('Failed to fetch seller stats:', err);
-        // Keep default stats if fetch fails
       }
     };
 
@@ -175,53 +163,20 @@ const DashBoardSeller = () => {
 
     if (authUser && token) {
       fetchProfile();
-      fetchActiveOrders();
       fetchSellerStats();
+      fetchActiveOrders();
+      fetchRecentReviews();
     }
   }, [authUser, token]);
+
+  // Function to handle order click
+  const handleOrderClick = (orderId) => {
+    navigate('/orders');
+  };
 
   // Function to handle gig click
   const handleGigClick = (gigId) => {
     navigate(`/gig/${gigId}`);
-  };
-
-  // Function to handle order click
-  const handleOrderClick = () => {
-    navigate('/orders');
-  };
-
-  // Function to render star rating
-  const renderStars = (rating) => {
-    const stars = [];
-    for (let i = 1; i <= 5; i++) {
-      stars.push(
-        <span
-          key={i}
-          className={`text-sm ${i <= rating ? 'text-yellow-400' : 'text-gray-300'}`}
-        >
-          ★
-        </span>
-      );
-    }
-    return <div className="flex">{stars}</div>;
-  };
-
-  // Function to format order status
-  const getStatusBadge = (status) => {
-    const statusConfig = {
-      'in_progress': { bg: 'bg-blue-100', text: 'text-blue-800', label: 'In Progress' },
-      'pending': { bg: 'bg-yellow-100', text: 'text-yellow-800', label: 'Pending' },
-      'completed': { bg: 'bg-green-100', text: 'text-green-800', label: 'Completed' },
-      'cancelled': { bg: 'bg-red-100', text: 'text-red-800', label: 'Cancelled' },
-    };
-    
-    const config = statusConfig[status] || { bg: 'bg-gray-100', text: 'text-gray-800', label: status };
-    
-    return (
-      <span className={`px-2 py-1 rounded-full text-xs font-medium ${config.bg} ${config.text}`}>
-        {config.label}
-      </span>
-    );
   };
 
   const handleInputChange = (e) => {
@@ -243,7 +198,7 @@ const DashBoardSeller = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      // Only send fields that can be updated (fullname, username, avt_url)
+      // Only send fields that can be updated (fullname, username, avt_url, seller_headline, seller_description)
       const updateData = {
         fullname: formData.fullname,
         username: formData.username,
@@ -280,6 +235,40 @@ const DashBoardSeller = () => {
     }
   };
 
+  // Function to render star rating
+  const renderStars = (rating) => {
+    const stars = [];
+    for (let i = 1; i <= 5; i++) {
+      stars.push(
+        <span
+          key={i}
+          className={`text-sm ${i <= rating ? 'text-yellow-400' : 'text-gray-300'}`}
+        >
+          ★
+        </span>
+      );
+    }
+    return <div className="flex">{stars}</div>;
+  };
+
+  // Function to format order status
+  const getStatusBadge = (status) => {
+    const statusConfig = {
+      'in_progress': { bg: 'bg-blue-100', text: 'text-blue-800', label: 'In Progress' },
+      'pending': { bg: 'bg-yellow-100', text: 'text-yellow-800', label: 'Pending' },
+      'completed': { bg: 'bg-green-100', text: 'text-green-800', label: 'Completed' },
+      'cancelled': { bg: 'bg-red-100', text: 'text-red-800', label: 'Cancelled' },
+    };
+    
+    const config = statusConfig[status] || { bg: 'bg-gray-100', text: 'text-gray-800', label: status };
+    
+    return (
+      <span className={`px-2 py-1 rounded-full text-xs font-medium ${config.bg} ${config.text}`}>
+        {config.label}
+      </span>
+    );
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50">
@@ -309,85 +298,233 @@ const DashBoardSeller = () => {
     <div className="min-h-screen bg-gray-50">
       <NavBarSeller />
       
+      {/* Toast Notification */}
+      {toast.show && (
+        <div className={`fixed top-20 right-4 z-50 px-4 py-3 rounded-lg shadow-lg transition-all duration-300 ${
+          toast.type === 'success' 
+            ? 'bg-green-500 text-white' 
+            : 'bg-red-500 text-white'
+        }`}>
+          <div className="flex items-center space-x-2">
+            <span className="text-sm font-medium">{toast.message}</span>
+            <button 
+              onClick={() => setToast({ show: false, message: '', type: 'success' })}
+              className="ml-2 text-white hover:text-gray-200"
+            >
+              ×
+            </button>
+          </div>
+        </div>
+      )}
+      
       <div className="container mx-auto px-4 py-8 pt-24">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          
-          {/* Left Sidebar - Profile and Create Gig */}
-          <div className="lg:col-span-1 space-y-4">
-            {/* Profile */}
-            <div className="bg-white rounded-lg shadow-lg p-3 max-w-sm border border-gray-100">
-              <h2 className="text-sm font-semibold text-gray-800 mb-2">My Profile</h2>
-              
-              <div className="text-center mb-2">
-                <AvatarUpload 
-                  currentAvatar={isEditing ? formData.avt_url || profile?.avatar_url : profile?.avatar_url}
-                  onAvatarChange={handleAvatarChange}
-                  size="medium"
-                />
-                
-                <div>
-                  <h3 className="text-base font-semibold text-gray-800">{profile?.fullname || 'Seller'}</h3>
-                  <p className="text-sm text-gray-600">@{profile?.username || 'username'}</p>
-                  <p className="text-xs text-gray-500 mb-2">{authUser?.email}</p>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Left Panel - Profile */}
+          <div className="lg:col-span-1">
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 text-center sticky top-6">
+              {!isEditing ? (
+                <>
+                  {/* Avatar */}
+                  <div className="relative inline-block mb-4">
+                    <img
+                      src={profile?.avt_url || profile?.avatar_url || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face&auto=format'}
+                      alt="Profile"
+                      className="w-24 h-24 rounded-full object-cover border-2 border-gray-200"
+                      onError={(e) => {
+                        e.target.src = 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face&auto=format';
+                      }}
+                    />
+                  </div>
                   
-                  <div className="flex items-center justify-center space-x-3 mb-3">
-                    <div className="flex items-center bg-yellow-50 px-2 py-1 rounded border border-yellow-100">
-                      <span className="text-yellow-500 text-sm">⭐</span>
-                      <span className="text-sm font-medium ml-1 text-yellow-700">{stats.rating}</span>
+                  {/* Display Name */}
+                  <h1 className="text-2xl font-bold text-gray-900 mb-1">{profile?.fullname || 'Seller'}</h1>
+                  
+                  {/* Username/ID */}
+                  <p className="text-gray-600 text-sm mb-1">@{profile?.username}</p>
+                  
+                  {/* Email */}
+                  <p className="text-gray-600 text-sm mb-2">{authUser?.email}</p>
+                  
+                  {/* Seller Headline */}
+                  {profile?.seller_headline && (
+                    <p className="text-gray-700 font-medium text-sm mb-1">{profile.seller_headline}</p>
+                  )}
+                  
+                  {/* Seller Description */}
+                  {profile?.seller_description && (
+                    <p className="text-gray-600 text-xs mb-4 max-w-xs mx-auto leading-relaxed">
+                      {profile.seller_description}
+                    </p>
+                  )}
+                  
+                  {!profile?.seller_headline && !profile?.seller_description && (
+                    <div className="mb-4"></div>
+                  )}
+                  
+                  {/* Stats */}
+                  <div className="grid grid-cols-2 gap-3 mb-6">
+                    <div className="bg-green-50 p-3 rounded-lg border border-green-100">
+                      <h4 className="font-semibold text-green-800 text-xs mb-1">Total Earnings</h4>
+                      <p className="text-lg font-bold text-green-600 truncate">${stats.totalEarnings.toFixed(2)}</p>
                     </div>
-                    <div className="bg-gray-50 px-2 py-1 rounded border border-gray-200">
-                      <span className="text-sm font-medium text-gray-700">{stats.responseRate}%</span>
+                    <div className="bg-blue-50 p-3 rounded-lg border border-blue-100">
+                      <h4 className="font-semibold text-blue-800 text-xs mb-1">Total Orders</h4>
+                      <p className="text-lg font-bold text-blue-600">{stats.totalOrders}</p>
+                    </div>
+                    <div className="bg-yellow-50 p-3 rounded-lg border border-yellow-100">
+                      <h4 className="font-semibold text-yellow-800 text-xs mb-1">Rating</h4>
+                      <p className="text-lg font-bold text-yellow-600">★ {stats.rating.toFixed(1)}</p>
+                    </div>
+                    <div className="bg-purple-50 p-3 rounded-lg border border-purple-100">
+                      <h4 className="font-semibold text-purple-800 text-xs mb-1">Response Rate</h4>
+                      <p className="text-lg font-bold text-purple-600">{stats.responseRate}%</p>
                     </div>
                   </div>
                   
-                  <button
-                    onClick={() => setIsEditing(!isEditing)}
-                    className="px-3 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
-                  >
-                    {isEditing ? 'Cancel' : 'Edit Profile'}
-                  </button>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-3 gap-2">
-                <div className="bg-green-50 p-2 rounded-lg text-center border border-green-100">
-                  <h4 className="font-semibold text-green-800 text-xs mb-1">Earnings</h4>
-                  <p className="text-sm font-bold text-green-600">${stats.totalEarnings.toFixed(2)}</p>
-                </div>
-                <div className="bg-blue-50 p-2 rounded-lg text-center border border-blue-100">
-                  <h4 className="font-semibold text-blue-800 text-xs mb-1">Active Orders</h4>
-                  <p className="text-xs font-bold text-blue-600">{activeOrders.length}</p>
-                </div>
-                <div className="bg-orange-50 p-2 rounded-lg text-center border border-orange-100">
-                  <h4 className="font-semibold text-orange-800 text-xs mb-1">Total Orders</h4>
-                  <p className="text-xs font-bold text-orange-600">{stats.totalOrders}</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Create Gig */}
-            <div className="bg-white rounded-lg shadow-lg p-3 max-w-sm border border-gray-100">
-              <h3 className="text-sm font-semibold text-gray-800 mb-2">Create Gig</h3>
-              <p className="text-xs text-gray-600 mb-3">Ready to showcase your skills?</p>
-              <button
-                onClick={() => navigate('/create-gig')}
-                className="w-full px-3 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors"
-              >
-                Create New Gig
-              </button>
+                  {/* Action Buttons */}
+                  <div className="space-y-3">
+                    <button
+                      onClick={() => setIsEditing(true)}
+                      className="w-full py-3 bg-gray-900 text-white font-semibold rounded-lg hover:bg-gray-800 transition-colors"
+                    >
+                      Edit Profile
+                    </button>
+                    
+                    <button
+                      onClick={() => navigate('/orders')}
+                      className="w-full py-3 bg-gray-100 border border-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-200 transition-colors"
+                    >
+                      View Orders
+                    </button>
+                    
+                    <button
+                      onClick={() => navigate('/manage-gigs')}
+                      className="w-full py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors"
+                    >
+                      Manage Gigs
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Edit Profile</h3>
+                  
+                  <form onSubmit={handleSubmit} className="space-y-4">
+                    {/* Avatar Upload */}
+                    <div className="text-center">
+                      <label className="block text-sm font-medium text-gray-700 mb-3">Profile Picture</label>
+                      <AvatarUpload 
+                        currentAvatar={formData.avt_url}
+                        onAvatarChange={handleAvatarChange}
+                        size="xlarge"
+                      />
+                    </div>
+                    
+                    {/* Form Fields */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Full Name *
+                      </label>
+                      <input
+                        type="text"
+                        name="fullname"
+                        value={formData.fullname}
+                        onChange={handleInputChange}
+                        className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder="Enter your full name"
+                        required
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Username *
+                      </label>
+                      <input
+                        type="text"
+                        name="username"
+                        value={formData.username}
+                        onChange={handleInputChange}
+                        className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder="Choose a username"
+                        required
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Seller Headline
+                      </label>
+                      <input
+                        type="text"
+                        name="seller_headline"
+                        value={formData.seller_headline}
+                        onChange={handleInputChange}
+                        className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder="e.g., Professional Web Developer"
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Seller Description
+                      </label>
+                      <textarea
+                        name="seller_description"
+                        value={formData.seller_description}
+                        onChange={handleInputChange}
+                        rows={5}
+                        className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-y min-h-[120px]"
+                        placeholder="Describe your services and expertise..."
+                        style={{ minHeight: '120px' }}
+                      />
+                      <p className="text-xs text-gray-500 mt-1">
+                        {formData.seller_description.length}/500 characters
+                      </p>
+                    </div>
+                    
+                    {/* Form Actions */}
+                    <div className="flex space-x-3 pt-4">
+                      <button
+                        type="submit"
+                        disabled={loading}
+                        className="flex-1 py-2 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+                      >
+                        {loading ? 'Saving...' : 'Save'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setIsEditing(false)}
+                        className="flex-1 py-2 bg-gray-200 text-gray-700 font-semibold rounded-lg hover:bg-gray-300 transition-colors"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </form>
+                </>
+              )}
             </div>
           </div>
 
-          {/* Right Sidebar - Active Orders */}
-          <div className="lg:col-span-1">
-            <div className="bg-white rounded-lg shadow-lg p-4 border border-gray-100">
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="text-base font-semibold text-gray-800">Active Orders</h3>
-                <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-sm font-medium">
-                  {ordersLoading ? '...' : activeOrders.length}
-                </span>
+          {/* Right Panel - Active Orders and Recent Reviews */}
+          <div className="lg:col-span-2 space-y-8">
+            {/* Active Orders Section */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl font-semibold text-gray-900 flex items-center">
+                  <svg className="w-5 h-5 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                  </svg>
+                  Active Orders
+                </h2>
+                <button
+                  onClick={() => navigate('/orders')}
+                  className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                >
+                  View All →
+                </button>
               </div>
-              
+
               {ordersLoading ? (
                 <div className="flex justify-center py-8">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
@@ -405,11 +542,8 @@ const DashBoardSeller = () => {
               ) : (
                 <div className="space-y-4">
                   {activeOrders.map((order, index) => (
-                    <div 
-                      key={order.id || index} 
-                      onClick={() => handleOrderClick()}
-                      className="border border-gray-200 rounded-lg p-4 hover:shadow-md hover:border-blue-300 transition-all cursor-pointer"
-                    >
+                    <div key={order.id || index} className="border border-gray-200 rounded-lg p-4 hover:shadow-sm transition-shadow cursor-pointer"
+                         onClick={() => handleOrderClick(order.id)}>
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
                           <div className="flex items-center justify-between mb-2">
@@ -420,7 +554,7 @@ const DashBoardSeller = () => {
                           </div>
                           <div className="flex items-center justify-between">
                             <p className="text-sm text-gray-600">
-                              Customer: {order.buyer?.username || order.buyer_username || order.client_username || 'N/A'}
+                              Customer: {order.buyer?.username || order.client_username || order.buyer_username || 'N/A'}
                             </p>
                             <span className="font-semibold text-green-600">
                               ${order.price_at_purchase || order.total_amount || order.amount || order.price || 0}
@@ -435,8 +569,8 @@ const DashBoardSeller = () => {
             </div>
 
             {/* Recent Reviews Section */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mt-6">
-              <div className="flex items-center justify-start mb-6">
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+              <div className="flex items-center justify-between mb-6">
                 <h2 className="text-xl font-semibold text-gray-900 flex items-center">
                   <svg className="w-5 h-5 mr-2 text-yellow-500" fill="currentColor" viewBox="0 0 20 20">
                     <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
@@ -513,18 +647,21 @@ const DashBoardSeller = () => {
                                 className="text-sm text-blue-600 hover:text-blue-800 hover:underline font-medium transition-colors"
                               >
                                 {(() => {
-                                  // Try to get gig title from nested gig data
-                                  if (review.order?.gig?.title) {
-                                    return review.order.gig.title;
-                                  }
+                                  // Try to get gig title from nested gig data first
                                   if (review.gig?.title) {
                                     return review.gig.title;
+                                  }
+                                  if (review.order?.gig?.title) {
+                                    return review.order.gig.title;
                                   }
                                   if (review.order?.gig_title) {
                                     return review.order.gig_title;
                                   }
-                                  // Fallback to gig ID
-                                  return `Service #${review.order.gig_id}`;
+                                  if (review.gig_title) {
+                                    return review.gig_title;
+                                  }
+                                  // Generic fallback
+                                  return "Completed Service";
                                 })()}
                               </button>
                             </div>
@@ -538,110 +675,6 @@ const DashBoardSeller = () => {
             </div>
           </div>
         </div>
-
-        {/* Toast Notification */}
-        {toast.show && (
-          <div className={`fixed top-20 right-4 z-50 px-4 py-3 rounded-lg shadow-lg transition-all duration-300 ${
-            toast.type === 'success' 
-              ? 'bg-green-500 text-white' 
-              : 'bg-red-500 text-white'
-          }`}>
-            <div className="flex items-center space-x-2">
-              <span className="text-sm font-medium">{toast.message}</span>
-              <button 
-                onClick={() => setToast({ show: false, message: '', type: 'success' })}
-                className="ml-2 text-white hover:text-gray-200"
-              >
-                ×
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Edit Profile Form */}
-        {isEditing && (
-          <div className="mt-8 bg-white rounded-lg shadow-lg p-6 border border-gray-100">
-            <h2 className="text-lg font-semibold text-gray-800 mb-4">Edit Profile</h2>
-            
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="flex flex-col items-center mb-6">
-                <label className="block text-sm font-medium text-gray-700 mb-3">Profile Avatar</label>
-                <AvatarUpload 
-                  currentAvatar={formData.avt_url}
-                  onAvatarChange={handleAvatarChange}
-                  size="xlarge"
-                  saveImmediately={false}
-                />
-                <p className="text-xs text-gray-500 mt-2">Click to upload a new avatar</p>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
-                  <input
-                    type="text"
-                    name="fullname"
-                    value={formData.fullname}
-                    onChange={handleInputChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Username</label>
-                  <input
-                    type="text"
-                    name="username"
-                    value={formData.username}
-                    onChange={handleInputChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    required
-                  />
-                </div>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Seller Headline</label>
-                <input
-                  type="text"
-                  name="seller_headline"
-                  value={formData.seller_headline}
-                  onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="e.g., Professional Web Developer"
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Seller Description</label>
-                <textarea
-                  name="seller_description"
-                  value={formData.seller_description}
-                  onChange={handleInputChange}
-                  rows={4}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="Describe your services and expertise..."
-                />
-              </div>
-              
-              <div className="flex space-x-3 pt-4">
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors"
-                >
-                  Save Changes
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setIsEditing(false)}
-                  className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg font-medium hover:bg-gray-300 transition-colors"
-                >
-                  Cancel
-                </button>
-              </div>
-            </form>
-          </div>
-        )}
       </div>
 
       <Footer />

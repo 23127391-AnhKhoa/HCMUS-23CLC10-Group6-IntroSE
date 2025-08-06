@@ -313,10 +313,10 @@ const ReviewPage = () => {
                     <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-6 text-center">
                       <div className="text-4xl mb-3">📦</div>
                       <h4 className="text-lg font-semibold text-gray-900 mb-2">
-                        Order #{order.id}
+                        {order.gig_title || `Order #${order.id}`}
                       </h4>
                       <p className="text-gray-600 text-sm mb-4">
-                        {order.gig_title || 'Service Order'}
+                        {order.gig_title ? `Order #${order.id}` : 'Service Order'}
                       </p>
                       <div className="mt-4">
                         <span className="text-2xl font-bold text-blue-600">
