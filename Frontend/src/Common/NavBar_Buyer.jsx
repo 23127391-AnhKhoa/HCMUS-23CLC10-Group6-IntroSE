@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Input, Avatar, Badge, Tooltip, Dropdown, Menu } from 'antd';
 import { SearchOutlined, MessageOutlined, BellOutlined, HeartOutlined, UserOutlined } from '@ant-design/icons';
 import { useAuth } from '../contexts/AuthContext'; // Đảm bảo đường dẫn đúng
+import NotificationBell from '../components/NotificationBell/NotificationBell';
 
 // Component con cho dropdown menu của categories
 const CategoryMenu = ({ category }) => {
@@ -263,7 +264,7 @@ const Navbar = () => {
                   </Badge>
                 </Tooltip>
                 <Tooltip title="Notifications">
-                  <BellOutlined className="text-xl hover:text-blue-600 cursor-pointer" />
+                  <NotificationBell />
                 </Tooltip>
                 <Tooltip title="Favorites">
                   <Link to="/favorites">

@@ -5,13 +5,18 @@ import { HeartFilled } from '@ant-design/icons';
 import NavBar from '../Common/NavBar_Buyer';
 import Footer from '../Common/Footer';
 import CreateOrderModal from '../components/CreateOrderModal/CreateOrderModal';
+import ReviewSection from '../components/Reviews/ReviewSection';
 import { useAuth } from '../contexts/AuthContext';
+import { useOrderNotification } from '../hooks/useOrderNotification';
 import ReportButton from '../components/ReportButton';
+import { createSafeHtml } from '../utils/htmlSanitizer';
+import { Tooltip } from 'antd';
 
 const GigDetail = () => {
     const { id } = useParams();
     const navigate = useNavigate();
     const { token, authUser, isLoading: authLoading } = useAuth();
+    const { notifyOrderCreated } = useOrderNotification();
     const [gig, setGig] = useState(null);
     const [sellerDetails, setSellerDetails] = useState(null);
     const [gigMedia, setGigMedia] = useState([]);
@@ -179,6 +184,32 @@ const GigDetail = () => {
             const data = await response.json();
             
             if (data.status === 'success') {
+                console.log('✅ Order created successfully:', data.data);
+                
+                // Create notification for gig owner
+                try {
+                    const orderNotificationData = {
+                        id: data.data.id,
+                        gig_owner_id: gig.owner_id,
+                        gig_id: gig.id,
+                        gig_title: gig.title,
+                        client_name: authUser.fullname || authUser.username || 'Client',
+                        price_at_purchase: orderPayload.price_at_purchase
+                    };
+                    
+                    console.log('🔔 Creating notification for gig owner:', orderNotificationData);
+                    const notificationResult = await notifyOrderCreated(orderNotificationData);
+                    
+                    if (notificationResult) {
+                        console.log('✅ Order notification sent successfully');
+                    } else {
+                        console.log('⚠️ Order notification failed to send');
+                    }
+                } catch (notificationError) {
+                    console.error('❌ Error sending order notification:', notificationError);
+                    // Don't fail the order creation if notification fails
+                }
+                
                 // Indicate success
                 setOrderCreated(true);
             } else {
@@ -279,6 +310,11 @@ const GigDetail = () => {
         } finally {
             setLoading(false);
         }
+    };
+
+    // Refresh gig data after review submission
+    const handleReviewSubmitted = () => {
+        fetchGigDetail(); // Refresh gig data to get updated rating
     };
 
     // Helper function to get all images and videos (cover + additional media)
@@ -461,291 +497,369 @@ const GigDetail = () => {
                 )}
                 
                 <div className="px-6 lg:px-40 flex flex-1 justify-center py-5 pt-28">
-                    <div className="layout-content-container flex flex-col max-w-[960px] flex-1">
-                        {/* Breadcrumb */}
-                        <div className="flex flex-wrap gap-2 p-6 mb-6">
-                            <button 
-                                onClick={() => navigate(-1)}
-                                className="text-blue-600 text-base font-medium leading-normal hover:text-purple-600 transition-colors duration-200"
-                            >
-                                {gig.category_name || 'Graphics & Design'}
-                            </button>
-                            <span className="text-gray-400 text-base font-medium leading-normal">/</span>
-                            <span className="text-gray-700 text-base font-medium leading-normal">
-                                {gig.title?.substring(0, 50) || 'Service Details'}
-                                {gig.title?.length > 50 ? '...' : ''}
-                            </span>
-                        </div>
-
-                        {/* Title & Favorite Button */}
-                        <div className="flex justify-between items-start p-6 mb-6">
-                            <h2 className="text-gray-800 tracking-light text-[28px] font-bold leading-tight text-left flex-1 pr-4 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                                {gig.title}
-                            </h2>
-                            <div className="flex gap-3 items-center">
-                                <button
-                                    onClick={handleFavoriteToggle}
-                                    className="p-3 rounded-full bg-white/60 backdrop-blur-sm border border-white/30 hover:bg-white/80 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
-                                    aria-label="Toggle Favorite"
+                    <div className="layout-content-container flex flex-col lg:flex-row max-w-[1200px] flex-1 gap-8">
+                        {/* Main Content - Left Side */}
+                        <div className="flex flex-col flex-1 max-w-[700px]">
+                            {/* Breadcrumb */}
+                            <div className="flex flex-wrap gap-2 p-6 mb-6">
+                                <button 
+                                    onClick={() => navigate(-1)}
+                                    className="text-blue-600 text-base font-medium leading-normal hover:text-purple-600 transition-colors duration-200"
                                 >
-                                    <HeartFilled
-                                        style={{
-                                            fontSize: '28px',
-                                            color: isFavorited ? '#1dbf73' : '#a9a9a9',
-                                        }}
-                                    />
+                                    {gig.category_name || 'Graphics & Design'}
                                 </button>
-                                <div className="top-0 right-0">
-                                    <ReportButton 
-                                        Id={gig.id}
-                                        type="report-gig"
-                                        className="bg-red-600 hover:bg-red-300 text-white border border-red-200 px-3 py-1 text-sm font-medium rounded-md shadow transition duration-200"
-                                    >
-                                        Report
-                                    </ReportButton>
+                                <span className="text-gray-400 text-base font-medium leading-normal">/</span>
+                                <span className="text-gray-700 text-base font-medium leading-normal">
+                                    {gig.title?.substring(0, 50) || 'Service Details'}
+                                    {gig.title?.length > 50 ? '...' : ''}
+                                </span>
+                            </div>
+
+                            {/* Title & Favorite Button */}
+                            <div className="flex justify-between items-start p-6 mb-6">
+                                <h2 className="text-gray-800 tracking-light text-[28px] font-bold leading-tight text-left flex-1 pr-4 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                                    {gig.title}
+                                </h2>
+                                <div className="flex gap-3 items-center">
+                                     <Tooltip title={isFavorited ? 'Unfavorite' : 'Favorite'}>
+                                        <button
+                                            onClick={handleFavoriteToggle}
+                                            className="p-2 rounded-full bg-white/60 backdrop-blur-sm border border-white/30 hover:bg-white/80 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+                                            aria-label="Toggle Favorite"
+                                        >
+                                            <HeartFilled
+                                            style={{
+                                                fontSize: '20px',
+                                                color: isFavorited ? '#1dbf73' : '#a9a9a9',
+                                            }}
+                                            />
+                                        </button>
+                                    </Tooltip>
+                                    <div className="top-0 right-0">
+                                        <ReportButton 
+                                            Id={gig.id}
+                                            type="report-gig"
+                                            className="bg-red-600 hover:bg-red-300 text-white border border-red-200 px-3 py-1 text-sm font-medium rounded-md shadow transition duration-200"
+                                        >
+                                            Report
+                                        </ReportButton>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Image Slider */}
+                            <div className="w-full relative p-6 mb-6">
+                                {/* Main Image/Video Display */}
+                                <div className="w-full overflow-hidden bg-gradient-to-br from-gray-100 to-gray-200 aspect-[3/2] rounded-2xl flex relative shadow-inner">
+                                    {allImages[currentImageIndex]?.type === 'video' ? (
+                                        <video
+                                            className="w-full h-full object-cover rounded-2xl"
+                                            autoPlay
+                                            muted
+                                            loop
+                                            preload="metadata"
+                                            style={{ outline: 'none' }}
+                                            controlsList="nodownload noremoteplayback noplaybackrate"
+                                            disablePictureInPicture
+                                            controls
+                                            key={currentImageIndex} // Force re-render when switching videos
+                                        >
+                                            <source src={allImages[currentImageIndex]?.url} type="video/mp4" />
+                                            <source src={allImages[currentImageIndex]?.url} type="video/webm" />
+                                            <source src={allImages[currentImageIndex]?.url} type="video/ogg" />
+                                            Your browser does not support the video tag.
+                                        </video>
+                                    ) : (
+                                        <div
+                                            className="w-full bg-center bg-no-repeat bg-cover aspect-auto rounded-2xl flex-1 transition-all duration-300"
+                                            style={{
+                                                backgroundImage: `url("${allImages[currentImageIndex]?.url || gig?.cover_image || 'https://placehold.co/800x400'}")`
+                                            }}
+                                        ></div>
+                                    )}
+                                    
+                                    {/* Navigation Arrows */}
+                                    {allImages.length > 1 && (
+                                        <>
+                                            <button
+                                                onClick={prevImage}
+                                                className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-white/90 backdrop-blur-sm hover:bg-white text-gray-700 rounded-full p-3 transition-all duration-200 z-10 shadow-lg hover:shadow-xl border border-white/20"
+                                            >
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 256 256">
+                                                    <path d="M165.66,202.34a8,8,0,0,1-11.32,11.32l-80-80a8,8,0,0,1,0-11.32l80-80a8,8,0,0,1,11.32,11.32L91.31,128Z"></path>
+                                                </svg>
+                                            </button>
+                                            <button
+                                                onClick={nextImage}
+                                                className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-white/90 backdrop-blur-sm hover:bg-white text-gray-700 rounded-full p-3 transition-all duration-200 z-10 shadow-lg hover:shadow-xl border border-white/20"
+                                            >
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 256 256">
+                                                    <path d="M181.66,133.66l-80,80a8,8,0,0,1-11.32-11.32L164.69,128,90.34,53.66a8,8,0,0,1,11.32-11.32l80,80A8,8,0,0,1,181.66,133.66Z"></path>
+                                                </svg>
+                                            </button>
+                                        </>
+                                    )}
+
+                                    {/* Media Type Indicator */}
+                                    {allImages[currentImageIndex]?.type === 'video' && (
+                                        <div className="absolute top-4 left-4 bg-black/60 backdrop-blur-sm text-white px-3 py-1 rounded-full text-sm z-10 flex items-center gap-2">
+                                            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                                                <path d="M8 5v14l11-7z"/>
+                                            </svg>
+                                            Video
+                                        </div>
+                                    )}
+
+                                    {/* Image Counter */}
+                                    {allImages.length > 1 && (
+                                        <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm text-gray-700 px-4 py-2 rounded-full text-sm z-10 border border-white/20 shadow-lg">
+                                            {currentImageIndex + 1} / {allImages.length}
+                                        </div>
+                                    )}
+
+                                    {/* Dot Indicators */}
+                                    {allImages.length > 1 && (
+                                        <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex gap-2 z-10 bg-white/20 backdrop-blur-sm px-4 py-2 rounded-full">
+                                            {allImages.map((_, index) => (
+                                                <button
+                                                    key={index}
+                                                    onClick={() => goToImage(index)}
+                                                    className={`w-3 h-3 rounded-full transition-all duration-200 ${
+                                                        currentImageIndex === index 
+                                                            ? 'bg-white scale-125 shadow-lg' 
+                                                            : 'bg-white/60 hover:bg-white/80'
+                                                    }`}
+                                                    aria-label={`Go to ${allImages[index]?.type === 'video' ? 'video' : 'image'} ${index + 1}`}
+                                                ></button>
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
 
-                            </div>
-                        </div>
-
-                        {/* Image Slider */}
-                        <div className="w-full relative p-6 mb-6">
-                            {/* Main Image/Video Display */}
-                            <div className="w-full overflow-hidden bg-gradient-to-br from-gray-100 to-gray-200 aspect-[3/2] rounded-2xl flex relative shadow-inner">
-                                {allImages[currentImageIndex]?.type === 'video' ? (
-                                    <video
-                                        className="w-full h-full object-cover rounded-2xl"
-                                        autoPlay
-                                        muted
-                                        loop
-                                        preload="metadata"
-                                        style={{ outline: 'none' }}
-                                        controlsList="nodownload noremoteplayback noplaybackrate"
-                                        disablePictureInPicture
-                                        controls
-                                        key={currentImageIndex} // Force re-render when switching videos
-                                    >
-                                        <source src={allImages[currentImageIndex]?.url} type="video/mp4" />
-                                        <source src={allImages[currentImageIndex]?.url} type="video/webm" />
-                                        <source src={allImages[currentImageIndex]?.url} type="video/ogg" />
-                                        Your browser does not support the video tag.
-                                    </video>
-                                ) : (
-                                    <div
-                                        className="w-full bg-center bg-no-repeat bg-cover aspect-auto rounded-2xl flex-1 transition-all duration-300"
-                                        style={{
-                                            backgroundImage: `url("${allImages[currentImageIndex]?.url || gig?.cover_image || 'https://placehold.co/800x400'}")`
-                                        }}
-                                    ></div>
-                                )}
-                                
-                                {/* Navigation Arrows */}
+                                {/* Thumbnail Navigation */}
                                 {allImages.length > 1 && (
-                                    <>
-                                        <button
-                                            onClick={prevImage}
-                                            className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-white/90 backdrop-blur-sm hover:bg-white text-gray-700 rounded-full p-3 transition-all duration-200 z-10 shadow-lg hover:shadow-xl border border-white/20"
-                                        >
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 256 256">
-                                                <path d="M165.66,202.34a8,8,0,0,1-11.32,11.32l-80-80a8,8,0,0,1,0-11.32l80-80a8,8,0,0,1,11.32,11.32L91.31,128Z"></path>
-                                            </svg>
-                                        </button>
-                                        <button
-                                            onClick={nextImage}
-                                            className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-white/90 backdrop-blur-sm hover:bg-white text-gray-700 rounded-full p-3 transition-all duration-200 z-10 shadow-lg hover:shadow-xl border border-white/20"
-                                        >
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 256 256">
-                                                <path d="M181.66,133.66l-80,80a8,8,0,0,1-11.32-11.32L164.69,128,90.34,53.66a8,8,0,0,1,11.32-11.32l80,80A8,8,0,0,1,181.66,133.66Z"></path>
-                                            </svg>
-                                        </button>
-                                    </>
-                                )}
-
-                                {/* Media Type Indicator */}
-                                {allImages[currentImageIndex]?.type === 'video' && (
-                                    <div className="absolute top-4 left-4 bg-black/60 backdrop-blur-sm text-white px-3 py-1 rounded-full text-sm z-10 flex items-center gap-2">
-                                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                                            <path d="M8 5v14l11-7z"/>
-                                        </svg>
-                                        Video
-                                    </div>
-                                )}
-
-                                {/* Image Counter */}
-                                {allImages.length > 1 && (
-                                    <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm text-gray-700 px-4 py-2 rounded-full text-sm z-10 border border-white/20 shadow-lg">
-                                        {currentImageIndex + 1} / {allImages.length}
-                                    </div>
-                                )}
-
-                                {/* Dot Indicators */}
-                                {allImages.length > 1 && (
-                                    <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex gap-2 z-10 bg-white/20 backdrop-blur-sm px-4 py-2 rounded-full">
-                                        {allImages.map((_, index) => (
+                                    <div className="flex gap-3 mt-6 overflow-x-auto pb-2">
+                                        {allImages.map((image, index) => (
                                             <button
-                                                key={index}
+                                                key={image.id}
                                                 onClick={() => goToImage(index)}
-                                                className={`w-3 h-3 rounded-full transition-all duration-200 ${
+                                                className={`flex-shrink-0 w-20 h-16 rounded-xl overflow-hidden border-2 transition-all duration-200 shadow-md hover:shadow-lg relative ${
                                                     currentImageIndex === index 
-                                                        ? 'bg-white scale-125 shadow-lg' 
-                                                        : 'bg-white/60 hover:bg-white/80'
+                                                        ? 'border-blue-500 ring-2 ring-blue-500 ring-opacity-30 transform scale-105' 
+                                                        : 'border-gray-300 hover:border-gray-400'
                                                 }`}
-                                                aria-label={`Go to ${allImages[index]?.type === 'video' ? 'video' : 'image'} ${index + 1}`}
-                                            ></button>
+                                            >
+                                                {image.type === 'video' ? (
+                                                    <>
+                                                        <video
+                                                            className="w-full h-full object-cover"
+                                                            preload="metadata"
+                                                            muted
+                                                        >
+                                                            <source src={image.url} type="video/mp4" />
+                                                        </video>
+                                                        <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+                                                            <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
+                                                                <path d="M8 5v14l11-7z"/>
+                                                            </svg>
+                                                        </div>
+                                                    </>
+                                                ) : (
+                                                    <div
+                                                        className="w-full h-full bg-center bg-no-repeat bg-cover"
+                                                        style={{
+                                                            backgroundImage: `url("${image.url}")`
+                                                        }}
+                                                    ></div>
+                                                )}
+                                            </button>
                                         ))}
                                     </div>
                                 )}
                             </div>
 
-                            {/* Thumbnail Navigation */}
-                            {allImages.length > 1 && (
-                                <div className="flex gap-3 mt-6 overflow-x-auto pb-2">
-                                    {allImages.map((image, index) => (
-                                        <button
-                                            key={image.id}
-                                            onClick={() => goToImage(index)}
-                                            className={`flex-shrink-0 w-20 h-16 rounded-xl overflow-hidden border-2 transition-all duration-200 shadow-md hover:shadow-lg relative ${
-                                                currentImageIndex === index 
-                                                    ? 'border-blue-500 ring-2 ring-blue-500 ring-opacity-30 transform scale-105' 
-                                                    : 'border-gray-300 hover:border-gray-400'
-                                            }`}
-                                        >
-                                            {image.type === 'video' ? (
-                                                <>
-                                                    <video
-                                                        className="w-full h-full object-cover"
-                                                        preload="metadata"
-                                                        muted
-                                                    >
-                                                        <source src={image.url} type="video/mp4" />
-                                                    </video>
-                                                    <div className="absolute inset-0 flex items-center justify-center bg-black/30">
-                                                        <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
-                                                            <path d="M8 5v14l11-7z"/>
-                                                        </svg>
-                                                    </div>
-                                                </>
-                                            ) : (
-                                                <div
-                                                    className="w-full h-full bg-center bg-no-repeat bg-cover"
-                                                    style={{
-                                                        backgroundImage: `url("${image.url}")`
-                                                    }}
-                                                ></div>
+                            {/* About This Gig */}
+                            <div className="p-6 mb-6">
+                                <h2 className="text-gray-800 text-[22px] font-bold leading-tight tracking-[-0.015em] pb-4 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                                    About This Gig
+                                </h2>
+                                <div 
+                                    className="text-gray-700 text-base font-normal leading-relaxed prose prose-sm max-w-none prose-headings:text-gray-800 prose-p:text-gray-700 prose-a:text-blue-600 prose-strong:text-gray-800"
+                                    dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(gig.description) }}
+                                ></div>
+                            </div>
+
+                            {/* Reviews Section */}
+                            <div className="mb-6">
+                                <ReviewSection 
+                                    gigId={gig.id}
+                                    avgRating={gig.avg_review || 0}
+                                    totalReviews={gig.total_review || 0}
+                                    onSubmitReview={handleReviewSubmitted}
+                                />
+                            </div>
+
+                            {/* About The Seller */}
+                            <div className="p-6 mb-6">
+                                <h2 className="text-gray-800 text-[22px] font-bold leading-tight tracking-[-0.015em] pb-4 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                                    About The Seller
+                                </h2>
+                                <div className="flex w-full flex-col gap-6">
+                                    <div className="flex gap-6 items-start">
+                                        <div
+                                            className="bg-center bg-no-repeat aspect-square bg-cover rounded-full min-h-32 w-32 ring-4 ring-white shadow-xl border-4 border-white"
+                                            style={{
+                                                backgroundImage: `url("${(sellerDetails?.avatar || gig.owner_avatar || 'https://placehold.co/300x300')}")`
+                                            }}
+                                        ></div>
+                                        <div className="flex flex-col justify-center flex-1">
+                                            <button 
+                                                onClick={() => navigate(`/SellerInfo/${sellerDetails?.uuid || gig.owner_id}`)}
+                                                className="text-gray-800 text-[22px] font-bold leading-tight tracking-[-0.015em] mb-1 hover:text-blue-700 transition-colors duration-200 text-left"
+                                            >
+                                                {sellerDetails?.fullname || gig.owner_fullname || 'Professional Seller'}
+                                            </button>
+                                            <button 
+                                                onClick={() => navigate(`/SellerInfo/${sellerDetails?.uuid || gig.owner_id}`)}
+                                                className="text-blue-600 text-base font-medium leading-normal mb-1 hover:text-blue-700 transition-colors duration-200 text-left"
+                                            >
+                                                @{sellerDetails?.username || gig.owner_username || 'seller'}
+                                            </button>
+                                            <p className="text-gray-600 text-base font-normal leading-normal mb-2">
+                                                {sellerDetails?.seller_headline || gig.category_name || 'Service Provider'}
+                                            </p>
+                                            {sellerDetails?.seller_since && (
+                                                <p className="text-gray-500 text-sm font-medium mb-3">
+                                                    Member since {new Date(sellerDetails.seller_since).getFullYear()}
+                                                </p>
                                             )}
-                                        </button>
-                                    ))}
+                                            <div className="flex gap-3 items-center">
+                                                <button 
+                                                    className="flex cursor-pointer items-center justify-center overflow-hidden rounded-2xl h-10 px-6 bg-gradient-to-r from-blue-500 to-blue-600 text-white text-sm font-bold leading-normal tracking-[0.015em] hover:from-blue-600 hover:to-blue-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+                                                    onClick={() => navigate(`/SellerInfo/${sellerDetails?.uuid || gig.owner_id}`)}
+                                                >
+                                                    <span className="truncate">Contact Seller</span>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {(sellerDetails?.seller_description || gig.owner_bio) && (
+                                        <div 
+                                            className="text-gray-700 text-base font-normal leading-relaxed prose prose-sm max-w-none prose-headings:text-gray-800 prose-p:text-gray-700 prose-a:text-blue-600 prose-strong:text-gray-800"
+                                            dangerouslySetInnerHTML={{ 
+                                                __html: DOMPurify.sanitize(
+                                                    sellerDetails?.seller_description || gig.owner_bio
+                                                )
+                                            }}
+                                        ></div>
+                                    )}
                                 </div>
-                            )}
+                            </div>
                         </div>
 
-                        {/* About This Gig */}
-                        <div className="p-6 mb-6">
-                            <h2 className="text-gray-800 text-[22px] font-bold leading-tight tracking-[-0.015em] pb-4 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                                About This Gig
-                            </h2>
-                            <div 
-                                className="text-gray-700 text-base font-normal leading-relaxed prose prose-sm max-w-none prose-headings:text-gray-800 prose-p:text-gray-700 prose-a:text-blue-600 prose-strong:text-gray-800"
-                                dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(gig.description) }}
-                            ></div>
-                        </div>
-
-                        {/* Pricing - Single Package */}
-                        <div className="p-6 mb-6">
-                            <h2 className="text-gray-800 text-[22px] font-bold leading-tight tracking-[-0.015em] pb-4 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                                Pricing
-                            </h2>
-                            <div className="max-w-md">
-                                <div className="bg-gradient-to-br from-blue-50 to-purple-50 border border-blue-200 rounded-2xl p-6 shadow-lg">
-                                    <div className="flex flex-col gap-4">
-                                        <div className="flex flex-col gap-2">
-                                            <h3 className="text-gray-800 text-lg font-bold leading-tight">Service Package</h3>
-                                            <p className="flex items-baseline gap-1">
-                                                <span className="text-gray-800 text-4xl font-black leading-tight tracking-[-0.033em] bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
+                        {/* Right Sidebar - Pricing Panel */}
+                        <div className="w-full lg:w-96 lg:sticky lg:top-32 lg:self-start">
+                            <div className="bg-white/80 backdrop-blur-sm border border-white/30 rounded-2xl p-8 shadow-xl">
+                                <div className="bg-gradient-to-br from-blue-50 to-purple-50 border border-blue-200 rounded-2xl p-8">
+                                    <div className="flex flex-col gap-6">
+                                        <div className="flex flex-col gap-3">
+                                            <h3 className="text-gray-800 text-xl font-bold leading-tight">Service Package</h3>
+                                            <p className="flex items-baseline gap-2">
+                                                <span className="text-gray-800 text-5xl font-black leading-tight tracking-[-0.033em] bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
                                                     ${gig.price}
                                                 </span>
-                                                <span className="text-gray-600 text-base font-bold leading-tight">one-time</span>
+                                                <span className="text-gray-600 text-lg font-bold leading-tight">one-time</span>
                                             </p>
                                         </div>
+
+                                        {/* Service Details */}
+                                        <div className="flex flex-col gap-4 py-6 border-t border-blue-200">
+                                            <h4 className="text-gray-800 font-semibold text-base">What's Included: </h4>
+                                            <div className="flex items-center justify-between py-2">
+                                                <span className="text-gray-600 text-base flex items-center gap-2">
+                                                    <span className="text-lg">⏱️</span>
+                                                    <span>Delivery Time</span>
+                                                </span>
+                                                <span className="text-gray-800 font-semibold text-base">{gig.delivery_days || 3} days</span>
+                                            </div>
+                                            <div className="flex items-center justify-between py-2">
+                                                <span className="text-gray-600 text-base flex items-center gap-2">
+                                                    <span className="text-lg">🔄</span>
+                                                    <span>Revisions</span>
+                                                </span>
+                                                <span className="text-gray-800 font-semibold text-base">{gig.num_of_edits || 'Unlimited'}</span>
+                                            </div>
+                                            <div className="flex items-center justify-between py-2">
+                                                <span className="text-gray-600 text-base flex items-center gap-2">
+                                                    <span className="text-lg">⭐</span>
+                                                    <span>Rating</span>
+                                                </span>
+                                                <span className="text-gray-800 font-semibold text-base">{gig.avg_review ? `${gig.avg_review.toFixed(1)} ★` : 'New Service'}</span>
+                                            </div>
+                                            <div className="flex items-center justify-between py-2">
+                                                <span className="text-gray-600 text-base flex items-center gap-2">
+                                                    <span className="text-lg">📝</span>
+                                                    <span>Category</span>
+                                                </span>
+                                                <span className="text-gray-800 font-semibold text-base">{gig.category_name || 'Design'}</span>
+                                            </div>
+                                        </div>
+
+                                        {/* Order Summary */}
+                                        <div className="bg-white/60 rounded-xl p-4 border border-blue-100">
+                                            <div className="flex justify-between items-center mb-3">
+                                                <span className="text-gray-700 font-medium">Service Total:</span>
+                                                <span className="text-gray-900 font-bold text-lg">${gig.price}</span>
+                                            </div>
+                                            <div className="flex justify-between items-center text-sm text-gray-600">
+                                                <span>Processing Fee:</span>
+                                                <span>$0.00</span>
+                                            </div>
+                                            <hr className="my-3 border-gray-200" />
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-gray-900 font-bold text-lg">Total:</span>
+                                                <span className="text-green-600 font-bold text-xl">${gig.price}</span>
+                                            </div>
+                                        </div>
+
                                         {/* Only show order button if user is not the owner */}
                                         {authUser && gig.owner_id !== authUser.uuid ? (
                                             <button 
                                                 onClick={handleCreateOrder}
-                                                className="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-2xl h-12 px-6 bg-gradient-to-r from-green-500 to-emerald-600 text-white text-sm font-bold leading-normal tracking-[0.015em] hover:from-green-600 hover:to-emerald-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+                                                className="flex min-w-[84px] w-full cursor-pointer items-center justify-center overflow-hidden rounded-2xl h-14 px-6 bg-gradient-to-r from-green-500 to-emerald-600 text-white text-base font-bold leading-normal tracking-[0.015em] hover:from-green-600 hover:to-emerald-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
                                             >
                                                 <span className="truncate">Continue (${gig.price})</span>
                                             </button>
                                         ) : authUser && gig.owner_id === authUser.uuid ? (
-                                            <div className="flex min-w-[84px] max-w-[480px] items-center justify-center overflow-hidden rounded-2xl h-12 px-6 bg-gray-300 text-gray-600 text-sm font-bold leading-normal tracking-[0.015em] cursor-not-allowed border-2 border-gray-200">
+                                            <div className="flex min-w-[84px] w-full items-center justify-center overflow-hidden rounded-2xl h-14 px-6 bg-gray-300 text-gray-600 text-base font-bold leading-normal tracking-[0.015em] cursor-not-allowed border-2 border-gray-200">
                                                 <span className="truncate">This is your gig</span>
                                             </div>
                                         ) : (
                                             <button 
                                                 onClick={() => navigate('/auth')}
-                                                className="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-2xl h-12 px-6 bg-gradient-to-r from-blue-500 to-purple-600 text-white text-sm font-bold leading-normal tracking-[0.015em] hover:from-blue-600 hover:to-purple-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+                                                className="flex min-w-[84px] w-full cursor-pointer items-center justify-center overflow-hidden rounded-2xl h-14 px-6 bg-gradient-to-r from-blue-500 to-purple-600 text-white text-base font-bold leading-normal tracking-[0.015em] hover:from-blue-600 hover:to-purple-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
                                             >
                                                 <span className="truncate">Login to Order</span>
                                             </button>
                                         )}
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
 
-                        {/* About The Seller */}
-                        <div className="p-6 mb-6">
-                            <h2 className="text-gray-800 text-[22px] font-bold leading-tight tracking-[-0.015em] pb-4 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                                About The Seller
-                            </h2>
-                            <div className="flex w-full flex-col gap-6">
-                                <div className="flex gap-6 items-start">
-                                    <div
-                                        className="bg-center bg-no-repeat aspect-square bg-cover rounded-full min-h-32 w-32 ring-4 ring-white shadow-xl border-4 border-white"
-                                        style={{
-                                            backgroundImage: `url("${(sellerDetails?.avatar || gig.owner_avatar || 'https://placehold.co/300x300')}")`
-                                        }}
-                                    ></div>
-                                    <div className="flex flex-col justify-center flex-1">
-                                        <button 
-                                            onClick={() => navigate(`/SellerInfo/${sellerDetails?.uuid || gig.owner_id}`)}
-                                            className="text-gray-800 text-[22px] font-bold leading-tight tracking-[-0.015em] mb-1 hover:text-blue-700 transition-colors duration-200 text-left"
-                                        >
-                                            {sellerDetails?.fullname || gig.owner_fullname || 'Professional Seller'}
-                                        </button>
-                                        <button 
-                                            onClick={() => navigate(`/SellerInfo/${sellerDetails?.uuid || gig.owner_id}`)}
-                                            className="text-blue-600 text-base font-medium leading-normal mb-1 hover:text-blue-700 transition-colors duration-200 text-left"
-                                        >
-                                            @{sellerDetails?.username || gig.owner_username || 'seller'}
-                                        </button>
-                                        <p className="text-gray-600 text-base font-normal leading-normal mb-2">
-                                            {sellerDetails?.seller_headline || gig.category_name || 'Service Provider'}
-                                        </p>
-                                        {sellerDetails?.seller_since && (
-                                            <p className="text-gray-500 text-sm font-medium mb-3">
-                                                Member since {new Date(sellerDetails.seller_since).getFullYear()}
-                                            </p>
-                                        )}
-                                        <div className="flex gap-3 items-center">
-                                            <button 
-                                                className="flex cursor-pointer items-center justify-center overflow-hidden rounded-2xl h-10 px-6 bg-gradient-to-r from-blue-500 to-blue-600 text-white text-sm font-bold leading-normal tracking-[0.015em] hover:from-blue-600 hover:to-blue-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
-                                                onClick={() => navigate(`/SellerInfo/${sellerDetails?.uuid || gig.owner_id}`)}
-                                            >
-                                                <span className="truncate">Contact Seller</span>
-                                            </button>
+                                        {/* Additional Info */}
+                                        <div className="pt-4 border-t border-blue-200">
+                                            <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
+                                                <span className="text-green-500">✓</span>
+                                                <span>Money-back guarantee</span>
+                                            </div>
+                                            <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
+                                                <span className="text-green-500">✓</span>
+                                                <span>Direct communication with seller</span>
+                                            </div>
+                                            <div className="flex items-center gap-2 text-sm text-gray-600">
+                                                <span className="text-green-500">✓</span>
+                                                <span>Professional service delivery</span>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
-                                <div 
-                                    className="text-gray-700 text-base font-normal leading-relaxed prose prose-sm max-w-none prose-headings:text-gray-800 prose-p:text-gray-700 prose-a:text-blue-600 prose-strong:text-gray-800"
-                                    dangerouslySetInnerHTML={{ 
-                                        __html: DOMPurify.sanitize(
-                                            sellerDetails?.seller_description || 
-                                            gig.owner_bio || 
-                                            `${sellerDetails?.fullname || gig.owner_fullname || 'This seller'} is a skilled professional with expertise in ${gig.category_name || 'their field'}. They are committed to delivering high-quality work and excellent customer service.`
-                                        )
-                                    }}
-                                ></div>
                             </div>
                         </div>
                     </div>

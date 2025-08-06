@@ -44,7 +44,9 @@ const adminRoutes = require('./routes/admin.routes');
 const uploadRoutes = require('./routes/upload.routes');
 const conversationRoutes = require('./routes/conversations.routes');
 const categoriesRoutes = require('./routes/categories.routes');
-const reportsRoutes = require('./routes/reports.routes'); // <-- Thêm dòng này
+const notificationRoutes = require('./routes/notifications.routes');
+const reviewRoutes = require('./routes/reviews.routes');
+
 
 // API routes
 app.use('/api/auth', authRoutes);
@@ -55,8 +57,10 @@ app.use('/api/orders', orderRoutes);
 app.use('/api/transactions', transactionRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/admin', adminRoutes);
-app.use('/api/categories', categoriesRoutes); 
-app.use('/api/reports', reportsRoutes); 
+app.use('/api/categories', categoriesRoutes);
+
+app.use('/api/notifications', notificationRoutes);
+app.use('/api/reviews', reviewRoutes);
 //app.use('/api/admin', adminRoutes);
 // Xài cái api thì nhớ bỏ // ở đầu, ví dụ xài gigs thì bỏ //, tại bây giờ chưa định nghĩa mà để dô thì nó không được hiểu là function, nó sẽ bị lỗi
 
@@ -64,8 +68,6 @@ app.use('/api/reports', reportsRoutes);
 
 // Lấy port từ biến môi trường hoặc dùng port 3000 mặc định
 const PORT = process.env.PORT || 8000;
-app.use('/api/conversations', conversationRoutes);
-//app.use('/api/admin', adminRoutes); // Uncomment when needed
 
 // Health check endpoint
 app.get('/health', (req, res) => {

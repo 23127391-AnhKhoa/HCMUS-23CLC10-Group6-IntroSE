@@ -10,9 +10,8 @@
  */
 
 const Order = require('../models/order.model');
-const Transaction = require('../models/transaction.model');
-const NotificationService = require('./notification.service');
-const AutoPaymentService = require('./autoPayment.service');
+const User = require('../models/user.model');
+const Transaction = require('../models/transactions.model');
 const supabase = require('../config/supabaseClient');
 
 const OrderService = {
@@ -219,7 +218,7 @@ const OrderService = {
       }
 
       if (gig.status !== 'active') {
-        throw new Error('Cannot order from inactive gig');
+        throw new Error(`Cannot order from gig with status '${gig.status}'. Only active gigs can be ordered.`);
       }
 
       // Validate that user cannot order their own gig
@@ -470,42 +469,7 @@ getClientOrders: async (clientId, options = {}) => {
       const updatedOrder = await Order.updateStatus(orderId, status);
       console.log('✅ [Order Service] Order status updated successfully');
       
-      // Clear auto payment timer for certain status changes
-      if (status === 'revision_requested' || status === 'cancelled') {
-        try {
-          await AutoPaymentService.clearAutoPaymentTimer(orderId);
-          console.log('⏰ Auto payment timer cleared due to status change:', status);
-        } catch (timerError) {
-          console.error('❌ Failed to clear auto payment timer:', timerError);
-          // Don't fail the entire operation if timer clearing fails
-        }
-      }
-      
-      // Send notifications for status change
-      try {
-        // Determine recipient role based on status change
-        let recipientRole = null;
-        
-        if (status === 'in_progress' && oldStatus === 'pending') {
-          recipientRole = 'buyer'; // Notify buyer that order is accepted
-        } else if (status === 'delivered') {
-          recipientRole = 'buyer'; // Notify buyer that order is delivered
-        } else if (status === 'revision_requested') {
-          recipientRole = 'seller'; // Notify seller that revision is requested
-        }
-        
-        if (recipientRole) {
-          await NotificationService.sendOrderStatusUpdate(
-            updatedOrder, 
-            oldStatus, 
-            status, 
-            recipientRole
-          );
-        }
-      } catch (notificationError) {
-        console.error('❌ Failed to send notification:', notificationError);
-        // Don't fail the entire operation if notification fails
-      }
+      // Auto payment timer logic removed - using manual payment only
       
       return updatedOrder;
     } catch (error) {
@@ -668,41 +632,34 @@ getClientOrders: async (clientId, options = {}) => {
 
       console.log('✅ Payment processed successfully via manual transaction');
 
-      // Create transaction record
+      // Create transaction records for both buyer and seller
       try {
+        // Create transaction for buyer (money deducted)
         await Transaction.create({
+          user_id: userId,
           order_id: parseInt(orderId),
-          buyer_id: userId,
-          seller_id: order.gig_owner_id,
           amount: order.price_at_purchase,
-          type: 'order_payment',
-          status: 'completed',
+          type: 'payment',
           description: `Payment for order #${orderId}`
         });
+
+        // Create transaction for seller (money received)
+        await Transaction.create({
+          user_id: order.gig_owner_id,
+          order_id: parseInt(orderId),
+          amount: order.price_at_purchase * 0.8, // Positive for income + tax
+          type: 'received_payment',
+          description: `Payment received from order #${orderId}`
+        });
       } catch (transactionError) {
-        console.error('❌ Failed to create transaction record:', transactionError);
+        console.error('❌ Failed to create transaction records:', transactionError);
         // Don't fail the entire payment if transaction record creation fails
       }
       
-      // Clear auto payment timer since payment is completed manually
-      try {
-        await AutoPaymentService.clearAutoPaymentTimer(orderId);
-        console.log('⏰ Auto payment timer cleared for order:', orderId);
-      } catch (timerError) {
-        console.error('❌ Failed to clear auto payment timer:', timerError);
-        // Don't fail payment if timer clearing fails
-      }
+      // Auto payment timer logic removed - using manual payment only
       
       // Get updated order
       const updatedOrder = await OrderService.getOrderById(orderId);
-      
-      // Send payment notifications
-      try {
-        await NotificationService.sendPaymentNotification(updatedOrder, order.price_at_purchase);
-      } catch (notificationError) {
-        console.error('❌ Failed to send payment notification:', notificationError);
-        // Don't fail the entire operation if notification fails
-      }
       
       console.log('✅ Payment processed successfully:', orderId);
       
@@ -966,6 +923,285 @@ getClientOrders: async (clientId, options = {}) => {
     } catch (error) {
       console.error('💥 [Order Service] Error in getSellerEarningsStats:', error);
       throw new Error(`Error fetching seller earnings stats: ${error.message}`);
+    }
+  },
+
+  /**
+   * Complete order and process payment manually
+   * 
+   * @param {number} orderId - Order ID
+   * @param {string} userUuid - User UUID performing the action
+   * @param {string} userRole - User role (should be 'buyer')
+   * @returns {Promise<Object>} Result object
+   */
+  completeOrder: async (orderId, userUuid, userRole) => {
+    try {
+      console.log('🎯 [Order Service] Starting completeOrder:', { orderId, userUuid, userRole });
+
+      // Lấy thông tin order với full details
+      const order = await Order.findById(orderId);
+      if (!order) {
+        throw new Error('Order not found');
+      }
+
+      console.log('📦 [Order Service] Order found:', { 
+        id: order.id, 
+        status: order.status, 
+        client_id: order.client_id,
+        price: order.price_at_purchase 
+      });
+
+      // Kiểm tra quyền: chỉ buyer mới có thể complete order
+      if (userRole !== 'buyer' || order.client_id !== userUuid) {
+        throw new Error('Only the buyer can complete this order');
+      }
+
+      // Kiểm tra trạng thái order
+      if (order.status !== 'delivered') {
+        throw new Error('Order must be delivered before completion');
+      }
+
+      // Lấy seller ID từ gig
+      const sellerId = order.Gigs?.owner_id;
+      if (!sellerId) {
+        throw new Error('Seller information not found');
+      }
+
+      console.log('👥 [Order Service] Processing payment between:', { 
+        buyer: userUuid, 
+        seller: sellerId, 
+        amount: order.price_at_purchase 
+      });
+
+      // Xử lý thanh toán
+      const paymentResult = await OrderService.processOrderPayment(order, userUuid, sellerId);
+
+      // Cập nhật trạng thái order thành completed
+      const updatedOrder = await Order.updateById(orderId, {
+        status: 'completed',
+        completed_at: new Date().toISOString()
+      });
+
+      console.log('✅ [Order Service] Order completed successfully');
+
+      return {
+        success: true,
+        message: 'Order completed and payment processed successfully',
+        order: updatedOrder,
+        payment: paymentResult
+      };
+
+    } catch (error) {
+      console.error('💥 [Order Service] Error completing order:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Process order payment: transfer money from buyer to seller
+   * 
+   * @param {Object} order - Order object
+   * @param {string} buyerId - Buyer UUID
+   * @param {string} sellerId - Seller UUID
+   * @returns {Promise<void>}
+   */
+  processOrderPayment: async (order, buyerId, sellerId) => {
+    try {
+      const amount = parseFloat(order.price_at_purchase);
+      
+      console.log('💰 [Order Service] Processing payment:', { 
+        orderId: order.id, 
+        amount, 
+        buyerId, 
+        sellerId 
+      });
+
+      // Lấy thông tin buyer và seller từ database
+      const [buyer, seller] = await Promise.all([
+        User.findById(buyerId),
+        User.findById(sellerId)
+      ]);
+
+      if (!buyer || !seller) {
+        throw new Error('Buyer or seller not found');
+      }
+
+      console.log('👤 [Order Service] Current balances:', {
+        buyer: { username: buyer.username, balance: buyer.balance },
+        seller: { username: seller.username, balance: seller.balance }
+      });
+
+      // Tính toán balance mới (không kiểm tra insufficient balance)
+      const buyerBalance = parseFloat(buyer.balance) || 0;
+      const sellerBalance = parseFloat(seller.balance) || 0;
+      const newBuyerBalance = buyerBalance - amount;
+      const newSellerBalance = sellerBalance + (amount * 0.8); // Seller nhận 80% do tax
+
+      console.log('🔄 [Order Service] New balances will be:', {
+        buyer: { old: buyerBalance, new: newBuyerBalance },
+        seller: { old: sellerBalance, new: newSellerBalance }
+      });
+
+      // Cập nhật balance cho buyer và seller trong database
+      try {
+        console.log('💳 [Order Service] Updating buyer balance using Supabase...');
+        
+        // Cập nhật buyer balance
+        const { data: buyerUpdateData, error: buyerUpdateError } = await supabase
+          .from('User')
+          .update({ 
+            balance: newBuyerBalance,
+            updated_at: new Date().toISOString()
+          })
+          .eq('uuid', buyerId)
+          .select();
+
+        if (buyerUpdateError) {
+          console.error('❌ [Order Service] Failed to update buyer balance:', buyerUpdateError);
+          throw new Error(`Failed to update buyer balance: ${buyerUpdateError.message}`);
+        }
+
+        console.log('✅ [Order Service] Buyer balance updated:', buyerUpdateData[0]?.balance);
+
+        console.log('💳 [Order Service] Updating seller balance using Supabase...');
+        
+        // Cập nhật seller balance
+        const { data: sellerUpdateData, error: sellerUpdateError } = await supabase
+          .from('User')
+          .update({ 
+            balance: newSellerBalance,
+            updated_at: new Date().toISOString()
+          })
+          .eq('uuid', sellerId)
+          .select();
+
+        if (sellerUpdateError) {
+          console.error('❌ [Order Service] Failed to update seller balance:', sellerUpdateError);
+          
+          // Rollback buyer balance
+          console.log('🔄 [Order Service] Rolling back buyer balance...');
+          await supabase
+            .from('User')
+            .update({ balance: buyerBalance })
+            .eq('uuid', buyerId);
+          
+          throw new Error(`Failed to update seller balance: ${sellerUpdateError.message}`);
+        }
+
+        console.log('✅ [Order Service] Seller balance updated:', sellerUpdateData[0]?.balance);
+        console.log('💳 [Order Service] All balances updated successfully in database');
+        
+      } catch (balanceError) {
+        console.error('❌ [Order Service] Failed to update balances:', balanceError);
+        throw new Error(`Failed to update user balances: ${balanceError.message}`);
+      }
+
+      // Lưu transaction cho buyer (trừ tiền)
+      await Transaction.create({
+        user_id: buyerId,
+        order_id: order.id,
+        amount: amount, // Số âm vì trừ tiền
+        description: `Payment for order #${order.id} - ${order.Gigs?.title || 'Unknown Gig'}`,
+        type: 'payment'
+      });
+
+      // Lưu transaction cho seller (cộng tiền)
+      await Transaction.create({
+        user_id: sellerId,
+        order_id: order.id,
+        amount: amount * 0.8, // Seller nhận 80% sau trừ phí platform
+        description: `Payment received from order #${order.id} - ${order.Gigs?.title || 'Unknown Gig'}`,
+        type: 'received_payment'
+      });
+
+      console.log('📊 [Order Service] Transactions recorded successfully');
+
+      // Verify balances sau khi cập nhật
+      const [verifyBuyer, verifySeller] = await Promise.all([
+        User.findById(buyerId),
+        User.findById(sellerId)
+      ]);
+
+      console.log('🔍 [Order Service] Final balances verification:', {
+        buyer: { username: verifyBuyer.username, balance: verifyBuyer.balance },
+        seller: { username: verifySeller.username, balance: verifySeller.balance }
+      });
+
+      console.log(`✅ [Order Service] Payment processed: $${amount} from ${buyer.username} to ${seller.username}`);
+      
+      // Return updated user data for frontend
+      const updatedBuyerData = {
+        uuid: verifyBuyer.uuid,
+        username: verifyBuyer.username,
+        fullname: verifyBuyer.fullname,
+        email: verifyBuyer.email,
+        role: verifyBuyer.role,
+        balance: verifyBuyer.balance,
+        avatar_url: verifyBuyer.avt_url,
+        bio: verifyBuyer.bio,
+        seller_headline: verifyBuyer.seller_headline,
+        seller_description: verifyBuyer.seller_description,
+        seller_since: verifyBuyer.seller_since
+      };
+
+      const updatedSellerData = {
+        uuid: verifySeller.uuid,
+        username: verifySeller.username,
+        fullname: verifySeller.fullname,
+        email: verifySeller.email,
+        role: verifySeller.role,
+        balance: verifySeller.balance,
+        avatar_url: verifySeller.avt_url,
+        bio: verifySeller.bio,
+        seller_headline: verifySeller.seller_headline,
+        seller_description: verifySeller.seller_description,
+        seller_since: verifySeller.seller_since
+      };
+      
+      return {
+        success: true,
+        buyerNewBalance: verifyBuyer.balance,
+        sellerNewBalance: verifySeller.balance,
+        amount: amount,
+        updatedBuyerData: updatedBuyerData,
+        updatedSellerData: updatedSellerData
+      };
+
+    } catch (error) {
+      console.error('💥 [Order Service] Error processing order payment:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get user's available balance information
+   * 
+   * @param {string} userId - User UUID
+   * @returns {Promise<Object>} Balance information with user-friendly messages
+   */
+  getUserBalanceInfo: async (userId) => {
+    try {
+      console.log('💰 [Order Service] Getting balance info for user:', userId);
+      
+      const balanceInfo = await Order.calculateAvailableBalance(userId);
+      
+      // Create user-friendly message
+      let message;
+      if (balanceInfo.reservedAmount > 0) {
+        message = `You have $${balanceInfo.availableBalance.toFixed(2)} available to spend. $${balanceInfo.reservedAmount.toFixed(2)} is reserved for ${balanceInfo.pendingOrders} pending order(s).`;
+      } else {
+        message = `You have $${balanceInfo.availableBalance.toFixed(2)} available to spend.`;
+      }
+      
+      return {
+        ...balanceInfo,
+        message: message,
+        canAfford: (amount) => balanceInfo.availableBalance >= amount
+      };
+      
+    } catch (error) {
+      console.error('💥 [Order Service] Error getting balance info:', error);
+      throw error;
     }
   }
 };

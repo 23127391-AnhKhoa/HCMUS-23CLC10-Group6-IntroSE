@@ -15,6 +15,7 @@ const SearchPage = () => {
     const [selectedCategory, setSelectedCategory] = useState('');
     const [selectedSubcategory, setSelectedSubcategory] = useState('');
     const [priceRange, setPriceRange] = useState({ min: '', max: '' });
+    const [ratingFilter, setRatingFilter] = useState(''); // New rating filter state
     const [sort, setSort] = useState('relevance_desc'); // Combined sort state with relevance as default
     const [categories, setCategories] = useState([]);
     const [showFilters, setShowFilters] = useState(true); // Show filters by default
@@ -72,6 +73,7 @@ const SearchPage = () => {
         const sortFromUrl = searchParams.get('sort');
         const minPriceFromUrl = searchParams.get('minPrice');
         const maxPriceFromUrl = searchParams.get('maxPrice');
+        const ratingFromUrl = searchParams.get('rating');
         
         console.log('[SearchPage] URL parameters changed:', { 
             query: queryFromUrl, 
@@ -79,7 +81,8 @@ const SearchPage = () => {
             page: pageFromUrl,
             sort: sortFromUrl,
             minPrice: minPriceFromUrl,
-            maxPrice: maxPriceFromUrl
+            maxPrice: maxPriceFromUrl,
+            rating: ratingFromUrl
         });
         
         // Update state from URL parameters
@@ -109,6 +112,10 @@ const SearchPage = () => {
                 min: minPriceFromUrl || '',
                 max: maxPriceFromUrl || ''
             });
+        }
+        
+        if (ratingFromUrl !== null) {
+            setRatingFilter(ratingFromUrl);
         }
         
         // Always perform search - pass both query and category to ensure proper filtering
@@ -149,6 +156,7 @@ const SearchPage = () => {
         if (!newSearchParams.get('sort') || newSearchParams.get('sort') === 'relevance_desc') newSearchParams.delete('sort');
         if (!newSearchParams.get('minPrice')) newSearchParams.delete('minPrice');
         if (!newSearchParams.get('maxPrice')) newSearchParams.delete('maxPrice');
+        if (!newSearchParams.get('rating')) newSearchParams.delete('rating');
         
         console.log('[SearchPage] Updating URL with params:', Object.fromEntries(newSearchParams));
         setSearchParams(newSearchParams, { replace: false }); // Don't replace history, allow back/forward
@@ -296,6 +304,16 @@ const SearchPage = () => {
                     console.log('[SearchPage] Applied frontend price filtering');
                 }
 
+                // Apply frontend filtering for rating
+                if (ratingFilter) {
+                    const minRating = parseFloat(ratingFilter);
+                    results = results.filter(gig => {
+                        const rating = parseFloat(gig.avg_review) || 0;
+                        return rating >= minRating;
+                    });
+                    console.log('[SearchPage] Applied rating filter, results after filtering:', results.length);
+                }
+
                 setSearchResults(results);
                 
                 // Handle pagination logic more conservatively
@@ -336,6 +354,7 @@ const SearchPage = () => {
         setSelectedCategory('');
         setSelectedSubcategory('');
         setPriceRange({ min: '', max: '' });
+        setRatingFilter(''); // Clear rating filter
         setSort('relevance_desc'); // Reset to default sort
         setError(null);
         setCategoryFromNavbar(false); // Reset navbar tracking
@@ -350,7 +369,8 @@ const SearchPage = () => {
             page: undefined,
             sort: undefined,
             minPrice: undefined,
-            maxPrice: undefined
+            maxPrice: undefined,
+            rating: undefined
         });
     };
 
@@ -363,7 +383,8 @@ const SearchPage = () => {
                 page: page > 1 ? page : undefined,
                 sort: sort !== 'relevance_desc' ? sort : undefined,
                 minPrice: priceRange.min,
-                maxPrice: priceRange.max
+                maxPrice: priceRange.max,
+                rating: ratingFilter
             });
         }
     };
@@ -376,7 +397,8 @@ const SearchPage = () => {
             page: undefined, // Reset to page 1
             sort: sort !== 'relevance_desc' ? sort : undefined,
             minPrice: priceRange.min,
-            maxPrice: priceRange.max
+            maxPrice: priceRange.max,
+            rating: ratingFilter
         });
     };
 
@@ -396,9 +418,10 @@ const SearchPage = () => {
             page: undefined, // Reset to page 1
             sort: sort !== 'relevance_desc' ? sort : undefined,
             minPrice: priceRange.min,
-            maxPrice: priceRange.max
+            maxPrice: priceRange.max,
+            rating: ratingFilter
         });
-    }, [selectedCategory, selectedSubcategory, sort, isInitialLoad]);
+    }, [selectedCategory, selectedSubcategory, sort, ratingFilter, isInitialLoad]);
 
     // Handle category change - reset subcategory when parent category changes
     useEffect(() => {
@@ -421,7 +444,8 @@ const SearchPage = () => {
                 page: undefined, // Reset to page 1
                 sort: sort !== 'relevance_desc' ? sort : undefined,
                 minPrice: priceRange.min,
-                maxPrice: priceRange.max
+                maxPrice: priceRange.max,
+                rating: ratingFilter
             });
         }, 500); // 500ms debounce
 
@@ -664,7 +688,7 @@ const SearchPage = () => {
                         
                         {/* Filters Panel */}
                         <div className="mt-6 p-4 bg-gray-50 rounded-xl border">
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
                                     {/* Category Filter */}
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-2">Category</label>
@@ -680,7 +704,8 @@ const SearchPage = () => {
                                                     page: undefined,
                                                     sort: sort !== 'relevance_desc' ? sort : undefined,
                                                     minPrice: priceRange.min,
-                                                    maxPrice: priceRange.max
+                                                    maxPrice: priceRange.max,
+                                                    rating: ratingFilter
                                                 });
                                             }}
                                             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -709,7 +734,8 @@ const SearchPage = () => {
                                                     page: undefined,
                                                     sort: sort !== 'relevance_desc' ? sort : undefined,
                                                     minPrice: priceRange.min,
-                                                    maxPrice: priceRange.max
+                                                    maxPrice: priceRange.max,
+                                                    rating: ratingFilter
                                                 });
                                             }}
                                             disabled={!selectedCategory}
@@ -721,6 +747,35 @@ const SearchPage = () => {
                                                     {subcategory.name}
                                                 </option>
                                             ))}
+                                        </select>
+                                    </div>
+                                    
+                                    {/* Rating Filter */}
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">Min Rating</label>
+                                        <select
+                                            value={ratingFilter}
+                                            onChange={(e) => {
+                                                setRatingFilter(e.target.value);
+                                                // Update URL immediately for rating changes
+                                                updateUrlParams({
+                                                    q: searchQuery,
+                                                    category: selectedCategory,
+                                                    page: undefined,
+                                                    sort: sort !== 'relevance_desc' ? sort : undefined,
+                                                    minPrice: priceRange.min,
+                                                    maxPrice: priceRange.max,
+                                                    rating: e.target.value || undefined
+                                                });
+                                            }}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                        >
+                                            <option value="">Any Rating</option>
+                                            <option value="4.5">4.5+</option>
+                                            <option value="4.0">4.0+</option>
+                                            <option value="3.5">3.5+</option>
+                                            <option value="3.0">3.0+</option>
+                                            <option value="2.0">2.0+</option>
                                         </select>
                                     </div>
                                     
@@ -762,14 +817,17 @@ const SearchPage = () => {
                                                     page: undefined,
                                                     sort: e.target.value !== 'relevance_desc' ? e.target.value : undefined,
                                                     minPrice: priceRange.min,
-                                                    maxPrice: priceRange.max
+                                                    maxPrice: priceRange.max,
+                                                    rating: ratingFilter
                                                 });
                                             }}
                                             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                         >
                                             <option value="relevance_desc">Most Relevant</option>
-                                            <option value="created_at_desc">Newest</option>
-                                            <option value="created_at_asc">Oldest</option>
+                                            <option value="avg_review_desc">Highest Rated</option>
+                                            <option value="total_review_desc">Most Reviewed</option>
+                                            <option value="created_at_desc">Newest First</option>
+                                            <option value="created_at_asc">Oldest First</option>
                                             <option value="price_asc">Price: Low to High</option>
                                             <option value="price_desc">Price: High to Low</option>
                                         </select>
@@ -791,7 +849,8 @@ const SearchPage = () => {
                                                 page: undefined,
                                                 sort: sort !== 'relevance_desc' ? sort : undefined,
                                                 minPrice: priceRange.min,
-                                                maxPrice: priceRange.max
+                                                maxPrice: priceRange.max,
+                                                rating: ratingFilter
                                             });
                                         }}
                                         className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"

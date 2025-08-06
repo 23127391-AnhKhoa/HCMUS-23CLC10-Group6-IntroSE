@@ -1,46 +1,161 @@
 import React, { useState, useEffect, useCallback } from 'react';
 // Thêm icon Check và X để duyệt gig
-import { FiHome, FiList, FiTrendingUp, FiUsers, FiSettings, FiHelpCircle, FiSearch, FiEye, FiChevronLeft, FiChevronRight, FiCheck, FiX } from 'react-icons/fi';
+import { FiHome, FiList, FiTrendingUp, FiUsers, FiSettings, FiHelpCircle, FiSearch, FiEye, FiChevronLeft, FiChevronRight, FiCheck, FiX, FiAlertCircle, FiUser, FiLogOut, FiChevronDown, FiDollarSign } from 'react-icons/fi';
 // Import useAuth để lấy token
 import { useAuth } from '../../contexts/AuthContext'; // <-- QUAN TRỌNG: Hãy chắc chắn đường dẫn này đúng với cấu trúc dự án của bạn
+import { Modal, Dropdown } from 'antd';
 
 // --- Components Con ---
+
+const SettingsDropdown = () => {
+  const { authUser, logout } = useAuth();
+  const [profileModalVisible, setProfileModalVisible] = useState(false);
+
+  const settingsItems = [
+    {
+      key: 'profile',
+      label: (
+        <div className="flex items-center px-3 py-2 hover:bg-gray-50 rounded transition-colors">
+          <FiUser className="mr-3 text-gray-600" />
+          <span>Admin Profile</span>
+        </div>
+      ),
+      onClick: () => setProfileModalVisible(true)
+    },
+    {
+      type: 'divider'
+    },
+    {
+      key: 'logout',
+      label: (
+        <div className="flex items-center px-3 py-2 hover:bg-red-50 rounded transition-colors text-red-600">
+          <FiLogOut className="mr-3" />
+          <span>Logout</span>
+        </div>
+      ),
+      onClick: () => {
+        logout();
+        window.location.href = '/auth';
+      }
+    }
+  ];
+
+  return (
+    <>
+      <Dropdown
+        menu={{ items: settingsItems }}
+        trigger={['click']}
+        placement="topLeft"
+      >
+        <button className="flex items-center p-3 text-gray-600 hover:bg-gray-100 rounded-lg transition-smooth w-full">
+          <FiSettings className="mr-3" />
+          <span className="flex-1 text-left">Settings</span>
+          <FiChevronDown className="text-sm" />
+        </button>
+      </Dropdown>
+
+      <AdminProfileModal 
+        visible={profileModalVisible}
+        onClose={() => setProfileModalVisible(false)}
+        admin={authUser}
+      />
+    </>
+  );
+};
+
+const AdminProfileModal = ({ visible, onClose, admin }) => {
+  if (!admin) return null;
+
+  return (
+    <Modal
+      title={
+        <div className="flex items-center space-x-2">
+          <FiUser className="text-blue-600" />
+          <span className="text-xl font-bold">Admin Profile</span>
+        </div>
+      }
+      open={visible}
+      onCancel={onClose}
+      footer={null}
+      width={500}
+    >
+      <div className="p-4">
+        <div className="flex items-center space-x-4 mb-6">
+          <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center">
+            <FiUser className="text-2xl text-blue-600" />
+          </div>
+          <div>
+            <h3 className="text-xl font-bold text-gray-800">{admin.fullname || admin.username}</h3>
+            <p className="text-gray-600">{admin.email}</p>
+            <span className="inline-block bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full mt-1">
+              Administrator
+            </span>
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          <div className="bg-gray-50 p-4 rounded-lg">
+            <h4 className="font-semibold text-gray-700 mb-2">Account Information</h4>
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div>
+                <p className="text-gray-600">Username:</p>
+                <p className="font-medium">{admin.username}</p>
+              </div>
+              <div>
+                <p className="text-gray-600">Role:</p>
+                <p className="font-medium capitalize">{admin.role}</p>
+              </div>
+              <div>
+                <p className="text-gray-600">User ID:</p>
+                <p className="font-medium text-xs">{admin.uuid}</p>
+              </div>
+              <div>
+                <p className="text-gray-600">Balance:</p>
+                <p className="font-medium">${admin.balance?.toFixed(2) || '0.00'}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex justify-end mt-6">
+          <button
+            onClick={onClose}
+            className="px-6 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </Modal>
+  );
+};
 
 const Sidebar = () => (
     <div className="w-64 bg-white h-screen flex flex-col justify-between p-4 shadow-lg">
       <div>
-        <div className="flex items-center space-x-2 mb-10 p-2">
-          <img src="/logo.svg" alt="Logo" className="w-10 h-10 rounded-full" />
-          <span className="font-bold text-xl text-gray-800">FREELAND</span>
+        <div className="flex items-center justify-center mb-10 p-2">
+          <img src="/logo.svg" alt="Logo" className="h-12 w-auto" />
         </div>
         <nav className="flex flex-col space-y-2">
           <a href="/admin/admindashboard" className="flex items-center p-3 text-gray-600 hover:bg-gray-100 rounded-lg transition-smooth">
             <FiHome className="mr-3" /> Dashboard
           </a>
           <a href="/admin/manage-reported-gigs" className="flex items-center p-3 text-gray-600 hover:bg-gray-100 rounded-lg transition-smooth">
-            <FiList className="mr-3" /> Report
+            <FiAlertCircle className="mr-3" /> Report
           </a>
-          <a href="/admin/servicesmanagement" className="flex items-center p-3 bg-gray-100 text-gray-800 font-bold rounded-lg transition-smooth">
+          <a href="/admin/servicemanagement" className="flex items-center p-3 bg-gray-100 text-gray-800 font-bold rounded-lg transition-smooth">
             <FiTrendingUp className="mr-3" /> Services Management
-          </a>
-          <a href="#" className="flex items-center p-3 text-gray-600 hover:bg-gray-100 rounded-lg transition-smooth">
-            <FiUsers className="mr-3" /> Earnings
-          </a>
-          <a href="#" className="flex items-center p-3 text-gray-600 hover:bg-gray-100 rounded-lg transition-smooth">
-            <FiUsers className="mr-3" /> Community
           </a>
           <a href="/admin/usermanagement" className="flex items-center p-3 text-gray-600 hover:bg-gray-100 rounded-lg transition-smooth">
             <FiUsers className="mr-3" /> User Management
           </a>
+          <a href="/admin/earnings" className="flex items-center p-3 text-gray-600 hover:bg-gray-100 rounded-lg transition-smooth">
+            <FiDollarSign className="mr-3" /> Earnings
+          </a>
         </nav>
       </div>
-       <div className="flex flex-col space-y-2">
-        <a href="#" className="flex items-center p-3 text-gray-600 hover:bg-gray-100 rounded-lg transition-smooth">
-          <FiHelpCircle className="mr-3" /> Help
-        </a>
-        <a href="#" className="flex items-center p-3 text-gray-600 hover:bg-gray-100 rounded-lg transition-smooth">
-          <FiSettings className="mr-3" /> Settings
-        </a>
+      <div className="flex flex-col space-y-2">
+        <SettingsDropdown />
       </div>
     </div>
 );

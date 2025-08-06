@@ -6,7 +6,6 @@
  */
 
 import React from 'react';
-import AutoPaymentTimer from '../AutoPaymentTimer/AutoPaymentTimer';
 import { 
     CalendarOutlined, 
     DollarCircleOutlined, 
@@ -69,14 +68,15 @@ const formatDate = (dateString) => {
  * @param {Function} props.onClick - Click handler to view details
  */
 const OrderOverviewCard = ({ order, userRole, onClick }) => {
-    const gigTitle = order.Gigs?.title || 'Unknown Gig';
-    const clientName = order.User?.fullname || order.User?.username || 'Unknown Client';
-    const sellerName = order.Gigs?.User?.fullname || order.Gigs?.User?.username || 'Unknown Seller';
+    // Handle both flattened and nested data structures
+    const gigTitle = order.gig_title || order.Gigs?.title || 'Unknown Gig';
+    const clientName = order.client_name || order.User?.fullname || order.User?.username || 'Unknown Client';
+    const sellerName = order.gig_owner_name || order.Gigs?.User?.fullname || order.Gigs?.User?.username || 'Unknown Seller';
     const otherPartyName = userRole === 'buyer' ? sellerName : clientName;
 
     return (
         <div 
-            className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow duration-200 cursor-pointer"
+            className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md hover:border-blue-300 transition-all duration-200 cursor-pointer group"
             onClick={() => onClick(order.id)}
         >
             {/* Header */}
@@ -88,7 +88,7 @@ const OrderOverviewCard = ({ order, userRole, onClick }) => {
                         <span className="ml-1 capitalize">{order.status?.replace('_', ' ')}</span>
                     </span>
                 </div>
-                <EyeOutlined className="text-gray-400" />
+                <EyeOutlined className="text-gray-400 group-hover:text-blue-500 transition-colors duration-200" />
             </div>
 
             {/* Main Content */}
@@ -102,7 +102,7 @@ const OrderOverviewCard = ({ order, userRole, onClick }) => {
                 <div className="flex items-center text-xs text-gray-600">
                     <UserOutlined className="w-3 h-3 mr-1" />
                     <span className="truncate">
-                        {userRole === 'buyer' ? 'Seller' : 'Client'}: {otherPartyName}
+                        {userRole === 'buyer' ? 'Purchased from:' : 'Sold to:'} {otherPartyName}
                     </span>
                 </div>
 
@@ -117,17 +117,6 @@ const OrderOverviewCard = ({ order, userRole, onClick }) => {
                         <span>{formatDate(order.created_at)}</span>
                     </div>
                 </div>
-
-                {/* Auto Payment Timer (compact version for overview) */}
-                {order.status === 'delivered' && order.auto_payment_deadline && (
-                    <div className="mt-2">
-                        <AutoPaymentTimer
-                            deadline={order.auto_payment_deadline}
-                            userRole={userRole}
-                            compact={true}
-                        />
-                    </div>
-                )}
             </div>
         </div>
     );

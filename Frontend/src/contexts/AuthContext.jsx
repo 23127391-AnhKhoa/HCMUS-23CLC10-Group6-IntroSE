@@ -1,5 +1,7 @@
 // src/contexts/AuthContext.js
-import React, { createContext, useState, useContext, useEffect } from 'react';
+// src/contexts/AuthContext.jsx
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import { supabase } from '../lib/supabase'; // sửa đường dẫn nếu khác
 
 // Tạo Context
 const AuthContext = createContext(null);
@@ -20,6 +22,13 @@ export const AuthProvider = ({ children }) => {
     }
     setIsLoading(false);
   }, []);
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      supabase.auth.setSession({ access_token: token, refresh_token: '' });
+    }
+  }, []);
+
 
   // Hàm để gọi khi đăng nhập thành công
   const login = (userData, userToken) => {

@@ -57,7 +57,7 @@ const Order = {
   },
 
   /**
-   * Create a new order
+   * Create a new order with future balance validation
    * 
    * @param {Object} orderData - Order data object
    * @param {string} orderData.client_id - UUID of the client
@@ -68,23 +68,126 @@ const Order = {
    * @returns {Promise<Object>} Created order object
    */
   create: async (orderData) => {
-    const { data, error } = await supabase
-      .from('Orders')
-      .insert([{
-        client_id: orderData.client_id,
-        gig_id: orderData.gig_id,
-        price_at_purchase: orderData.price_at_purchase,
-        requirement: orderData.requirement,
-        status: orderData.status || 'pending',
-        response_time_hours: orderData.response_time_hours || 24, // Default 24 hours
-        download_start_time: orderData.download_start_time || null,
-        auto_payment_deadline: orderData.auto_payment_deadline || null
-      }])
-      .select()
-      .single();
-    
-    if (error) throw error;
-    return data;
+    try {
+      console.log('🏦 [Order Model] Starting order creation with future balance check...');
+      
+      // 1. Get user's current balance
+      const { data: user, error: userError } = await supabase
+        .from('User')
+        .select('balance, username')
+        .eq('uuid', orderData.client_id)
+        .single();
+      
+      if (userError) {
+        console.error('❌ [Order Model] Error fetching user:', userError);
+        throw new Error('User not found');
+      }
+      
+      // 2. Calculate total reserved amount from existing orders
+      const { data: existingOrders, error: ordersError } = await supabase
+        .from('Orders')
+        .select('price_at_purchase')
+        .eq('client_id', orderData.client_id)
+        .in('status', ['pending', 'in_progress', 'delivered']);
+      
+      if (ordersError) {
+        console.error('❌ [Order Model] Error fetching existing orders:', ordersError);
+        throw new Error('Failed to check existing orders');
+      }
+      
+      const reservedAmount = existingOrders.reduce((total, order) => total + order.price_at_purchase, 0);
+      const futureBalance = user.balance - reservedAmount - orderData.price_at_purchase;
+      
+      console.log('💰 [Order Model] Future balance calculation:', {
+        currentBalance: user.balance,
+        reservedFromExistingOrders: reservedAmount,
+        newOrderAmount: orderData.price_at_purchase,
+        futureBalance: futureBalance,
+        availableBalance: user.balance - reservedAmount
+      });
+      
+      // 3. Validate future balance
+      if (futureBalance < 0) {
+        const availableBalance = user.balance - reservedAmount;
+        console.log('❌ [Order Model] Insufficient future balance:', {
+          availableBalance,
+          requiredAmount: orderData.price_at_purchase
+        });
+        throw new Error(`Insufficient available balance. Available: $${availableBalance.toFixed(2)} (Total: $${user.balance}, Reserved: $${reservedAmount.toFixed(2)}), Required: $${orderData.price_at_purchase}`);
+      }
+      
+      // 4. Create the order (no balance deduction yet)
+      const { data: order, error: orderError } = await supabase
+        .from('Orders')
+        .insert([{
+          client_id: orderData.client_id,
+          gig_id: orderData.gig_id,
+          price_at_purchase: orderData.price_at_purchase,
+          requirement: orderData.requirement,
+          status: orderData.status || 'pending'
+        }])
+        .select()
+        .single();
+      
+      if (orderError) {
+        console.error('❌ [Order Model] Error creating order:', orderError);
+        throw orderError;
+      }
+      
+      console.log('✅ [Order Model] Order created successfully. No balance deducted yet - will be deducted when buyer confirms delivery.');
+      
+      return order;
+      
+    } catch (error) {
+      console.error('💥 [Order Model] Error in create:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Calculate user's available balance (total balance - reserved for pending orders)
+   * 
+   * @param {string} userId - User UUID
+   * @returns {Promise<Object>} Balance information
+   */
+  calculateAvailableBalance: async (userId) => {
+    try {
+      // Get user's current balance
+      const { data: user, error: userError } = await supabase
+        .from('User')
+        .select('balance')
+        .eq('uuid', userId)
+        .single();
+      
+      if (userError) {
+        throw new Error('User not found');
+      }
+      
+      // Calculate total reserved amount from existing orders
+      const { data: existingOrders, error: ordersError } = await supabase
+        .from('Orders')
+        .select('price_at_purchase')
+        .eq('client_id', userId)
+        .in('status', ['pending', 'in_progress', 'delivered']);
+      
+      if (ordersError) {
+        throw new Error('Failed to check existing orders');
+      }
+      
+      const reservedAmount = existingOrders.reduce((total, order) => total + order.price_at_purchase, 0);
+      const availableBalance = user.balance - reservedAmount;
+      
+      return {
+        totalBalance: user.balance,
+        reservedAmount: reservedAmount,
+        availableBalance: availableBalance,
+        pendingOrders: existingOrders.length
+      };
+      
+    } catch (error) {
+      console.error('💥 [Order Model] Error calculating available balance:', error);
+      throw error;
+    }
   },
 
   /**

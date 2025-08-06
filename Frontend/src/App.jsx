@@ -4,6 +4,7 @@ import { AuthProvider } from './contexts/AuthContext';
 import AuthPage from './pages/AuthPage';
 import Introduction from './pages/Introduction';
 import CreateGigsPage from './pages/Create_Gigs';
+import EditGig from './pages/EditGig';
 import AdminDashboard from './pages/Admin/AdminDashboard';
 import ExplorePage from './pages/ExplorePage';
 import GigDetail from './pages/GigDetail';
@@ -16,6 +17,7 @@ import InboxPage from './pages/InboxPage';
 import SellerInfo from './pages/SellerInfo';
 import Payment from './pages/Payment';
 import PaymentSuccess from './pages/PaymentSuccess';
+import ReviewPage from './pages/ReviewPage';
 import Footer from './Common/Footer';
 import BecomeSellerPage from './pages/BecomeSeller';
 import UserManagement from './pages/Admin/UserManagement';
@@ -26,8 +28,10 @@ import ServicesManagement from './pages/Admin/ServiceManagement';
 import GigDetailContent from './pages/Admin/AdminGigContent';
 import AdminSellerInfor from './pages/Admin/AdminSellerInfor'; 
 import ManageReportedGigs from './pages/Admin/ManageReportedGigs'; 
+import AdminEarnings from './pages/Admin/AdminEarnings'; 
 import ReportUserPage from './pages/ReportUserPage';
-import ReportGigPage from './pages/ReportGigPage'; // Assuming you have a ReportGigPage component
+import NotificationPage from './pages/NotificationPage';
+import ReportGigPage from './pages/ReportGigPage'; 
 
 function App() {
   return (
@@ -40,17 +44,19 @@ function App() {
             <Route path="/" element={<Introduction />} />
 
             <Route path="admin/AdminDashboard" element={<AdminDashboard />} />
-
             <Route path="/admin/manage-reported-gigs" element={<ManageReportedGigs />} />
+            <Route path="/admin/earnings" element={<AdminEarnings />} />
             {/* Route for signup page */}
-
-            <Route path="/admin/manage-reported-gigs" element={<ManageReportedGigs />} />
+            
             {/* Route for authentication page */}
             <Route path="/auth" element={<AuthPage />} />
 
             <Route path="/admin/servicemanagement" element={<ServicesManagement />} />
             {/*ROUTE FOR CREATE GIGS*/}
             <Route path="/create-gig" element={<CreateGigsPage />} />
+            
+            {/*ROUTE FOR EDIT GIGS*/}
+            <Route path="/gigs/edit/:gigId" element={<EditGig />} />
             
             <Route path="/explore" element={<ExplorePage />} />
 
@@ -78,6 +84,8 @@ function App() {
             <Route path="/payment/:orderId" element={<Payment />} />
             <Route path="/payment/success/:orderId" element={<PaymentSuccess />} />
 
+             <Route path="/order/:orderId/review" element={<ReviewPage />} />
+
             <Route path="/become-seller" element={<BecomeSellerPage />} />
 
             <Route path="/deposit" element={<WalletPage />} />
@@ -89,6 +97,9 @@ function App() {
             <Route path="/inbox" element={<InboxPage />} />
 
             <Route path="/messages" element={<InboxPage />} />
+            
+            <Route path="/notifications" element={<NotificationPage />} />
+            
             <Route path="/admin/seller/:sellerId" element={<AdminSellerInfor />} />
 
             {/* Admin routes */}
