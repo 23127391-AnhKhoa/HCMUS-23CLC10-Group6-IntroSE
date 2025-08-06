@@ -10,6 +10,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useOrderNotification } from '../hooks/useOrderNotification';
 import ReportButton from '../components/ReportButton';
 import { createSafeHtml } from '../utils/htmlSanitizer';
+import { Tooltip } from 'antd';
 
 const GigDetail = () => {
     const { id } = useParams();
@@ -520,18 +521,20 @@ const GigDetail = () => {
                                     {gig.title}
                                 </h2>
                                 <div className="flex gap-3 items-center">
-                                    <button
-                                        onClick={handleFavoriteToggle}
-                                        className="p-3 rounded-full bg-white/60 backdrop-blur-sm border border-white/30 hover:bg-white/80 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
-                                        aria-label="Toggle Favorite"
-                                    >
-                                        <HeartFilled
+                                     <Tooltip title={isFavorited ? 'Unfavorite' : 'Favorite'}>
+                                        <button
+                                            onClick={handleFavoriteToggle}
+                                            className="p-2 rounded-full bg-white/60 backdrop-blur-sm border border-white/30 hover:bg-white/80 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+                                            aria-label="Toggle Favorite"
+                                        >
+                                            <HeartFilled
                                             style={{
-                                                fontSize: '28px',
+                                                fontSize: '20px',
                                                 color: isFavorited ? '#1dbf73' : '#a9a9a9',
                                             }}
-                                        />
-                                    </button>
+                                            />
+                                        </button>
+                                    </Tooltip>
                                     <div className="top-0 right-0">
                                         <ReportButton 
                                             Id={gig.id}
