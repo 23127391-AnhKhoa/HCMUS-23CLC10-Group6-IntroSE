@@ -19,6 +19,7 @@ const SellerInfo = () => {
     });
     const [reviewsLoading, setReviewsLoading] = useState(false);
     const [loading, setLoading] = useState(true);
+    const [activeTab, setActiveTab] = useState('gigs'); // 'gigs' or 'reviews'
     const { token } = useAuth();
     const navigate = useNavigate();
     
