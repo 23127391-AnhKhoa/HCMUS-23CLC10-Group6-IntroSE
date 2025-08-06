@@ -79,15 +79,15 @@ const Navbar = () => {
   ];
 
   const handleIntroductionClick = () => {
-    navigate('/Introduction');
+    navigate('/explore');
   };
 
   const handleLoginClick = () => {
-    navigate('/login');
+    navigate('/auth');
   };
 
   const handleSignupClick = () => {
-    navigate('/signup');
+    navigate('/auth');
   };
 
     const handleCreateGigsClick = () => {
@@ -159,7 +159,7 @@ const Navbar = () => {
               className="cursor-pointer text-gray-700 hover:text-blue-600 transition-smooth py-2 font-medium"
               onClick={handleIntroductionClick}
             >
-              Introduction
+              All services
             </div>
             {/*CREATE GIGS*/}
             <button

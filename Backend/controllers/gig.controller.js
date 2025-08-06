@@ -90,7 +90,7 @@ const getGigById = async (req, res) => {
 const createGig = async (req, res) => {
   try {
     // Validation dữ liệu đầu vào
-    const { title, cover_image, description, price, delivery_days, category_id } = req.body;
+    const { title, cover_image, description, price, delivery_days, category_id, response_time_hours } = req.body;
     
     // Kiểm tra các trường bắt buộc
     if (!title || !cover_image || !description || !price || !delivery_days || !category_id) {
@@ -112,6 +112,14 @@ const createGig = async (req, res) => {
       return res.status(400).json({
         status: 'error',
         message: 'Delivery days must be between 1 and 365'
+      });
+    }
+
+    // Validate response_time_hours if provided
+    if (response_time_hours && (response_time_hours < 1 || response_time_hours > 168)) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Response time must be between 1 hour and 1 week (168 hours)'
       });
     }
     
@@ -139,7 +147,8 @@ const createGig = async (req, res) => {
 
     const gigData = {
       ...req.body,
-      owner_id: ownerId
+      owner_id: ownerId,
+      response_time_hours: response_time_hours || 24 // Default to 24 hours
     };
 
     const newGig = await GigService.createGig(gigData);
@@ -209,9 +218,58 @@ const deleteGig = async (req, res) => {
   }
 };
 
+// THÊM MỚI: Controller method cho recommendations
+const getRecommendedGigs = async (req, res) => {
+  try {
+    const { limit = 3 } = req.query;
+    
+    const result = await GigService.getRecommendedGigs({
+      limit: parseInt(limit)
+    });
+    
+    res.status(200).json({
+      status: 'success',
+      data: result,
+      message: `Retrieved ${result.length} recommended gigs`
+    });
+  } catch (error) {
+    console.error('Get recommended gigs error:', error);
+    res.status(500).json({
+      status: 'error',
+      message: 'Failed to get recommended gigs',
+      error: error.message
+    });
+  }
+};
+
+// NEW: Get seller gigs with statistics
+const getSellerGigsWithStats = async (req, res) => {
+  try {
+    const { sellerId } = req.params;
+    
+    console.log('📊 [Gig Controller] getSellerGigsWithStats called for seller:', sellerId);
+
+    const gigsWithStats = await GigService.getSellerGigsWithStats(sellerId);
+
+    res.status(200).json({
+      status: 'success',
+      data: gigsWithStats
+    });
+  } catch (error) {
+    console.error('Get seller gigs with stats error:', error);
+    res.status(500).json({
+      status: 'error',
+      message: 'Failed to get seller gigs with statistics',
+      error: error.message
+    });
+  }
+};
+
 module.exports = {
   healthCheck,
   getAllGigs,
+  getRecommendedGigs,  // THÊM MỚI
+  getSellerGigsWithStats, // NEW
   getGigById,
   createGig,
   updateGig,

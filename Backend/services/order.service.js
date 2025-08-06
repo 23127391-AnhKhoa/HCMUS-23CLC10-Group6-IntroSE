@@ -10,6 +10,8 @@
  */
 
 const Order = require('../models/order.model');
+const User = require('../models/user.model');
+const Transaction = require('../models/transactions.model');
 const supabase = require('../config/supabaseClient');
 
 const OrderService = {
@@ -170,6 +172,13 @@ const OrderService = {
       };
 
       console.log('✅ Order found and flattened');
+      console.log('🔍 Debug gig_owner_id:', {
+        raw_gig_owner_id: order.Gigs?.owner_id,
+        flattened_gig_owner_id: flattenedOrder.gig_owner_id,
+        gig_exists: !!order.Gigs,
+        gig_owner_exists: !!order.Gigs?.owner_id
+      });
+      
       return flattenedOrder;
     } catch (error) {
       console.error('💥 Error in getOrderById:', error);
@@ -263,9 +272,9 @@ const OrderService = {
 
       // Validate status transition if status is being updated
       if (updateData.status) {
-        const validStatuses = ['pending', 'in_progress', 'completed', 'cancelled'];
+        const validStatuses = ['pending', 'in_progress', 'delivered', 'completed', 'cancelled'];
         if (!validStatuses.includes(updateData.status)) {
-          throw new Error('Invalid status. Must be one of: pending, in_progress, completed, cancelled');
+          throw new Error('Invalid status. Must be one of: pending, in_progress, delivered, completed, cancelled');
         }
       }
 
@@ -310,65 +319,64 @@ const OrderService = {
     }
   },
 
-  /**
-   * Get orders for a specific client
-   * 
-   * @param {string} clientId - Client UUID
-   * @param {Object} options - Query options
-   * @returns {Promise<Array>} Array of client orders
-   */
-  getClientOrders: async (clientId, options = {}) => {
-    try {
-      console.log('👤 [Order Service] getClientOrders called for client:', clientId);
-      console.log('🔧 Options:', options);
-      
-      const orders = await Order.findByClientId(clientId, options);
-      console.log('✅ [Order Service] Found', orders?.length || 0, 'orders for client');
-      
-      // Flatten the nested data for easier frontend consumption
-      const flattenedOrders = orders.map(order => ({
-        id: order.id,
-        client_id: order.client_id,
-        gig_id: order.gig_id,
-        price_at_purchase: order.price_at_purchase,
-        requirement: order.requirement,
-        status: order.status,
-        created_at: order.created_at,
-        completed_at: order.completed_at,
-        // Client information (current user)
-        client_username: order.User?.username,
-        client_fullname: order.User?.fullname,
-        client_name: order.User?.fullname || order.User?.username || 'Unknown Client',
-        client_avatar: order.User?.avt_url || 'https://placehold.co/300x300',
-        // Gig information with detailed fields
-        gig_title: order.Gigs?.title,
-        gig_cover_image: order.Gigs?.cover_image,
-        gig_description: order.Gigs?.description,
-        gig_price: order.Gigs?.price,
-        gig_delivery_days: order.Gigs?.delivery_days,
-        gig_num_of_edits: order.Gigs?.num_of_edits,
-        gig_status: order.Gigs?.status,
-        gig_owner_id: order.Gigs?.owner_id,
-        gig_category_id: order.Gigs?.category_id,
-        gig_created_at: order.Gigs?.created_at,
-        gig_updated_at: order.Gigs?.updated_at,
-        // Gig owner information (seller)
-        gig_owner_username: order.Gigs?.User?.username,
-        gig_owner_fullname: order.Gigs?.User?.fullname,
-        gig_owner_name: order.Gigs?.User?.fullname || order.Gigs?.User?.username || 'Unknown Seller',
-        gig_owner_avatar: order.Gigs?.User?.avt_url || 'https://placehold.co/300x300'
-      }));
+/**
+ * Get orders for a specific client
+ * 
+ * @param {string} clientId - Client UUID
+ * @param {Object} options - Query options
+ * @returns {Promise<Array>} Array of client orders
+ */
+getClientOrders: async (clientId, options = {}) => {
+  try {
+    console.log('👤 [Order Service] getClientOrders called for client:', clientId);
+    console.log('🔧 Options:', options);
+    
+    const orders = await Order.findByClientId(clientId, options);
+    console.log('✅ [Order Service] Found', orders?.length || 0, 'orders for client');
+    
+    // Flatten the nested data for easier frontend consumption
+    const flattenedOrders = orders.map(order => ({
+      id: order.id,
+      client_id: order.client_id,
+      gig_id: order.gig_id,
+      price_at_purchase: order.price_at_purchase,
+      requirement: order.requirement,
+      status: order.status,
+      created_at: order.created_at,
+      completed_at: order.completed_at,
+      // Client information
+      client_username: order.User?.username,
+      client_fullname: order.User?.fullname,
+      client_name: order.User?.fullname || order.User?.username || 'Unknown Client',
+      client_avatar: order.User?.avt_url || 'https://placehold.co/300x300',
+      // Gig information with detailed fields
+      gig_title: order.Gigs?.title,
+      gig_cover_image: order.Gigs?.cover_image,
+      gig_description: order.Gigs?.description,
+      gig_price: order.Gigs?.price,
+      gig_delivery_days: order.Gigs?.delivery_days,
+      gig_num_of_edits: order.Gigs?.num_of_edits,
+      gig_status: order.Gigs?.status,
+      gig_owner_id: order.Gigs?.owner_id,
+      gig_category_id: order.Gigs?.category_id,
+      gig_created_at: order.Gigs?.created_at,
+      gig_updated_at: order.Gigs?.updated_at,
+      // Gig owner information
+      gig_owner_username: order.Gigs?.User?.username,
+      gig_owner_fullname: order.Gigs?.User?.fullname,
+      gig_owner_name: order.Gigs?.User?.fullname || order.Gigs?.User?.username || 'Unknown Seller',
+      gig_owner_avatar: order.Gigs?.User?.avt_url || 'https://placehold.co/300x300'
+    }));
 
-      console.log('✅ [Order Service] Flattened client orders:', flattenedOrders?.length || 0);
-      console.log('🔍 Sample order:', flattenedOrders[0]);
-      
-      return flattenedOrders;
-    } catch (error) {
-      console.error('💥 [Order Service] Error in getClientOrders:', error);
-      console.error('Stack trace:', error.stack);
-      throw new Error(`Error fetching client orders: ${error.message}`);
-    }
-  },
+    console.log('✅ [Order Service] Flattened client orders:', flattenedOrders?.length || 0);
+    
+    return flattenedOrders;
+  } catch (error) {
+    console.error('💥 [Order Service] Error in getClientOrders:', error);
+    console.error('Stack trace:', error.stack);
+    throw new Error(`Error fetching client orders: ${error.message}`);
+  }
+},
 
   /**
    * Get orders for gigs owned by a specific user
@@ -442,23 +450,26 @@ const OrderService = {
       console.log('🔄 [Order Service] updateOrderStatus called with ID:', orderId, 'and status:', status);
       
       // Validate status
-      const validStatuses = ['pending', 'in_progress', 'completed', 'cancelled'];
+      const validStatuses = ['pending', 'in_progress', 'delivered', 'completed', 'cancelled', 'revision_requested'];
       if (!validStatuses.includes(status)) {
         console.log('❌ Invalid status provided:', status);
-        throw new Error('Invalid status. Must be one of: pending, in_progress, completed, cancelled');
+        throw new Error('Invalid status. Must be one of: pending, in_progress, delivered, completed, cancelled, revision_requested');
       }
 
-      // Check if order exists
+      // Check if order exists and get current status
       const existingOrder = await Order.findById(orderId);
       if (!existingOrder) {
         console.log('❌ Order not found for ID:', orderId);
         throw new Error('Order not found');
       }
 
-      console.log('📊 Existing order found:', existingOrder.id);
+      const oldStatus = existingOrder.status;
+      console.log('📊 Existing order found:', existingOrder.id, 'Current status:', oldStatus);
       
       const updatedOrder = await Order.updateStatus(orderId, status);
       console.log('✅ [Order Service] Order status updated successfully');
+      
+      // Auto payment timer logic removed - using manual payment only
       
       return updatedOrder;
     } catch (error) {
@@ -517,51 +528,648 @@ const OrderService = {
   },
 
   /**
+   * Process payment for order
+   * 
+   * @param {string} orderId - Order ID
+   * @param {string} userId - User ID (buyer)
+   * @returns {Promise<Object>} Payment result
+   */
+  processPayment: async (orderId, userId) => {
+    try {
+      console.log('💳 [Order Service] processPayment called:', { orderId, userId });
+      
+      // Get order details
+      const order = await OrderService.getOrderById(orderId);
+      if (!order) {
+        throw new Error('Order not found');
+      }
+      
+      // Verify user is the buyer
+      if (order.client_id !== userId) {
+        throw new Error('Only the buyer can process payment');
+      }
+      
+      // Check order status
+      if (order.status !== 'delivered') {
+        throw new Error('Order must be delivered before payment');
+      }
+      
+      // Get buyer details (remove balance check as it was verified during order creation)
+      const { data: buyer, error: buyerError } = await supabase
+        .from('User')
+        .select('uuid, balance')
+        .eq('uuid', userId)
+        .single();
+      
+      if (buyerError || !buyer) {
+        throw new Error('Buyer not found');
+      }
+      
+      // Get seller details
+      const { data: seller, error: sellerError } = await supabase
+        .from('User')
+        .select('balance')
+        .eq('uuid', order.gig_owner_id)
+        .single();
+      
+      if (sellerError || !seller) {
+        throw new Error('Seller not found');
+      }
+      
+      // Process payment manually (bypass balance check)
+      console.log('💳 Processing payment manually:', {
+        orderId,
+        buyerId: userId,
+        sellerId: order.gig_owner_id,
+        amount: order.price_at_purchase,
+        buyerCurrentBalance: buyer.balance,
+        sellerCurrentBalance: seller.balance
+      });
+
+      // Calculate new balances
+      const newBuyerBalance = buyer.balance - order.price_at_purchase;
+      const newSellerBalance = seller.balance + order.price_at_purchase;
+
+      // Update buyer balance
+      const { error: buyerUpdateError } = await supabase
+        .from('User')
+        .update({ balance: newBuyerBalance })
+        .eq('uuid', userId);
+
+      if (buyerUpdateError) {
+        throw new Error('Failed to update buyer balance: ' + buyerUpdateError.message);
+      }
+
+      // Update seller balance
+      const { error: sellerUpdateError } = await supabase
+        .from('User')
+        .update({ balance: newSellerBalance })
+        .eq('uuid', order.gig_owner_id);
+
+      if (sellerUpdateError) {
+        // Rollback buyer balance if seller update fails
+        await supabase
+          .from('User')
+          .update({ balance: buyer.balance })
+          .eq('uuid', userId);
+        throw new Error('Failed to update seller balance: ' + sellerUpdateError.message);
+      }
+
+      // Update order status to completed
+      const { error: orderUpdateError } = await supabase
+        .from('Orders')
+        .update({ 
+          status: 'completed'
+        })
+        .eq('id', orderId);
+
+      if (orderUpdateError) {
+        // Rollback balances if order update fails
+        await supabase.from('User').update({ balance: buyer.balance }).eq('uuid', userId);
+        await supabase.from('User').update({ balance: seller.balance }).eq('uuid', order.gig_owner_id);
+        throw new Error('Failed to update order status: ' + orderUpdateError.message);
+      }
+
+      console.log('✅ Payment processed successfully via manual transaction');
+
+      // Create transaction records for both buyer and seller
+      try {
+        // Create transaction for buyer (money deducted)
+        await Transaction.create({
+          user_id: userId,
+          order_id: parseInt(orderId),
+          amount: order.price_at_purchase,
+          type: 'payment',
+          description: `Payment for order #${orderId}`
+        });
+
+        // Create transaction for seller (money received)
+        await Transaction.create({
+          user_id: order.gig_owner_id,
+          order_id: parseInt(orderId),
+          amount: order.price_at_purchase * 0.8, // Positive for income + tax
+          type: 'received_payment',
+          description: `Payment received from order #${orderId}`
+        });
+      } catch (transactionError) {
+        console.error('❌ Failed to create transaction records:', transactionError);
+        // Don't fail the entire payment if transaction record creation fails
+      }
+      
+      // Auto payment timer logic removed - using manual payment only
+      
+      // Get updated order
+      const updatedOrder = await OrderService.getOrderById(orderId);
+      
+      console.log('✅ Payment processed successfully:', orderId);
+      
+      return {
+        order: updatedOrder,
+        payment_amount: order.price_at_purchase,
+        buyer_new_balance: newBuyerBalance,
+        seller_new_balance: newSellerBalance,
+        transaction_id: 'manual_payment'
+      };
+      
+    } catch (error) {
+      console.error('❌ [Order Service] Error in processPayment:', error);
+      throw error;
+    }
+  },
+
+  /**
    * Get order statistics for dashboard
    * 
-   * @param {Object} filters - Filters for statistics
-   * @param {string} [filters.status] - Filter by order status
-   * @param {string} [filters.client_id] - Filter by client ID
-   * @param {string} [filters.gig_id] - Filter by gig ID
-   * @returns {Promise<Object>} Object containing statistics data
+   * @param {string} userId - User ID
+   * @param {string} role - User role (buyer/seller)
+   * @returns {Promise<Object>} Order statistics
    */
-  getOrderStatistics: async (filters = {}) => {
+  getOrderStatistics: async (userId, role) => {
     try {
-      console.log('📊 [Order Service] getOrderStatistics called with filters:', filters);
+      console.log('📊 [Order Service] getOrderStatistics called:', { userId, role });
       
-      // Prepare base query
       let query = supabase
         .from('Orders')
-        .select('status, count(id) as count', { count: 'exact' })
-        .group('status')
-        .order('status', { ascending: true });
-
-      // Apply filters
-      if (filters.status) {
-        query = query.eq('status', filters.status);
+        .select('status, price_at_purchase, created_at');
+      
+      if (role === 'buyer') {
+        query = query.eq('client_id', userId);
+      } else if (role === 'seller') {
+        query = query
+          .select('status, price_at_purchase, created_at, Gigs!inner(owner_id)')
+          .eq('Gigs.owner_id', userId);
       }
-
-      if (filters.client_id) {
-        query = query.eq('client_id', filters.client_id);
-      }
-
-      if (filters.gig_id) {
-        query = query.eq('gig_id', filters.gig_id);
-      }
-
-      const { data, error } = await query;
+      
+      const { data: orders, error } = await query;
       
       if (error) {
-        throw new Error(`Error fetching statistics: ${error.message}`);
+        throw new Error(`Failed to get order statistics: ${error.message}`);
+      }
+      
+      // Calculate statistics
+      const stats = {
+        total_orders: orders.length,
+        pending: orders.filter(o => o.status === 'pending').length,
+        in_progress: orders.filter(o => o.status === 'in_progress').length,
+        delivered: orders.filter(o => o.status === 'delivered').length,
+        completed: orders.filter(o => o.status === 'completed').length,
+        cancelled: orders.filter(o => o.status === 'cancelled').length,
+        revision_requested: orders.filter(o => o.status === 'revision_requested').length,
+        total_revenue: orders
+          .filter(o => o.status === 'completed')
+          .reduce((sum, o) => sum + parseFloat(o.price_at_purchase), 0),
+        this_month_orders: orders.filter(o => {
+          const orderDate = new Date(o.created_at);
+          const currentDate = new Date();
+          return orderDate.getMonth() === currentDate.getMonth() && 
+                 orderDate.getFullYear() === currentDate.getFullYear();
+        }).length
+      };
+      
+      console.log('📊 Order statistics calculated:', stats);
+      
+      return stats;
+      
+    } catch (error) {
+      console.error('❌ [Order Service] Error in getOrderStatistics:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get recent orders for a seller (for earnings page)
+   * 
+   * @param {string} sellerId - Seller UUID
+   * @param {number} [limit=10] - Number of recent orders to fetch
+   * @returns {Promise<Array>} Array of recent orders with gig details
+   */
+  getSellerRecentOrders: async (sellerId, limit = 10) => {
+    try {
+      console.log('🔍 [Order Service] getSellerRecentOrders called for seller:', sellerId);
+      
+      // Get recent orders for seller's gigs using Supabase query
+      const { data: orders, error } = await supabase
+        .from('Orders')
+        .select(`
+          id,
+          price_at_purchase,
+          status,
+          requirement,
+          created_at,
+          completed_at,
+          Gigs!Orders_gig_id_fkey (
+            id,
+            title,
+            owner_id
+          )
+        `)
+        .eq('Gigs.owner_id', sellerId)
+        .order('created_at', { ascending: false })
+        .limit(limit);
+
+      if (error) {
+        throw new Error(`Error fetching recent orders: ${error.message}`);
       }
 
-      console.log('✅ [Order Service] Statistics data:', data);
-      
-      return data;
+      // Transform data for frontend
+      const recentOrders = orders.map(order => ({
+        id: order.id,
+        gig_title: order.Gigs?.title || 'Unknown Gig',
+        price_at_purchase: parseFloat(order.price_at_purchase),
+        status: order.status,
+        requirement: order.requirement,
+        created_at: order.created_at,
+        completed_at: order.completed_at
+      }));
+
+      console.log('✅ [Order Service] Found', recentOrders.length, 'recent orders for seller');
+      return recentOrders;
     } catch (error) {
-      console.error('💥 [Order Service] Error in getOrderStatistics:', error);
-      console.error('Stack trace:', error.stack);
-      throw new Error(`Error fetching order statistics: ${error.message}`);
+      console.error('💥 [Order Service] Error in getSellerRecentOrders:', error);
+      throw new Error(`Error fetching seller recent orders: ${error.message}`);
+    }
+  },
+
+  /**
+   * Get seller earnings statistics (for earnings page)
+   * 
+   * @param {string} sellerId - Seller UUID  
+   * @param {string} [period='allTime'] - Time period filter
+   * @returns {Promise<Object>} Earnings statistics object
+   */
+  getSellerEarningsStats: async (sellerId, period = 'allTime') => {
+    try {
+      console.log('📊 [Order Service] getSellerEarningsStats called for seller:', sellerId, 'period:', period);
+      
+      // Calculate date range based on period
+      const now = new Date();
+      let startDate = null;
+      
+      switch(period) {
+        case 'thisMonth':
+          startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+          break;
+        case 'lastMonth':
+          startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+          const endDate = new Date(now.getFullYear(), now.getMonth(), 0);
+          break;
+        case 'thisYear':
+          startDate = new Date(now.getFullYear(), 0, 1);
+          break;
+        default: // allTime
+          startDate = null;
+      }
+
+      // Build query for orders
+      let ordersQuery = supabase
+        .from('Orders')
+        .select(`
+          id,
+          price_at_purchase,
+          status,
+          created_at,
+          completed_at,
+          Gigs!Orders_gig_id_fkey (
+            id,
+            title,
+            owner_id
+          )
+        `)
+        .eq('Gigs.owner_id', sellerId);
+
+      if (startDate) {
+        ordersQuery = ordersQuery.gte('created_at', startDate.toISOString());
+      }
+
+      const { data: orders, error: ordersError } = await ordersQuery;
+      if (ordersError) throw ordersError;
+
+      // Calculate statistics
+      const completedOrders = orders.filter(order => order.status === 'completed');
+      const totalEarnings = completedOrders.reduce((sum, order) => sum + parseFloat(order.price_at_purchase), 0);
+      const averageOrderValue = completedOrders.length > 0 ? totalEarnings / completedOrders.length : 0;
+      
+      const pendingOrders = orders.filter(order => ['pending', 'in_progress'].includes(order.status));
+      const pendingEarnings = pendingOrders.reduce((sum, order) => sum + parseFloat(order.price_at_purchase), 0);
+
+      // Get seller balance
+      const { data: user, error: userError } = await supabase
+        .from('User')
+        .select('balance')
+        .eq('uuid', sellerId)
+        .single();
+      
+      if (userError) throw userError;
+
+      // Get active gigs count
+      const { data: activeGigs, error: gigsError } = await supabase
+        .from('Gigs')
+        .select('id')
+        .eq('owner_id', sellerId)
+        .eq('status', 'active');
+      
+      if (gigsError) throw gigsError;
+
+      // Get withdrawal transactions
+      const { data: transactions, error: transError } = await supabase
+        .from('Transactions')
+        .select('amount')
+        .eq('user_id', sellerId)
+        .ilike('description', '%withdraw%');
+      
+      const totalWithdrawn = transactions 
+        ? transactions.reduce((sum, trans) => sum + Math.abs(parseFloat(trans.amount)), 0)
+        : 0;
+
+      // Calculate monthly breakdown
+      const monthlyStats = {};
+      completedOrders.forEach(order => {
+        const date = new Date(order.completed_at || order.created_at);
+        const monthKey = `${date.getFullYear()}-${date.getMonth()}`;
+        const monthName = date.toLocaleDateString('en-US', { month: 'short' });
+        const year = date.getFullYear();
+        
+        if (!monthlyStats[monthKey]) {
+          monthlyStats[monthKey] = {
+            month: monthName,
+            year: year,
+            earnings: 0,
+            orders: 0
+          };
+        }
+        
+        monthlyStats[monthKey].earnings += parseFloat(order.price_at_purchase);
+        monthlyStats[monthKey].orders += 1;
+      });
+
+      const monthlyBreakdown = Object.values(monthlyStats)
+        .sort((a, b) => new Date(a.year, a.month) - new Date(b.year, b.month))
+        .slice(-12); // Last 12 months
+
+      const earningsStats = {
+        totalEarnings,
+        completedOrders: completedOrders.length,
+        averageOrderValue,
+        pendingEarnings,
+        availableBalance: parseFloat(user.balance || 0),
+        totalWithdrawn,
+        activeGigs: activeGigs.length,
+        completionRate: orders.length > 0 ? (completedOrders.length / orders.length) * 100 : 0,
+        monthlyBreakdown
+      };
+
+      console.log('✅ [Order Service] Earnings stats calculated:', earningsStats);
+      return earningsStats;
+    } catch (error) {
+      console.error('💥 [Order Service] Error in getSellerEarningsStats:', error);
+      throw new Error(`Error fetching seller earnings stats: ${error.message}`);
+    }
+  },
+
+  /**
+   * Complete order and process payment manually
+   * 
+   * @param {number} orderId - Order ID
+   * @param {string} userUuid - User UUID performing the action
+   * @param {string} userRole - User role (should be 'buyer')
+   * @returns {Promise<Object>} Result object
+   */
+  completeOrder: async (orderId, userUuid, userRole) => {
+    try {
+      console.log('🎯 [Order Service] Starting completeOrder:', { orderId, userUuid, userRole });
+
+      // Lấy thông tin order với full details
+      const order = await Order.findById(orderId);
+      if (!order) {
+        throw new Error('Order not found');
+      }
+
+      console.log('📦 [Order Service] Order found:', { 
+        id: order.id, 
+        status: order.status, 
+        client_id: order.client_id,
+        price: order.price_at_purchase 
+      });
+
+      // Kiểm tra quyền: chỉ buyer mới có thể complete order
+      if (userRole !== 'buyer' || order.client_id !== userUuid) {
+        throw new Error('Only the buyer can complete this order');
+      }
+
+      // Kiểm tra trạng thái order
+      if (order.status !== 'delivered') {
+        throw new Error('Order must be delivered before completion');
+      }
+
+      // Lấy seller ID từ gig
+      const sellerId = order.Gigs?.owner_id;
+      if (!sellerId) {
+        throw new Error('Seller information not found');
+      }
+
+      console.log('👥 [Order Service] Processing payment between:', { 
+        buyer: userUuid, 
+        seller: sellerId, 
+        amount: order.price_at_purchase 
+      });
+
+      // Xử lý thanh toán
+      const paymentResult = await OrderService.processOrderPayment(order, userUuid, sellerId);
+
+      // Cập nhật trạng thái order thành completed
+      const updatedOrder = await Order.updateById(orderId, {
+        status: 'completed',
+        completed_at: new Date().toISOString()
+      });
+
+      console.log('✅ [Order Service] Order completed successfully');
+
+      return {
+        success: true,
+        message: 'Order completed and payment processed successfully',
+        order: updatedOrder,
+        payment: paymentResult
+      };
+
+    } catch (error) {
+      console.error('💥 [Order Service] Error completing order:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Process order payment: transfer money from buyer to seller
+   * 
+   * @param {Object} order - Order object
+   * @param {string} buyerId - Buyer UUID
+   * @param {string} sellerId - Seller UUID
+   * @returns {Promise<void>}
+   */
+  processOrderPayment: async (order, buyerId, sellerId) => {
+    try {
+      const amount = parseFloat(order.price_at_purchase);
+      
+      console.log('💰 [Order Service] Processing payment:', { 
+        orderId: order.id, 
+        amount, 
+        buyerId, 
+        sellerId 
+      });
+
+      // Lấy thông tin buyer và seller từ database
+      const [buyer, seller] = await Promise.all([
+        User.findById(buyerId),
+        User.findById(sellerId)
+      ]);
+
+      if (!buyer || !seller) {
+        throw new Error('Buyer or seller not found');
+      }
+
+      console.log('👤 [Order Service] Current balances:', {
+        buyer: { username: buyer.username, balance: buyer.balance },
+        seller: { username: seller.username, balance: seller.balance }
+      });
+
+      // Tính toán balance mới (không kiểm tra insufficient balance)
+      const buyerBalance = parseFloat(buyer.balance) || 0;
+      const sellerBalance = parseFloat(seller.balance) || 0;
+      const newBuyerBalance = buyerBalance - amount;
+      const newSellerBalance = sellerBalance + (amount * 0.8); // Seller nhận 80% do tax
+
+      console.log('🔄 [Order Service] New balances will be:', {
+        buyer: { old: buyerBalance, new: newBuyerBalance },
+        seller: { old: sellerBalance, new: newSellerBalance }
+      });
+
+      // Cập nhật balance cho buyer và seller trong database
+      try {
+        console.log('💳 [Order Service] Updating buyer balance using Supabase...');
+        
+        // Cập nhật buyer balance
+        const { data: buyerUpdateData, error: buyerUpdateError } = await supabase
+          .from('User')
+          .update({ 
+            balance: newBuyerBalance,
+            updated_at: new Date().toISOString()
+          })
+          .eq('uuid', buyerId)
+          .select();
+
+        if (buyerUpdateError) {
+          console.error('❌ [Order Service] Failed to update buyer balance:', buyerUpdateError);
+          throw new Error(`Failed to update buyer balance: ${buyerUpdateError.message}`);
+        }
+
+        console.log('✅ [Order Service] Buyer balance updated:', buyerUpdateData[0]?.balance);
+
+        console.log('💳 [Order Service] Updating seller balance using Supabase...');
+        
+        // Cập nhật seller balance
+        const { data: sellerUpdateData, error: sellerUpdateError } = await supabase
+          .from('User')
+          .update({ 
+            balance: newSellerBalance,
+            updated_at: new Date().toISOString()
+          })
+          .eq('uuid', sellerId)
+          .select();
+
+        if (sellerUpdateError) {
+          console.error('❌ [Order Service] Failed to update seller balance:', sellerUpdateError);
+          
+          // Rollback buyer balance
+          console.log('🔄 [Order Service] Rolling back buyer balance...');
+          await supabase
+            .from('User')
+            .update({ balance: buyerBalance })
+            .eq('uuid', buyerId);
+          
+          throw new Error(`Failed to update seller balance: ${sellerUpdateError.message}`);
+        }
+
+        console.log('✅ [Order Service] Seller balance updated:', sellerUpdateData[0]?.balance);
+        console.log('💳 [Order Service] All balances updated successfully in database');
+        
+      } catch (balanceError) {
+        console.error('❌ [Order Service] Failed to update balances:', balanceError);
+        throw new Error(`Failed to update user balances: ${balanceError.message}`);
+      }
+
+      // Lưu transaction cho buyer (trừ tiền)
+      await Transaction.create({
+        user_id: buyerId,
+        order_id: order.id,
+        amount: amount, // Số âm vì trừ tiền
+        description: `Payment for order #${order.id} - ${order.Gigs?.title || 'Unknown Gig'}`,
+        type: 'payment'
+      });
+
+      // Lưu transaction cho seller (cộng tiền)
+      await Transaction.create({
+        user_id: sellerId,
+        order_id: order.id,
+        amount: amount * 0.8, // Seller nhận 80% sau trừ phí platform
+        description: `Payment received from order #${order.id} - ${order.Gigs?.title || 'Unknown Gig'}`,
+        type: 'received_payment'
+      });
+
+      console.log('📊 [Order Service] Transactions recorded successfully');
+
+      // Verify balances sau khi cập nhật
+      const [verifyBuyer, verifySeller] = await Promise.all([
+        User.findById(buyerId),
+        User.findById(sellerId)
+      ]);
+
+      console.log('🔍 [Order Service] Final balances verification:', {
+        buyer: { username: verifyBuyer.username, balance: verifyBuyer.balance },
+        seller: { username: verifySeller.username, balance: verifySeller.balance }
+      });
+
+      console.log(`✅ [Order Service] Payment processed: $${amount} from ${buyer.username} to ${seller.username}`);
+      
+      // Return updated user data for frontend
+      const updatedBuyerData = {
+        uuid: verifyBuyer.uuid,
+        username: verifyBuyer.username,
+        fullname: verifyBuyer.fullname,
+        email: verifyBuyer.email,
+        role: verifyBuyer.role,
+        balance: verifyBuyer.balance,
+        avatar_url: verifyBuyer.avt_url,
+        bio: verifyBuyer.bio,
+        seller_headline: verifyBuyer.seller_headline,
+        seller_description: verifyBuyer.seller_description,
+        seller_since: verifyBuyer.seller_since
+      };
+
+      const updatedSellerData = {
+        uuid: verifySeller.uuid,
+        username: verifySeller.username,
+        fullname: verifySeller.fullname,
+        email: verifySeller.email,
+        role: verifySeller.role,
+        balance: verifySeller.balance,
+        avatar_url: verifySeller.avt_url,
+        bio: verifySeller.bio,
+        seller_headline: verifySeller.seller_headline,
+        seller_description: verifySeller.seller_description,
+        seller_since: verifySeller.seller_since
+      };
+      
+      return {
+        success: true,
+        buyerNewBalance: verifyBuyer.balance,
+        sellerNewBalance: verifySeller.balance,
+        amount: amount,
+        updatedBuyerData: updatedBuyerData,
+        updatedSellerData: updatedSellerData
+      };
+
+    } catch (error) {
+      console.error('💥 [Order Service] Error processing order payment:', error);
+      throw error;
     }
   }
 };

@@ -1,7 +1,7 @@
 // src/pages/Create_Gigs.jsx
 import React, { useState, useEffect } from 'react';
 import OverviewCreGigs from '../components/CreateGigButton/Overview_CreGigs';
-import PricingCreGigs from '../components/CreateGigButton/Pricing_CreGigs_Fixed';
+import PricingCreGigs from '../components/CreateGigButton/Pricing_CreGigs';
 import DescriptionCreGigs from '../components/CreateGigButton/Description_CreGigs';
 import ReviewPublish from '../components/CreateGigButton/ReviewPublish';
 import NavbarLD from '../Common/Navbar_LD';
@@ -56,6 +56,8 @@ const CreateGigsPage = () => {
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [publishedGigData, setPublishedGigData] = useState(null);
   const [isPublishing, setIsPublishing] = useState(false); // Track publishing state
+  const [hasSubmitted, setHasSubmitted] = useState(false); // Prevent multiple submissions
+  const [categories, setCategories] = useState([]); // Store categories from API
 
   const [gigData, setGigData] = useState({
     // Overview fields
@@ -71,6 +73,7 @@ const CreateGigsPage = () => {
     price: '',
     delivery_days: 7,
     num_of_edits: 3,
+    response_time_hours: 24, // Default 24 hours for buyer response
     // Description fields
     description: '',
     faqs: [],
@@ -168,10 +171,33 @@ const CreateGigsPage = () => {
     return Object.keys(stepErrors).length === 0;
   };
 
-  // Check if user is authenticated
+  // Fetch categories from API
+  const fetchCategories = async () => {
+    try {
+      console.log('[CreateGigs] Fetching categories...');
+      const response = await fetch('http://localhost:8000/api/categories');
+      if (response.ok) {
+        const data = await response.json();
+        if (data.status === 'success') {
+          setCategories(data.data || []);
+          console.log('[CreateGigs] Categories loaded successfully:', data.data?.length || 0, 'categories');
+          console.log('[CreateGigs] Sample category structure:', data.data?.[0]);
+        } else {
+          console.warn('[CreateGigs] Categories API returned non-success status:', data.status);
+        }
+      } else {
+        console.warn('[CreateGigs] Categories API response not ok:', response.status);
+      }
+    } catch (err) {
+      console.error('[CreateGigs] Error fetching categories:', err);
+      // Don't set error state as categories are optional for now
+    }
+  };
+
+  // Check if user is authenticated and fetch categories
   useEffect(() => {
     if (!authUser) {
-      navigate('/login', { 
+      navigate('/auth', { 
         state: { 
           from: '/create-gig',
           message: 'Please login to create a gig' 
@@ -180,6 +206,9 @@ const CreateGigsPage = () => {
     } else {
       setGigData(prev => ({ ...prev, owner_id: authUser.uuid }));
     }
+    
+    // Fetch categories when component mounts
+    fetchCategories();
   }, [authUser, navigate]);
 
   const handleInputChange = (fieldName, value) => {
@@ -263,19 +292,26 @@ const CreateGigsPage = () => {
 
   const publishGig = async () => {
     // Prevent double submission
-    if (isPublishing || isLoading) {
-      console.log('Already publishing, preventing duplicate submission');
+    if (isPublishing || isLoading || hasSubmitted) {
+      console.log('Already publishing or submitted, preventing duplicate submission');
       return;
     }
 
     try {
       setIsPublishing(true);
       setIsLoading(true);
+      setHasSubmitted(true); // Mark as submitted
       setLoadingMessage("Publishing your gig...");
       
       // Calculate the total price with surcharges
       const totalPrice = calculateTotalPrice();
       console.log('Publishing gig with calculated total price:', totalPrice);
+      
+      // Get the correct category ID
+      const categoryId = getSelectedCategoryId();
+      if (!categoryId) {
+        throw new Error('Please select a valid category');
+      }
       
       const gigPayload = {
         title: gigData.gigTitle,
@@ -284,9 +320,9 @@ const CreateGigsPage = () => {
         price: totalPrice, // Use calculated total price instead of base price
         delivery_days: parseInt(gigData.delivery_days),
         num_of_edits: parseInt(gigData.num_of_edits),
-        category_id: getCategoryIdFromName(gigData.category),
+        category_id: categoryId, // Use the new category ID logic
         owner_id: gigData.owner_id,
-        status: 'active'
+        status: 'pending'
       };
 
       console.log('Publishing gig with payload:', gigPayload);
@@ -361,6 +397,7 @@ const CreateGigsPage = () => {
       setTimeout(() => {
         setIsLoading(false);
         setIsPublishing(false);
+        setHasSubmitted(false); // Reset submission flag on error
         setErrors({ 
           publish: `Failed to publish gig: ${error.message}. Please try again.` 
         });
@@ -371,16 +408,49 @@ const CreateGigsPage = () => {
     }
   };
 
-  // Helper function to map category names to IDs
+  // Helper function to map category names to IDs using the fetched categories
   const getCategoryIdFromName = (categoryName) => {
-    const categoryMap = {
-      'dev': 1,
-      'design': 2,
-      'writing': 3,
-      'marketing': 4,
-      'business': 5
-    };
-    return categoryMap[categoryName] || 1;
+    if (!categoryName || !categories.length) {
+      console.warn('[CreateGigs] No category name or categories not loaded yet');
+      return null;
+    }
+
+    // First try to find in parent categories
+    const parentCategory = categories.find(cat => 
+      cat.name.toLowerCase() === categoryName.toLowerCase() && cat.parent_id === null
+    );
+    
+    if (parentCategory) {
+      return parentCategory.id;
+    }
+
+    // Then try to find in subcategories
+    for (const parentCat of categories) {
+      if (parentCat.children && parentCat.children.length > 0) {
+        const subcategory = parentCat.children.find(subCat => 
+          subCat.name.toLowerCase() === categoryName.toLowerCase()
+        );
+        if (subcategory) {
+          return subcategory.id;
+        }
+      }
+    }
+
+    console.warn('[CreateGigs] Category not found:', categoryName);
+    return null;
+  };
+
+  // Helper function to get category ID from the selected subcategory (if any) or category
+  const getSelectedCategoryId = () => {
+    // If subcategory is selected, use subcategory ID
+    if (gigData.subcategory) {
+      return getCategoryIdFromName(gigData.subcategory);
+    }
+    // Otherwise use main category ID
+    if (gigData.category) {
+      return getCategoryIdFromName(gigData.category);
+    }
+    return null;
   };
 
   const goBackOneStep = () => {
@@ -464,6 +534,7 @@ const CreateGigsPage = () => {
                 onCategoryChange={handleCategoryChange}
                 onUpdateTagsArray={handleUpdateTagsArray}
                 errors={errors}
+                categories={categories} // Pass categories to components
                 onPublish={currentStepDetails.name === 'Publish' ? publishGig : undefined}
                 isPublishing={currentStepDetails.name === 'Publish' ? isPublishing : false}
                 isLoading={currentStepDetails.name === 'Publish' ? isLoading : false}
@@ -484,10 +555,15 @@ const CreateGigsPage = () => {
                 <div className="flex flex-col sm:flex-row items-center gap-4">
                   <button
                     type="submit"
-                    disabled={isLoading}
+                    disabled={isLoading || isPublishing || hasSubmitted}
                     className="w-full sm:w-auto bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-8 rounded-lg shadow-md hover:shadow-lg transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    {GIG_CREATION_STEPS.findIndex(step => step.id === currentStepId) < totalSteps - 1 ? 'Save & Continue' : 'Save & Publish'}
+                    {isPublishing || hasSubmitted 
+                      ? 'Publishing...' 
+                      : GIG_CREATION_STEPS.findIndex(step => step.id === currentStepId) < totalSteps - 1 
+                        ? 'Save & Continue' 
+                        : 'Save & Publish'
+                    }
                   </button>
                 </div>
               </div>

@@ -2,6 +2,43 @@
 const uploadService = require('../services/upload.service');
 const supabase = require('../config/supabaseClient');
 
+// Centralized allowed file types
+const ALLOWED_FILE_TYPES = [
+  // Images
+  'image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml',
+  'image/bmp', 'image/tiff', 'image/ico',
+  
+  // Videos
+  'video/mp4', 'video/avi', 'video/mov', 'video/wmv', 'video/flv', 'video/webm',
+  'video/mkv', 'video/3gp', 'video/quicktime',
+  
+  // Documents
+  'application/pdf', 'text/plain', 'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.ms-excel',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'application/vnd.ms-powerpoint',
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  'text/csv', 'application/rtf',
+  
+  // Audio
+  'audio/mpeg', 'audio/wav', 'audio/ogg', 'audio/mp3', 'audio/flac',
+  'audio/aac', 'audio/wma', 'audio/m4a',
+  
+  // Archives
+  'application/zip', 'application/x-zip-compressed', 'application/zip-compressed',
+  'application/x-rar-compressed', 'application/vnd.rar',
+  'application/x-7z-compressed', 'application/x-tar', 'application/gzip',
+  
+  // Design files
+  'application/vnd.adobe.photoshop', 'application/postscript',
+  'application/vnd.adobe.illustrator', 'image/vnd.adobe.photoshop',
+  
+  // Development files
+  'application/json', 'application/xml', 'text/xml', 'text/html',
+  'text/css', 'text/javascript', 'application/javascript'
+];
+
 const uploadFile = async (req, res) => {
   try {
     console.log('📤 Upload request received');
@@ -20,15 +57,10 @@ const uploadFile = async (req, res) => {
     });
 
     // Validate file type (multer middleware đã kiểm tra, nhưng double check)
-    const allowedTypes = [
-      'image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp',
-      'video/mp4', 'video/avi', 'video/mov', 'video/quicktime'
-    ];
-    
-    if (!allowedTypes.includes(req.file.mimetype)) {
+    if (!ALLOWED_FILE_TYPES.includes(req.file.mimetype)) {
       return res.status(400).json({
         status: 'error',
-        message: 'File type not allowed. Only images (JPEG, JPG, PNG, GIF, WebP) and videos (MP4, AVI, MOV) are allowed.',
+        message: 'File type not allowed. Contact support if you need to upload a different file type.',
       });
     }
 
@@ -102,11 +134,6 @@ const uploadMultipleFiles = async (req, res) => {
     });
 
     // Validate all files
-    const allowedTypes = [
-      'image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp',
-      'video/mp4', 'video/avi', 'video/mov', 'video/quicktime'
-    ];
-    
     const maxSize = 50 * 1024 * 1024; // 50MB
     const maxFiles = 10;
 
@@ -117,11 +144,12 @@ const uploadMultipleFiles = async (req, res) => {
       });
     }
 
+    // Validate file type for multiple files
     for (const file of req.files) {
-      if (!allowedTypes.includes(file.mimetype)) {
+      if (!ALLOWED_FILE_TYPES.includes(file.mimetype)) {
         return res.status(400).json({
           status: 'error',
-          message: `File "${file.originalname}" has unsupported type. Only images and videos are allowed.`,
+          message: `File "${file.originalname}" has unsupported type. Contact support if you need to upload a different file type.`,
         });
       }
 
@@ -294,4 +322,5 @@ module.exports = {
   uploadFilesWithFields,
   testStorage,
   testBucketCreation,
+  ALLOWED_FILE_TYPES
 };

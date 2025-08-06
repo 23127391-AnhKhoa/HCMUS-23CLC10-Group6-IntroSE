@@ -16,4 +16,7 @@ router.get('/:conversationId/messages', authenticateToken, conversationControlle
 // Gửi message mới
 router.post('/:conversationId/messages', authenticateToken, conversationController.sendMessage);
 
+// Tạo hoặc lấy conversation cho order
+router.get('/order/:orderId', authenticateToken, conversationController.getOrCreateOrderConversation);
+
 module.exports = router;

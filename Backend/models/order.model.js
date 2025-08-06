@@ -429,6 +429,10 @@ const Order = {
       updateData.completed_at = new Date().toISOString();
     }
     
+    // Note: delivered_at column doesn't exist in Orders table
+    // If status is delivered, we'll just update the status
+    // delivered_at functionality can be added later if needed
+    
     // If status is in_progress (seller confirms), calculate delivery deadline
     if (status === 'in_progress') {
       // First, get the order with gig details to access delivery_days
@@ -449,7 +453,9 @@ const Order = {
         // Calculate delivery deadline: current date + delivery_days
         const now = new Date();
         const deliveryDeadline = new Date(now.getTime() + (orderWithGig.Gigs.delivery_days * 24 * 60 * 60 * 1000));
-        updateData.delivery_deadline = deliveryDeadline.toISOString();
+        // Note: delivery_deadline column needs to be added to Orders table
+        console.log('Calculated delivery deadline:', deliveryDeadline.toISOString());
+        // updateData.delivery_deadline = deliveryDeadline.toISOString();
       }
     }
 

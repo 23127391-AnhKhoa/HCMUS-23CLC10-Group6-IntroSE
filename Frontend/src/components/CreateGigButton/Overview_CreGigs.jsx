@@ -3,7 +3,7 @@ import { XMarkIcon } from '@heroicons/react/24/solid'; // Cần cho nút xóa ta
 import MediaGalleryManager from './MediaGalleryManager';
 
 // Props bây giờ sẽ là onUpdateTagsArray thay vì onTagsChange
-const OverviewCreGigs = ({ gigData, onInputChange, onCategoryChange, onUpdateTagsArray, errors = {} }) => {
+const OverviewCreGigs = ({ gigData, onInputChange, onCategoryChange, onUpdateTagsArray, errors = {}, categories = [] }) => {
   const MAX_TITLE_LENGTH = 80;
   const MAX_TAGS = 5;
 
@@ -21,14 +21,18 @@ const OverviewCreGigs = ({ gigData, onInputChange, onCategoryChange, onUpdateTag
     onInputChange('positiveKeywords', e.target.value);
   };
 
-  const categories = [
-    { id: 'dev', name: 'Development & IT', subcategories: [ { id: 'webdev', name: 'Web Development' }, { id: 'mobiledev', name: 'Mobile Development' }, {id: 'datascience', name: 'Data Science & AI'}, { id: 'cybersecurity', name: 'Cybersecurity' }]},
-    { id: 'design', name: 'Design & Creative', subcategories: [ { id: 'logodesign', name: 'Logo Design' }, { id: 'graphicdesign', name: 'Graphic Design & Illustration' }, {id: 'uidesign', name: 'UI/UX Design'}, { id: 'videoediting', name: 'Video Editing' }]},
-    { id: 'writing', name: 'Writing & Translation', subcategories: [ { id: 'articles', name: 'Articles & Blog Posts' }, { id: 'translation', name: 'Translation Services' }, {id: 'proofreading', name: 'Proofreading & Editing'}, { id: 'copywriting', name: 'Copywriting' }]},
-    { id: 'marketing', name: 'Digital Marketing', subcategories: [ { id: 'seo', name: 'SEO Services' }, { id: 'socialmedia', name: 'Social Media Marketing' }, {id: 'emailmarketing', name: 'Email Marketing'}, { id: 'contentmarketing', name: 'Content Marketing' }]},
-    { id: 'business', name: 'Business', subcategories: [ { id: 'va', name: 'Virtual Assistant' }, { id: 'marketresearch', name: 'Market Research' }, { id: 'businessplans', name: 'Business Plans' }]},
-  ];
-  const selectedCategoryObject = categories.find(cat => cat.id === gigData.category);
+  // Use categories from props instead of hardcoded ones
+  const selectedCategoryObject = categories.find(cat => 
+    cat.name === gigData.category && cat.parent_id === null
+  );
+  
+  console.log('[OverviewCreGigs] Current category selection:', {
+    selectedCategory: gigData.category,
+    selectedSubcategory: gigData.subcategory,
+    availableCategories: categories.length,
+    foundCategoryObject: selectedCategoryObject?.name,
+    availableSubcategories: selectedCategoryObject?.children?.length || 0
+  });
 
   const inputBaseClasses = "block w-full text-sm text-slate-800 bg-white border border-slate-300 rounded-lg shadow-sm placeholder-slate-400 focus:outline-none focus:border-indigo-600 focus:ring-2 focus:ring-indigo-300 disabled:bg-slate-100 disabled:text-slate-500 disabled:border-slate-200 disabled:shadow-none";
   const labelClasses = "block text-lg font-semibold text-slate-800 mb-1";
@@ -95,7 +99,7 @@ const OverviewCreGigs = ({ gigData, onInputChange, onCategoryChange, onUpdateTag
             <label htmlFor="category" className="sr-only">Main Category</label>
             <select id="category" name="category" className={`${inputBaseClasses} py-3 px-4 ${errors.category ? 'border-red-500 focus:border-red-500' : ''}`} value={gigData.category || ''} onChange={(e) => onCategoryChange('category', e.target.value)}>
               <option value="" disabled>SELECT A CATEGORY</option>
-              {categories.map(cat => (<option key={cat.id} value={cat.id}>{cat.name}</option>))}
+              {categories.filter(cat => cat.parent_id === null).map(cat => (<option key={cat.id} value={cat.name}>{cat.name}</option>))}
             </select>
             {errors.category && (
               <p className="text-sm text-red-600 mt-1">{errors.category}</p>
@@ -103,9 +107,9 @@ const OverviewCreGigs = ({ gigData, onInputChange, onCategoryChange, onUpdateTag
           </div>
           <div>
             <label htmlFor="subcategory" className="sr-only">Sub Category</label>
-            <select id="subcategory" name="subcategory" className={`${inputBaseClasses} py-3 px-4 ${errors.subcategory ? 'border-red-500 focus:border-red-500' : ''}`} value={gigData.subcategory || ''} onChange={(e) => onCategoryChange('subcategory', e.target.value)} disabled={!gigData.category || !selectedCategoryObject?.subcategories?.length}>
+            <select id="subcategory" name="subcategory" className={`${inputBaseClasses} py-3 px-4 ${errors.subcategory ? 'border-red-500 focus:border-red-500' : ''}`} value={gigData.subcategory || ''} onChange={(e) => onCategoryChange('subcategory', e.target.value)} disabled={!gigData.category || !selectedCategoryObject?.children?.length}>
               <option value="" disabled>SELECT A SUBCATEGORY</option>
-              {selectedCategoryObject?.subcategories?.map(subcat => (<option key={subcat.id} value={subcat.id}>{subcat.name}</option>))}
+              {selectedCategoryObject?.children?.map(subcat => (<option key={subcat.id} value={subcat.name}>{subcat.name}</option>))}
             </select>
             {errors.subcategory && (
               <p className="text-sm text-red-600 mt-1">{errors.subcategory}</p>

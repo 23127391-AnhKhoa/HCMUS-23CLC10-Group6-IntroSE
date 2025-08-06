@@ -31,4 +31,19 @@ const login = async (req, res) => {
   }
 };
 
-module.exports = { register, verifyOTP, login };
+const resendOTP = async (req, res) => {
+  try {
+    const { email } = req.body;
+    
+    if (!email) {
+      return res.status(400).json({ message: 'Email is required' });
+    }
+
+    const result = await AuthService.handleResendOTP(email);
+    res.status(200).json(result);
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+};
+
+module.exports = { register, verifyOTP, login, resendOTP };

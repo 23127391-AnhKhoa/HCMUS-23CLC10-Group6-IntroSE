@@ -1,14 +1,21 @@
 // models/user.model.js
-const supabase = require('../config/supabaseClient'); // Giả định
+const supabase = require('../config/supabaseClient'); 
 
 const User = {
-  // HÀM CŨ CỦA BẠN (giữ nguyên)
   findById: async (uuid) => {
     const { data, error } = await supabase.from('User').select('*').eq('uuid', uuid).single();
     if (error && error.code !== 'PGRST116') throw error;
     return data;
   },
-
+  findByIds: async (ids) => {
+        if (!ids || ids.length === 0) return [];
+        const { data, error } = await supabase
+            .from('User')
+            .select('uuid, username, status, ban_reason, banned_until') // Thêm các field cần thiết cho ban
+            .in('uuid', ids);
+        if (error) throw error;
+        return data;
+    },
   // Tìm user bằng username
   findByUsername: async (username) => {
     const { data, error } = await supabase.from('User').select('*').eq('username', username).single();
@@ -23,11 +30,10 @@ const User = {
     return data[0];
   },
 
-  // HÀM CŨ CỦA BẠN (giữ nguyên, nhưng tôi sẽ dùng tên bảng là 'User' cho nhất quán)
   updateByUuid: async (uuid, updateData) => {
     
     const { data, error } = await supabase
-      .from('User') // Sửa 'users' thành 'User' cho nhất quán với các hàm khác
+      .from('User') 
       .update(updateData)
       .eq('uuid', uuid)
       .select();
@@ -79,14 +85,184 @@ const User = {
   searchUsers: async (query) => {
     const { data, error } = await supabase
       .from('User')
-      .select('uuid, fullname, username, avt_url, role, status')
+      .select('uuid, fullname, username, avt_url, role, status, seller_headline')
       .or(`fullname.ilike.%${query}%,username.ilike.%${query}%`)
       .eq('status', 'active')
       .order('fullname')
       .limit(20);
 
     if (error) throw error;
-    return data || [];
+    
+    // Map avt_url to avatar for frontend compatibility
+    const users = (data || []).map(user => ({
+      ...user,
+      avatar: user.avt_url
+    }));
+    
+    return { status: 'success', data: users };
+  },
+
+  // === USER FAVORITES FUNCTIONS ===
+  
+  // Thêm gig vào favorites
+  addFavorite: async (userId, gigId) => {
+    try {
+      const { data, error } = await supabase
+        .from('UserFavorites')
+        .insert([
+          {
+            user_id: userId,
+            gig_id: gigId,
+            created_at: new Date().toISOString()
+          }
+        ])
+        .select();
+
+      if (error) {
+        console.error('Error adding favorite:', error);
+        throw error;
+      }
+
+      return data[0];
+    } catch (error) {
+      console.error('Error in addFavorite:', error);
+      throw error;
+    }
+  },
+
+  // Xóa gig khỏi favorites
+  removeFavorite: async (userId, gigId) => {
+    try {
+      const { data, error } = await supabase
+        .from('UserFavorites')
+        .delete()
+        .eq('user_id', userId)
+        .eq('gig_id', gigId)
+        .select();
+
+      if (error) {
+        console.error('Error removing favorite:', error);
+        throw error;
+      }
+
+      return data;
+    } catch (error) {
+      console.error('Error in removeFavorite:', error);
+      throw error;
+    }
+  },
+
+  // Lấy tất cả favorites của user
+  getUserFavorites: async (userId) => {
+    try {
+      const { data, error } = await supabase
+        .from('UserFavorites')
+        .select(`
+          *,
+          Gigs!UserFavorites_gig_id_fkey (
+            id,
+            title,
+            description,
+            price,
+            cover_image,
+            category_id,
+            owner_id,
+            created_at,
+            updated_at
+          )
+        `)
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error getting user favorites:', error);
+        throw error;
+      }
+
+      return data;
+    } catch (error) {
+      console.error('Error in getUserFavorites:', error);
+      throw error;
+    }
+  },
+
+  // Kiểm tra xem gig có được favorite hay không
+  isFavorited: async (userId, gigId) => {
+    try {
+      const { data, error } = await supabase
+        .from('UserFavorites')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('gig_id', gigId)
+        .single();
+
+      if (error && error.code !== 'PGRST116') { // PGRST116 = No rows found
+        console.error('Error checking favorite status:', error);
+        throw error;
+      }
+
+      return !!data;
+    } catch (error) {
+      console.error('Error in isFavorited:', error);
+      throw error;
+    }
+  },
+
+  // Toggle favorite status
+  toggleFavorite: async (userId, gigId) => {
+    try {
+      const isFav = await User.isFavorited(userId, gigId);
+      
+      if (isFav) {
+        await User.removeFavorite(userId, gigId);
+        return { action: 'removed', isFavorited: false };
+      } else {
+        await User.addFavorite(userId, gigId);
+        return { action: 'added', isFavorited: true };
+      }
+    } catch (error) {
+      console.error('Error in toggleFavorite:', error);
+      throw error;
+    }
+  },
+
+  // Cập nhật rating cho user
+  updateUserRating: async (userId) => {
+    try {
+      // Lấy tất cả reviews cho seller này
+      const { data: reviews, error: reviewError } = await supabase
+        .from('Reviews')
+        .select('rating')
+        .eq('seller_id', userId);
+
+      if (reviewError) throw reviewError;
+
+      let averageRating = 0;
+      
+      if (reviews && reviews.length > 0) {
+        const ratings = reviews.map(review => review.rating);
+        const totalRating = ratings.reduce((sum, rating) => sum + rating, 0);
+        averageRating = Math.round((totalRating / ratings.length) * 10) / 10;
+      }
+
+      // Cập nhật rating trong User table
+      const { data, error } = await supabase
+        .from('User')
+        .update({ rating: averageRating })
+        .eq('uuid', userId)
+        .select();
+
+      if (error) throw error;
+      
+      return {
+        userId,
+        newRating: averageRating,
+        totalReviews: reviews ? reviews.length : 0
+      };
+    } catch (error) {
+      console.error('Error updating user rating:', error);
+      throw error;
+    }
   }
 };
 

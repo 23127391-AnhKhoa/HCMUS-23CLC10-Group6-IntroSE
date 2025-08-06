@@ -88,6 +88,11 @@ const AuthService = {
         const userProfile = await User.findById(authUser.id); // Giả sử bạn đã đổi tên hàm thành findByUuid
         if (!userProfile) throw new Error("User profile not found in public schema.");
 
+        // Kiểm tra trạng thái tài khoản
+        if (userProfile.status !== 'active') {
+            throw new Error('Your account is not active. Please contact support.');
+        }
+
         // 3. Tạo payload cho JWT, kết hợp thông tin từ cả hai nguồn
         const payload = {
         // Lấy uuid từ userProfile (hoặc authUser.id, chúng giống nhau)
@@ -116,12 +121,42 @@ const AuthService = {
                 avatar_url: userProfile.avt_url, // Sửa tên field cho đúng với schema
                 seller_headline: userProfile.seller_headline,
                 seller_description: userProfile.seller_description,
-                seller_since: userProfile.seller_since
+                seller_since: userProfile.seller_since,
+                // Trả về thông tin từ Supabase Auth, đó là JWT cho FE vào Supabase mà dùng REALTIME SOCKET
+                token: data.session.access_token
             } // Trả về thông tin user đầy đủ hơn
         };
     },
     regenerateToken: (payload) => {
         return jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '1d' });
+    },
+
+    // Logic xử lý gửi lại OTP
+    handleResendOTP: async (email) => {
+        // Kiểm tra xem email có trong otpStore không (có nghĩa là đã register nhưng chưa verify)
+        const storedData = otpStore.get(email);
+        
+        if (!storedData) {
+            throw new Error('No pending registration found for this email. Please register again.');
+        }
+
+        // Tạo OTP mới
+        const newOTP = Math.floor(100000 + Math.random() * 900000).toString();
+        
+        // Gửi email với OTP mới
+        await mailService.sendOTPEmail(email, newOTP);
+        
+        // Cập nhật OTP và thời gian hết hạn trong store
+        otpStore.set(email, {
+            ...storedData,
+            otp: newOTP,
+            expires: Date.now() + 5 * 60 * 1000 // Reset thời gian hết hạn về 5 phút
+        });
+
+        return { 
+            message: 'New OTP sent to your email successfully.',
+            email: email
+        };
     }
 };
 

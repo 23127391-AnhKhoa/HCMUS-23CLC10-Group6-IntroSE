@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 
-export const useRealtimeConversations = (authUser, refreshKey = 0) => {
+export const useRealtimeConversations = (authUser) => {
   const [conversations, setConversations] = useState([]);
   const [loading, setLoading] = useState(false);
 
@@ -41,9 +41,6 @@ export const useRealtimeConversations = (authUser, refreshKey = 0) => {
     
     fetchConversations();
 
-    // Clean up any existing subscription with the same name
-    supabase.removeChannel('conversations');
-
     const conversationChannel = supabase
       .channel('conversations')
       .on('postgres_changes', 
@@ -64,22 +61,17 @@ export const useRealtimeConversations = (authUser, refreshKey = 0) => {
         },
         fetchConversations
       )
-      .subscribe((status) => {
-        console.log('Conversations subscription status:', status);
-      });
+      .subscribe();
 
     return () => {
       console.log('Unsubscribing from conversations channel');
       conversationChannel.unsubscribe();
     };
-  }, [authUser, fetchConversations, refreshKey]); // Add refreshKey as dependency
+  }, [authUser, fetchConversations]);
 
   // Subscribe to new messages to update last message
   useEffect(() => {
     if (!authUser) return;
-
-    // Clean up any existing subscription with the same name
-    supabase.removeChannel('all_messages');
 
     const messageChannel = supabase
       .channel('all_messages')
@@ -105,15 +97,13 @@ export const useRealtimeConversations = (authUser, refreshKey = 0) => {
           );
         }
       )
-      .subscribe((status) => {
-        console.log('All messages subscription status:', status);
-      });
+      .subscribe();
 
-    return () => {
+    return () => {  
       console.log('Unsubscribing from all_messages channel');
       messageChannel.unsubscribe();
     };
-  }, [authUser, refreshKey]); // Add refreshKey as dependency
+  }, [authUser]);
 
   // Create new conversation using backend API
   const createConversation = async (otherUserId) => {

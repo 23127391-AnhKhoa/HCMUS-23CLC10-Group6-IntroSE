@@ -1,7 +1,7 @@
 // controllers/transaction.controller.js
 const User = require('../models/user.model');
+const Transaction = require('../models/transactions.model');
 const jwt = require('jsonwebtoken');
-
 /**
  * JWT Token Generation Best Practices:
  * 
@@ -34,14 +34,6 @@ const TransactionController = {
       if (!amount || amount <= 0) {
         return res.status(400).json({
           message: 'Amount must be greater than 0'
-        });
-      }
-
-      // Kiểm tra amount có trong các gói cho phép không (5, 10, 20)
-      const allowedAmounts = [5, 10, 20];
-      if (!allowedAmounts.includes(Number(amount))) {
-        return res.status(400).json({
-          message: 'Invalid amount. Only $5, $10, and $20 packages are allowed.'
         });
       }
 
@@ -78,6 +70,16 @@ const TransactionController = {
         seller_description: updatedUser.seller_description,
         seller_since: updatedUser.seller_since
       };
+
+      // ✅ Ghi vào bảng Transactions
+      const { error: insertError } = await Transaction.create({
+        user_id: userUuid,
+        amount: parseFloat(amount),
+        description: 'Deposit to account',
+        type: 'deposit',
+      });
+
+      if (insertError) throw insertError;
 
       res.json({
         message: `Successfully deposited $${amount}`,
@@ -154,6 +156,19 @@ const TransactionController = {
         seller_since: updatedUser.seller_since
       };
 
+      // ✅ Ghi vào bảng Transactions
+      const { error: insertError } = await Transaction.create({
+        user_id: userUuid,
+        amount: parseFloat(amount),
+        description: 'Withdraw from account',
+        type: 'withdraw',
+      });
+
+      if (insertError) throw insertError;
+
+
+      if (insertError) throw insertError;
+
       res.json({
         message: `Successfully withdrew $${amount}`,
         user: updatedUserData,
@@ -171,6 +186,160 @@ const TransactionController = {
       res.status(500).json({
         message: 'Internal server error',
         error: error.message
+      });
+    }
+  },
+
+  // API để lấy lịch sử giao dịch theo user ID
+  getTransactionHistory: async (req, res) => {
+    try {
+      const userUuid = req.user.uuid;
+      const { page = 1, limit = 20, type = 'all' } = req.query;
+
+      // Validation
+      const pageNum = parseInt(page);
+      const limitNum = parseInt(limit);
+      
+      if (pageNum < 1 || limitNum < 1 || limitNum > 100) {
+        return res.status(400).json({
+          message: 'Invalid pagination parameters'
+        });
+      }
+
+      // Build filter
+      let typeFilter = {};
+      if (type !== 'all') {
+        if (!['deposit', 'withdraw'].includes(type)) {
+          return res.status(400).json({
+            message: 'Type must be "deposit", "withdraw", or "all"'
+          });
+        }
+        typeFilter.type = type;
+      }
+
+      // Get transaction history with pagination
+      const { data: transactions, error } = await Transaction.getByUserId(
+        userUuid, 
+        { 
+          ...typeFilter,
+          page: pageNum,
+          limit: limitNum
+        }
+      );
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      // Get total count for pagination
+      const { data: totalCount, error: countError } = await Transaction.getTotalCount(
+        userUuid, 
+        typeFilter
+      );
+
+      if (countError) {
+        throw new Error(countError.message);
+      }
+
+      const totalPages = Math.ceil(totalCount / limitNum);
+
+      res.json({
+        message: 'Transaction history retrieved successfully',
+        data: {
+          transactions: transactions || [],
+          pagination: {
+            currentPage: pageNum,
+            totalPages,
+            totalItems: totalCount,
+            itemsPerPage: limitNum,
+            hasNextPage: pageNum < totalPages,
+            hasPrevPage: pageNum > 1
+          }
+        }
+      });
+
+    } catch (error) {
+      console.error('Error in getTransactionHistory:', error);
+      res.status(500).json({
+        message: 'Internal server error',
+        error: error.message
+      });
+    }
+  },
+
+  // API để lấy transactions theo user ID và transaction type
+  getUserTransactions: async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const { transaction_type, limit = 10, page = 1 } = req.query;
+
+      // Validation
+      const limitNum = parseInt(limit);
+      const pageNum = parseInt(page);
+      
+      if (limitNum < 1 || limitNum > 100) {
+        return res.status(400).json({
+          status: 'error',
+          message: 'Limit must be between 1 and 100'
+        });
+      }
+
+      if (pageNum < 1) {
+        return res.status(400).json({
+          status: 'error',
+          message: 'Page must be greater than 0'
+        });
+      }
+
+      // Build filter for the query
+      let filters = {
+        page: pageNum,
+        limit: limitNum
+      };
+
+      // Map transaction_type to type field in database
+      if (transaction_type) {
+        if (transaction_type === 'received_payment') {
+          filters.type = 'received_payment';
+        } else if (transaction_type === 'deposit') {
+          filters.type = 'deposit';
+        } else if (transaction_type === 'withdraw') {
+          filters.type = 'withdraw';
+        } else {
+          return res.status(400).json({
+            status: 'error',
+            message: 'Invalid transaction_type. Must be: received_payment, deposit, or withdraw'
+          });
+        }
+      }
+
+      // Get transactions
+      const { data: transactions, error } = await Transaction.getByUserId(userId, filters);
+
+      if (error) {
+        return res.status(500).json({
+          status: 'error',
+          message: 'Failed to fetch transactions',
+          details: error.message
+        });
+      }
+
+      return res.status(200).json({
+        status: 'success',
+        data: transactions || [],
+        pagination: {
+          page: pageNum,
+          limit: limitNum,
+          total: transactions?.length || 0
+        }
+      });
+
+    } catch (error) {
+      console.error('Error in getUserTransactions:', error);
+      return res.status(500).json({
+        status: 'error',
+        message: 'Internal server error',
+        details: error.message
       });
     }
   }
