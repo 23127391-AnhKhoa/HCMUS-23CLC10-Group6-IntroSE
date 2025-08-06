@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import DOMPurify from 'dompurify';
+import { createSafeHtml } from '../../utils/htmlSanitizer';
 
 const GigDetailContent = () => {
     const { id } = useParams();
@@ -369,7 +370,7 @@ const GigDetailContent = () => {
                             </h2>
                             <div 
                                 className="text-gray-700 text-base font-normal leading-relaxed prose prose-sm max-w-none prose-headings:text-gray-800 prose-p:text-gray-700 prose-a:text-blue-600 prose-strong:text-gray-800"
-                                dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(gig.description) }}
+                                dangerouslySetInnerHTML={createSafeHtml(gig.description)}
                             ></div>
                         </div>
 

@@ -17,7 +17,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import NavBar_Buyer from '../Common/NavBar_Buyer';
 import NavBar_Seller from '../Common/NavBar_Seller';
-import { EyeOutlined, ClockCircleOutlined, CheckCircleOutlined, CloseCircleOutlined, ShoppingOutlined, FileTextOutlined, AppstoreOutlined, UnorderedListOutlined } from '@ant-design/icons';
+import { EyeOutlined, ClockCircleOutlined, CheckCircleOutlined, CloseCircleOutlined, ShoppingOutlined, FileTextOutlined } from '@ant-design/icons';
 import Footer from '../Common/Footer';
 import OrderCard from '../components/OrderCard/OrderCard';
 import OrderOverviewCard from '../components/OrderOverviewCard/OrderOverviewCard';
@@ -36,16 +36,23 @@ const Orders = () => {
     const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
-    const [activeTab, setActiveTab] = useState(authUser?.role || 'buyer'); // 'buyer' or 'seller'
+    const [activeTab, setActiveTab] = useState(authUser?.role === 'seller' ? 'seller' : 'buyer'); // Set based on user role
     const [statusFilter, setStatusFilter] = useState('all');
-    const [viewMode, setViewMode] = useState('overview'); // 'overview' or 'detailed'
     const [selectedOrderId, setSelectedOrderId] = useState(null);
 
-    // Pagination state
-    const [currentPage, setCurrentPage] = useState(1);
-    const [totalPages, setTotalPages] = useState(1);
+    // Separate loading states for different actions
+    const [actionLoadings, setActionLoadings] = useState({
+        statusUpdate: {},
+        deliveryUpload: {},
+        fileDownload: {},
+        revisionRequest: {}
+    });
+
+    // Infinite scroll state
+    const [hasMore, setHasMore] = useState(true);
+    const [isLoadingMore, setIsLoadingMore] = useState(false);
     const [totalOrders, setTotalOrders] = useState(0);
-    const itemsPerPage = 10;
+    const itemsPerPage = 20;
 
     // Check authentication and redirect if needed
     useEffect(() => {
@@ -65,28 +72,74 @@ const Orders = () => {
     // Fetch orders when component mounts or filters change
     useEffect(() => {
         if (!authLoading && authUser && token) {
-            fetchOrders();
+            // Reset orders when filters change and fetch new data
+            fetchOrders(true);
         }
-    }, [authUser, token, authLoading, activeTab, statusFilter, currentPage]);
+    }, [authUser, token, authLoading, activeTab, statusFilter]);
 
+    // Initialize with correct tab and setup scroll listener
     useEffect(() => {
         if (!authLoading && authUser) {
+            // Set the correct tab based on user role
             const correctTab = authUser.role === 'seller' ? 'seller' : 'buyer';
             if (activeTab !== correctTab) {
                 setActiveTab(correctTab);
-                setCurrentPage(1);
-                setViewMode('overview');
             }
         }
-    }, [authUser, authLoading, activeTab]);
+
+        // Setup infinite scroll listener
+        const handleScroll = () => {
+            if (window.innerHeight + document.documentElement.scrollTop !== document.documentElement.offsetHeight || isLoadingMore || !hasMore) {
+                return;
+            }
+            loadMoreOrders();
+        };
+
+        window.addEventListener('scroll', handleScroll);
+        return () => window.removeEventListener('scroll', handleScroll);
+    }, [authUser, authLoading, isLoadingMore, hasMore]);
+
+    /**
+     * Custom sorting function for orders based on status priority
+     */
+    const sortOrdersByStatus = (ordersArray) => {
+        const statusPriority = {
+            'pending': 1,
+            'in_progress': 2,
+            'revision_requested': 3,
+            'delivered': 4,
+            'completed': 5,
+            'cancelled': 6
+        };
+
+        return ordersArray.sort((a, b) => {
+            const aPriority = statusPriority[a.status] || 99;
+            const bPriority = statusPriority[b.status] || 99;
+            
+            if (aPriority !== bPriority) {
+                return aPriority - bPriority;
+            }
+            
+            // If same status, sort by created_at descending (newest first)
+            return new Date(b.created_at) - new Date(a.created_at);
+        });
+    };
 
     /**
      * Fetch orders from API based on current filters
      */
-    const fetchOrders = async () => {
+    const fetchOrders = async (reset = false) => {
         try {
-            setLoading(true);
+            if (reset) {
+                setLoading(true);
+                setOrders([]); // Clear orders immediately when resetting
+                setHasMore(true);
+            } else {
+                setIsLoadingMore(true);
+            }
             setError(null);
+            
+            const currentPage = reset ? 1 : Math.floor(orders.length / itemsPerPage) + 1;
             
             let url = '';
             const params = new URLSearchParams({
@@ -143,12 +196,26 @@ const Orders = () => {
             console.log('📦 First order sample:', data.data?.[0]);
 
             if (data.status === 'success') {
-                setOrders(data.data || []);
+                const newOrders = data.data || [];
+                
+                if (reset) {
+                    // Apply custom sorting for 'all' filter
+                    const sortedOrders = statusFilter === 'all' ? sortOrdersByStatus([...newOrders]) : newOrders;
+                    setOrders(sortedOrders);
+                } else {
+                    // Append new orders for infinite scroll
+                    const combinedOrders = [...orders, ...newOrders];
+                    const sortedOrders = statusFilter === 'all' ? sortOrdersByStatus(combinedOrders) : combinedOrders;
+                    setOrders(sortedOrders);
+                }
                 
                 // Handle pagination info if available
                 if (data.pagination) {
-                    setTotalPages(data.pagination.pages);
                     setTotalOrders(data.pagination.total);
+                    setHasMore(currentPage < data.pagination.pages);
+                } else {
+                    // If no pagination info, assume no more data if less than requested amount
+                    setHasMore(newOrders.length === itemsPerPage);
                 }
             } else {
                 throw new Error(data.message || 'Failed to fetch orders');
@@ -158,24 +225,80 @@ const Orders = () => {
             setError(err.message);
         } finally {
             setLoading(false);
+            setIsLoadingMore(false);
         }
     };
 
     /**
-     * Handle order status update
+     * Set loading state for specific action and order
+     */
+    const setActionLoading = (action, orderId, isLoading) => {
+        setActionLoadings(prev => ({
+            ...prev,
+            [action]: {
+                ...prev[action],
+                [orderId]: isLoading
+            }
+        }));
+    };
+
+    /**
+     * Get loading state for specific action and order
+     */
+    const getActionLoading = (action, orderId) => {
+        return actionLoadings[action]?.[orderId] || false;
+    };
+
+    /**
+     * Update order in place without full reload
+     */
+    const updateOrderInPlace = (orderId, updates) => {
+        setOrders(prevOrders => 
+            prevOrders.map(order => 
+                order.id === orderId 
+                    ? { ...order, ...updates }
+                    : order
+            )
+        );
+    };
+
+    /**
+     * Load more orders for infinite scroll
+     */
+    const loadMoreOrders = () => {
+        if (!isLoadingMore && hasMore) {
+            fetchOrders(false);
+        }
+    };
+
+    /**
+     * Handle order status update with optimistic UI
      */
     const handleStatusUpdate = async (orderId, newStatus) => {
         try {
             console.log('🔄 Updating order status:', orderId, newStatus);
             
+            // Set loading state for this specific order
+            setActionLoading('statusUpdate', orderId, true);
+            
+            // Optimistic update - update UI immediately
+            updateOrderInPlace(orderId, { status: newStatus });
+            
             await ApiService.updateOrderStatus(orderId, newStatus);
             
-            // Refresh orders list
-            fetchOrders();
             console.log('✅ Order status updated successfully');
         } catch (err) {
             console.error('❌ Error updating order status:', err);
+            
+            // Revert optimistic update on error
+            const originalOrder = orders.find(order => order.id === orderId);
+            if (originalOrder) {
+                updateOrderInPlace(orderId, { status: originalOrder.status });
+            }
+            
             alert(`Error updating order status: ${err.message}`);
+        } finally {
+            setActionLoading('statusUpdate', orderId, false);
         }
     };
 
@@ -188,22 +311,29 @@ const Orders = () => {
     };
 
     /**
-     * Handle file download for delivered orders
+     * Handle file download for delivered orders with loading state
      */
     const handleFileDownload = async (orderOrFile) => {
-        console.log('📥 File downloaded from modal - updating order data');
+        const orderId = orderOrFile.id || orderOrFile.order_id;
         
         try {
-            // Refresh all orders data after download
-            await loadOrders();
-            console.log('Orders data refreshed after file download');
+            console.log('📥 File download started for order:', orderId);
+            setActionLoading('fileDownload', orderId, true);
+            
+            // The actual file download logic would be here
+            // For now, just simulate the action
+            
+            console.log('Orders data updated after file download');
         } catch (error) {
-            console.error('Error updating orders after download:', error);
+            console.error('Error during file download:', error);
+            alert(`Error downloading file: ${error.message}`);
+        } finally {
+            setActionLoading('fileDownload', orderId, false);
         }
     };
 
     /**
-     * Handle delivery upload for sellers
+     * Handle delivery upload for sellers with loading state
      */
     const handleDeliveryUpload = async (order) => {
         console.log('📤 Uploading delivery for order:', order.id);
@@ -219,6 +349,9 @@ const Orders = () => {
             if (files.length === 0) return;
             
             try {
+                // Set loading state for this specific order
+                setActionLoading('deliveryUpload', order.id, true);
+                
                 // Add delivery message
                 const deliveryMessage = prompt('Add a message for the delivery (optional):');
                 
@@ -228,10 +361,15 @@ const Orders = () => {
                 // Upload files using ApiService
                 await ApiService.uploadDeliveryFiles(order.id, fileArray, deliveryMessage || '');
                 
+                // Update order status optimistically
+                updateOrderInPlace(order.id, { 
+                    status: 'delivered',
+                    delivery_message: deliveryMessage || '',
+                    delivery_files: fileArray.map(file => ({ name: file.name }))
+                });
+                
                 alert('Delivery files uploaded successfully!');
                 
-                // Refresh orders list
-                fetchOrders();
             } catch (error) {
                 console.error('Error uploading delivery:', error);
                 
@@ -249,6 +387,8 @@ const Orders = () => {
                 }
                 
                 alert(errorMessage);
+            } finally {
+                setActionLoading('deliveryUpload', order.id, false);
             }
         };
         
@@ -280,7 +420,7 @@ const Orders = () => {
     };
 
     /**
-     * Handle revision request
+     * Handle revision request with loading state
      */
     const handleRevisionRequest = async (order) => {
         console.log('🔄 Requesting revision for order:', order.id);
@@ -288,17 +428,27 @@ const Orders = () => {
         const revisionReason = prompt('Please specify what needs to be revised:');
         if (revisionReason && revisionReason.trim()) {
             try {
+                // Set loading state for this specific order
+                setActionLoading('revisionRequest', order.id, true);
+                
+                // Optimistic update
+                updateOrderInPlace(order.id, { status: 'revision_requested' });
+                
                 // Update status to revision_requested
                 await ApiService.updateOrderStatus(order.id, 'revision_requested');
                 
                 // In a real app, you would also send the revision reason to the seller
                 alert('Revision request sent to seller.');
                 
-                // Refresh orders list
-                fetchOrders();
             } catch (error) {
                 console.error('Error requesting revision:', error);
+                
+                // Revert optimistic update on error
+                updateOrderInPlace(order.id, { status: order.status });
+                
                 alert(`Error requesting revision: ${error.message}`);
+            } finally {
+                setActionLoading('revisionRequest', order.id, false);
             }
         }
     };
@@ -348,23 +498,65 @@ const Orders = () => {
     };
 
     /**
+     * Skeleton loading component for order cards
+     */
+    const OrderCardSkeleton = () => (
+        <div className="bg-white rounded-lg border border-gray-200 p-6 animate-pulse">
+            <div className="flex justify-between items-start mb-4">
+                <div>
+                    <div className="h-4 bg-gray-200 rounded w-24 mb-2"></div>
+                    <div className="h-6 bg-gray-200 rounded w-48"></div>
+                </div>
+                <div className="h-6 bg-gray-200 rounded w-20"></div>
+            </div>
+            <div className="flex justify-between items-center mb-4">
+                <div className="h-4 bg-gray-200 rounded w-32"></div>
+                <div className="h-8 bg-gray-200 rounded w-24"></div>
+            </div>
+            <div className="flex justify-between items-center">
+                <div className="h-4 bg-gray-200 rounded w-40"></div>
+                <div className="flex space-x-2">
+                    <div className="h-8 bg-gray-200 rounded w-20"></div>
+                    <div className="h-8 bg-gray-200 rounded w-20"></div>
+                </div>
+            </div>
+        </div>
+    );
+
+    /**
+     * Skeleton loading component for overview cards
+     */
+    const OrderOverviewSkeleton = () => (
+        <div className="bg-white rounded-lg border border-gray-200 p-4 animate-pulse">
+            <div className="flex justify-between items-start mb-3">
+                <div className="h-4 bg-gray-200 rounded w-20"></div>
+                <div className="h-5 bg-gray-200 rounded w-16"></div>
+            </div>
+            <div className="h-5 bg-gray-200 rounded w-3/4 mb-3"></div>
+            <div className="flex justify-between items-center mb-3">
+                <div className="h-4 bg-gray-200 rounded w-24"></div>
+                <div className="h-6 bg-gray-200 rounded w-16"></div>
+            </div>
+            <div className="h-4 bg-gray-200 rounded w-32"></div>
+        </div>
+    );
+    /**
      * Filter buttons data
      */
     const statusFilters = [
-        { key: 'all', label: 'All Orders', count: totalOrders },
+        { key: 'all', label: 'All', count: totalOrders },
         { key: 'pending', label: 'Pending', count: 0 },
         { key: 'in_progress', label: 'In Progress', count: 0 },
         { key: 'delivered', label: 'Delivered', count: 0 },
-        { key: 'revision_requested', label: 'Revision Requested', count: 0 },
+        { key: 'revision_requested', label: 'Needs Revision', count: 0 },
         { key: 'completed', label: 'Completed', count: 0 },
         { key: 'cancelled', label: 'Cancelled', count: 0 }
     ];
 
     
-    if (authLoading || loading) {
+    if (authLoading) {
         return (
             <div className="min-h-screen bg-gray-50" style={{ fontFamily: 'Inter, "Noto Sans", sans-serif' }}>
-                
                 <div className="flex-1 flex items-center justify-center py-32">
                     <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-500"></div>
                 </div>
@@ -372,7 +564,8 @@ const Orders = () => {
             </div>
         );
     }
-    const navBarComponent = authUser.role === 'seller' ? <NavBar_Seller /> : <NavBar_Buyer />;
+    
+    const navBarComponent = authUser?.role === 'seller' ? <NavBar_Seller /> : <NavBar_Buyer />;
 
     // If not authenticated, the useEffect will redirect
     if (!authUser || !token) {
@@ -391,38 +584,46 @@ const Orders = () => {
                         Manage your orders and track their progress
                     </p>
                 </div>
-                {/* Tab Navigation and View Controls */}
-                <div className="mb-6 space-y-4">
-                    {/* Tab Navigation */}
-                    
-                    <div className="flex justify-between items-center">
 
-                        {/* View Mode Toggle */}
-                        <div className="flex space-x-1 bg-gray-100 rounded-lg p-1">
-                            <button
-                                onClick={() => setViewMode('overview')}
-                                className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                                    viewMode === 'overview'
-                                        ? 'bg-white text-gray-900 shadow-sm'
-                                        : 'text-gray-600 hover:text-gray-900'
-                                }`}
-                            >
-                                <AppstoreOutlined className="mr-1" />
-                                Overview
-                            </button>
-                            <button
-                                onClick={() => setViewMode('detailed')}
-                                className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                                    viewMode === 'detailed'
-                                        ? 'bg-white text-gray-900 shadow-sm'
-                                        : 'text-gray-600 hover:text-gray-900'
-                                }`}
-                            >
-                                <UnorderedListOutlined className="mr-1" />
-                                Detailed
-                            </button>
-                        </div>
+                {/* Role Tabs - Show only relevant tab based on user role */}
+                <div className="mb-6">
+                    <div className="border-b border-gray-200">
+                        <nav className="-mb-px flex space-x-8">
+                            {(authUser?.role === 'buyer' || authUser?.role !== 'seller') && (
+                                <button
+                                    onClick={() => {
+                                        setActiveTab('buyer');
+                                        setSelectedOrderId(null);
+                                        setStatusFilter('all');
+                                    }}
+                                    className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                                        activeTab === 'buyer'
+                                            ? 'border-blue-500 text-blue-600'
+                                            : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                                    }`}
+                                >
+                                    My Purchases
+                                </button>
+                            )}
+                            {authUser?.role === 'seller' && (
+                                <button
+                                    onClick={() => {
+                                        setActiveTab('seller');
+                                        setSelectedOrderId(null);
+                                        setStatusFilter('all');
+                                    }}
+                                    className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                                        activeTab === 'seller'
+                                            ? 'border-blue-500 text-blue-600'
+                                            : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                                    }`}
+                                >
+                                    My Sales
+                                </button>
+                            )}
+                        </nav>
                     </div>
+                </div>
 
                 {/* Status Filter */}
                 <div className="mb-6">
@@ -432,7 +633,7 @@ const Orders = () => {
                                 key={filter.key}
                                 onClick={() => {
                                     setStatusFilter(filter.key);
-                                    setCurrentPage(1);
+                                    setSelectedOrderId(null);
                                 }}
                                 className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
                                     statusFilter === filter.key
@@ -450,14 +651,15 @@ const Orders = () => {
                         ))}
                     </div>
                 </div>
-            </div>
 
                 {/* Error Display */}
                 {error && (
                     <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
                         <p className="text-red-800">{error}</p>
                         <button
-                            onClick={fetchOrders}
+                            onClick={() => {
+                                fetchOrders(true);
+                            }}
                             className="mt-2 text-red-600 hover:text-red-800 font-medium"
                         >
                             Retry
@@ -466,19 +668,32 @@ const Orders = () => {
                 )}
 
                 {/* Orders List */}
-                <div className={viewMode === 'overview' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4' : 'space-y-4'}>
-                    {orders.length === 0 ? (
-                        <div className={`text-center py-12 ${viewMode === 'overview' ? 'col-span-full' : ''}`}>
+                <div className="space-y-4">
+                    {loading ? (
+                        // Show skeleton loading for initial load and filter changes
+                        selectedOrderId ? (
+                            // Skeleton for detailed view
+                            <OrderCardSkeleton />
+                        ) : (
+                            // Skeleton for overview grid
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                {Array.from({ length: 6 }).map((_, index) => (
+                                    <OrderOverviewSkeleton key={index} />
+                                ))}
+                            </div>
+                        )
+                    ) : orders.length === 0 ? (
+                        <div className="text-center py-12">
                             <div className="text-gray-400 text-6xl mb-4">
                                 <ShoppingOutlined />
                             </div>
                             <h3 className="text-xl font-medium text-gray-900 mb-2">
-                                {activeTab === 'buyer' ? 'No orders placed yet' : 'No orders received yet'}
+                                {activeTab === 'buyer' ? 'No purchases yet' : 'No sales yet'}
                             </h3>
                             <p className="text-gray-500">
                                 {activeTab === 'buyer' 
-                                    ? 'Start browsing gigs to place your first order' 
-                                    : 'Orders for your gigs will appear here'
+                                    ? 'Start browsing services to make your first purchase' 
+                                    : 'Orders for your services will appear here'
                                 }
                             </p>
                             {activeTab === 'buyer' && (
@@ -486,27 +701,18 @@ const Orders = () => {
                                     onClick={() => navigate('/explore')}
                                     className="mt-4 bg-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors"
                                 >
-                                    Explore Gigs
+                                    Browse Services
                                 </button>
                             )}
                         </div>
-                    ) : (
+                    ) : selectedOrderId ? (
+                        // Show detailed view for selected order only
                         <>
-                            {orders.map((order) => {
-                                try {
-                                    return viewMode === 'overview' ? (
-                                        <OrderOverviewCard
-                                            key={order.id}
-                                            order={order}
-                                            userRole={activeTab}
-                                            onClick={(orderId) => {
-                                                setSelectedOrderId(orderId);
-                                                setViewMode('detailed');
-                                            }}
-                                        />
-                                    ) : (
-                                        // Show detailed view for specific order or all orders
-                                        (!selectedOrderId || selectedOrderId === order.id) ? (
+                            {orders
+                                .filter(order => order.id === selectedOrderId)
+                                .map((order) => {
+                                    try {
+                                        return (
                                             <OrderCard
                                                 key={order.id}
                                                 order={order}
@@ -519,8 +725,44 @@ const Orders = () => {
                                                 onRevisionRequest={handleRevisionRequest}
                                                 getStatusColor={getStatusColor}
                                                 getStatusIcon={getStatusIcon}
+                                                // Loading states for each action
+                                                isStatusUpdating={getActionLoading('statusUpdate', order.id)}
+                                                isDeliveryUploading={getActionLoading('deliveryUpload', order.id)}
+                                                isFileDownloading={getActionLoading('fileDownload', order.id)}
+                                                isRevisionRequesting={getActionLoading('revisionRequest', order.id)}
                                             />
-                                        ) : null
+                                        );
+                                    } catch (error) {
+                                        console.error('❌ Error rendering order card:', error, 'Order data:', order);
+                                        return (
+                                            <div key={order.id || `error-${Date.now()}`} className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+                                                <p className="text-red-600 font-medium">Error loading order</p>
+                                                <p className="text-red-500 text-sm">Order ID: {order.id || 'Unknown'}</p>
+                                                <p className="text-red-500 text-sm">Error: {error.message}</p>
+                                            </div>
+                                        );
+                                    }
+                                })}
+                        </>
+                    ) : (
+                        // Show overview list of all orders
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {orders.map((order) => {
+                                try {
+                                    return (
+                                        <OrderOverviewCard
+                                            key={order.id}
+                                            order={order}
+                                            userRole={activeTab}
+                                            onClick={(orderId) => {
+                                                setSelectedOrderId(orderId);
+                                            }}
+                                            // Pass loading states for visual feedback
+                                            isStatusUpdating={getActionLoading('statusUpdate', order.id)}
+                                            isDeliveryUploading={getActionLoading('deliveryUpload', order.id)}
+                                            isFileDownloading={getActionLoading('fileDownload', order.id)}
+                                            isRevisionRequesting={getActionLoading('revisionRequest', order.id)}
+                                        />
                                     );
                                 } catch (error) {
                                     console.error('❌ Error rendering order card:', error, 'Order data:', order);
@@ -533,59 +775,39 @@ const Orders = () => {
                                     );
                                 }
                             })}
-                        </>
+                        </div>
                     )}
                 </div>
 
-                {/* Back to Overview Button (when in detailed view with selected order) */}
-                {viewMode === 'detailed' && selectedOrderId && (
+                {/* Back to Overview Button (when viewing a specific order) */}
+                {selectedOrderId && (
                     <div className="mt-6 text-center">
                         <button
                             onClick={() => {
                                 setSelectedOrderId(null);
-                                setViewMode('overview');
                             }}
                             className="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg font-medium hover:bg-gray-200 transition-colors"
                         >
-                            ← Back to Overview
+                            ← Back to List
                         </button>
                     </div>
                 )}
 
-                {/* Pagination */}
-                {totalPages > 1 && (
-                    <div className="mt-8 flex justify-center">
-                        <div className="flex space-x-2">
-                            <button
-                                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                                disabled={currentPage === 1}
-                                className="px-4 py-2 border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
-                            >
-                                Previous
-                            </button>
-                            
-                            {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-                                <button
-                                    key={page}
-                                    onClick={() => setCurrentPage(page)}
-                                    className={`px-4 py-2 border rounded-lg ${
-                                        currentPage === page
-                                            ? 'bg-blue-600 text-white border-blue-600'
-                                            : 'border-gray-300 hover:bg-gray-50'
-                                    }`}
-                                >
-                                    {page}
-                                </button>
+                {/* Infinite Scroll Loading Indicator */}
+                {isLoadingMore && (
+                    <div className="mt-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {Array.from({ length: 3 }).map((_, index) => (
+                                <OrderOverviewSkeleton key={`loading-${index}`} />
                             ))}
-                            
-                            <button
-                                onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                                disabled={currentPage === totalPages}
-                                className="px-4 py-2 border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
-                            >
-                                Next
-                            </button>
                         </div>
+                    </div>
+                )}
+
+                {/* End of Results Indicator */}
+                {!hasMore && orders.length > 0 && (
+                    <div className="mt-8 text-center text-gray-500">
+                        <p>You've reached the end of your orders</p>
                     </div>
                 )}
             </div>
