@@ -110,7 +110,7 @@ const ReviewSection = ({
         filtered.sort((a, b) => a.rating - b.rating);
         break;
       default:
-        // Default to newest
+        // Default to newes
         filtered.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
     }
     
