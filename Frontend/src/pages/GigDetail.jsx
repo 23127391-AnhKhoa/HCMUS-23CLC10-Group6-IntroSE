@@ -770,7 +770,7 @@ const GigDetail = () => {
 
                                         {/* Service Details */}
                                         <div className="flex flex-col gap-4 py-6 border-t border-blue-200">
-                                            <h4 className="text-gray-800 font-semibold text-base">What's Included:</h4>
+                                            <h4 className="text-gray-800 font-semibold text-base">What's Included: </h4>
                                             <div className="flex items-center justify-between py-2">
                                                 <span className="text-gray-600 text-base flex items-center gap-2">
                                                     <span className="text-lg">⏱️</span>
