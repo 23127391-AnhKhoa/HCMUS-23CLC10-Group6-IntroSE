@@ -493,7 +493,19 @@ const UserRow = ({ user, onDelete, onUpdateRole, onReactivate }) => { // Thêm p
       <td className="py-4 px-6 text-gray-600">{new Date(user.created_at).toLocaleDateString()}</td>
       <td className="py-4 px-6">
         <div className="flex items-center space-x-4 text-gray-500">
-          <FiEye onClick={() => alert(JSON.stringify(user, null, 2))} className="cursor-pointer hover:text-blue-500 transition-smooth" size={20} />
+          <FiEye 
+            onClick={() => {
+              const sellerId = user.uuid;
+              if (sellerId) {
+                window.open(`/admin/seller/${sellerId}`, '_blank');
+              } else {
+                alert('User ID not found');
+              }
+            }} 
+            className="cursor-pointer hover:text-blue-500 transition-smooth" 
+            size={20}
+            title="View Seller"
+          />
           
           {/* --- LOGIC HIỂN THỊ NÚT ĐỘNG --- */}
           {isUserActive ? (
