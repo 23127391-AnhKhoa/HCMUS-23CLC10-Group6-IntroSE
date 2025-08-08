@@ -13,7 +13,4 @@ router.post('/withdraw', authenticateToken, transactionController.withdraw);
 // Route để lấy lịch sử giao dịch theo user ID
 router.get('/history', authenticateToken, transactionController.getTransactionHistory);
 
-// Route để lấy transactions theo user ID và transaction type
-router.get('/user/:userId', authenticateToken, transactionController.getUserTransactions);
-
 module.exports = router;

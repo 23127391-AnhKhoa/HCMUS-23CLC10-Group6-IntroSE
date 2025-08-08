@@ -3,9 +3,6 @@ import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import NavBar_Seller from '../Common/NavBar_Seller';
 import Footer from '../Common/Footer';
-import { createSafeHtml, truncateHtml } from '../utils/htmlSanitizer';
-import GigService from '../services/gigService';
-import ConfirmationModal from '../components/ConfirmationModal';
 
 const ManageGigs = () => {
   const { authUser, token } = useAuth();
@@ -14,10 +11,6 @@ const ManageGigs = () => {
   const [gigs, setGigs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  
-  // Modal state for delete confirmation
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [gigToDelete, setGigToDelete] = useState(null);
 
   // Get seller ID from auth context
   const getSellerId = () => {
@@ -30,7 +23,7 @@ const ManageGigs = () => {
 
   const sellerId = getSellerId();
 
-  // Fetch seller's gigs from backend with statistics using service layer
+  // Fetch seller's gigs from backend with statistics
   const fetchGigs = async () => {
     if (!sellerId) {
       setError('Please log in to view your gigs');
@@ -40,23 +33,37 @@ const ManageGigs = () => {
 
     try {
       setLoading(true);
-      
-      const result = await GigService.getSellerGigsWithStats(sellerId, token);
-      
-      if (result.success) {
-        setGigs(result.data);
-        console.log('📊 All gigs loaded:', result.data?.length || 0);
+      console.log('🔍 Fetching gigs with stats for seller:', sellerId);
+
+      const response = await fetch(`http://localhost:8000/api/gigs/seller/${sellerId}/stats`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log('✅ Gigs data with stats received:', data);
+
+      if (data.status === 'success') {
+        setGigs(data.data || []);
+        console.log('📊 All gigs loaded:', data.data?.length || 0);
         
         // Debug: Log gig statuses
-        if (result.data) {
-          const statusCounts = result.data.reduce((acc, gig) => {
+        if (data.data) {
+          const statusCounts = data.data.reduce((acc, gig) => {
             acc[gig.status] = (acc[gig.status] || 0) + 1;
             return acc;
           }, {});
           console.log('📈 Gig status breakdown:', statusCounts);
         }
       } else {
-        throw new Error(result.error || 'Failed to fetch gigs');
+        throw new Error(data.message || 'Failed to fetch gigs');
       }
     } catch (error) {
       console.error('💥 Error fetching gigs:', error);
@@ -70,12 +77,35 @@ const ManageGigs = () => {
     fetchGigs();
   }, [sellerId, token]);
 
-  // Filter gigs based on active tab using service layer
-  const filteredGigs = GigService.filterGigsByStatus(gigs, activeTab);
+  // Filter gigs based on active tab
+  const filteredGigs = gigs.filter(gig => {
+    switch (activeTab) {
+      case 'active':
+        return gig.status === 'active';
+      case 'paused':
+        return gig.status === 'paused' ;
+      case 'denied':
+        return gig.status === 'denied';
+      default:
+        return true;
+    }
+  });
 
-  // Get gig statistics using service layer
+  // Get gig statistics (now from API response)
   const getGigStats = (gig) => {
-    return GigService.getGigStats(gig);
+    // Return real statistics from API if available, otherwise fallback to mock data
+    if (gig.statistics) {
+      return gig.statistics;
+    }
+    
+    // Fallback mock data
+    return {
+      impressions: Math.floor(Math.random() * 2000) + 500,
+      clicks: Math.floor(Math.random() * 500) + 100,
+      orders: Math.floor(Math.random() * 50) + 5,
+      cancellations: Math.floor(Math.random() * 5),
+      earnings: Math.floor(Math.random() * 1000) + 200
+    };
   };
 
   // Handle tab change
@@ -83,20 +113,33 @@ const ManageGigs = () => {
     setActiveTab(tab);
   };
 
-  // Handle gig actions using service layer
+  // Handle gig actions
   const handleEdit = (gigId) => {
     navigate(`/gigs/edit/${gigId}`);
   };
 
   const handlePause = async (gigId) => {
     try {
-      const result = await GigService.pauseGig(gigId, token);
+      console.log('🔄 Pausing gig:', gigId);
       
-      if (result.success) {
+      const response = await fetch(`http://localhost:8000/api/gigs/${gigId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ status: 'paused' })
+      });
+
+      console.log('📡 Response status:', response.status);
+      
+      if (response.ok) {
+        const data = await response.json();
+        console.log('✅ Pause response:', data);
         fetchGigs(); // Refresh gigs list
       } else {
-        console.error('❌ Pause failed:', result.error);
-        // You could show a toast notification here
+        const errorData = await response.json();
+        console.error('❌ Pause failed:', errorData);
       }
     } catch (error) {
       console.error('💥 Error pausing gig:', error);
@@ -105,47 +148,21 @@ const ManageGigs = () => {
 
   const handleActivate = async (gigId) => {
     try {
-      const result = await GigService.activateGig(gigId, token);
-      
-      if (result.success) {
+      const response = await fetch(`http://localhost:8000/api/gigs/${gigId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ status: 'active' })
+      });
+
+      if (response.ok) {
         fetchGigs(); // Refresh gigs list
-      } else {
-        console.error('❌ Activate failed:', result.error);
-        // You could show a toast notification here
       }
     } catch (error) {
-      console.error('💥 Error activating gig:', error);
+      console.error('Error activating gig:', error);
     }
-  };
-
-  const handleDelete = async (gigId) => {
-    // Show confirmation modal instead of alert
-    setGigToDelete(gigId);
-    setShowDeleteModal(true);
-  };
-
-  const confirmDelete = async () => {
-    if (!gigToDelete) return;
-
-    try {
-      const result = await GigService.deleteGig(gigToDelete, token);
-      
-      if (result.success) {
-        fetchGigs(); // Refresh gigs list
-        setShowDeleteModal(false);
-        setGigToDelete(null);
-      } else {
-        console.error('❌ Delete failed:', result.error);
-        // You could show a toast notification here
-      }
-    } catch (error) {
-      console.error('💥 Error deleting gig:', error);
-    }
-  };
-
-  const cancelDelete = () => {
-    setShowDeleteModal(false);
-    setGigToDelete(null);
   };
 
   if (loading) {
@@ -203,28 +220,6 @@ const ManageGigs = () => {
             </nav>
           </div>
         </div>
-
-        {/* Summary Stats */}
-        {filteredGigs.length > 0 && (() => {
-          const summaryStats = GigService.calculateSummaryStats(filteredGigs);
-          return (
-            <div className="mb-8 grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="bg-white p-6 rounded-lg shadow-sm">
-                <h3 className="text-lg font-medium text-gray-900">Total Gigs</h3>
-                <p className="text-3xl font-bold text-green-600 mt-2">{summaryStats.totalGigs}</p>
-              </div>
-              <div className="bg-white p-6 rounded-lg shadow-sm">
-                <h3 className="text-lg font-medium text-gray-900">Total Orders</h3>
-                <p className="text-3xl font-bold text-green-600 mt-2">{summaryStats.totalOrders}</p>
-              </div>
-              <div className="bg-white p-6 rounded-lg shadow-sm">
-                <h3 className="text-lg font-medium text-gray-900">Total Earnings</h3>
-                <p className="text-3xl font-bold text-green-600 mt-2">${summaryStats.totalEarnings.toLocaleString()}</p>
-              </div>
-            </div>
-          );
-        })()}
-
         {/* Gigs Table */}
         <div className="bg-white shadow-sm rounded-lg overflow-hidden">
           <div className="overflow-x-auto">
@@ -270,87 +265,53 @@ const ManageGigs = () => {
                               />
                               <div className="flex-1 min-w-0">
                                 <button
-                                  className="text-base font-semibold text-green-700 hover:underline text-left"
+                                  className="text-sm font-medium text-green-700 hover:underline text-left"
                                   onClick={() => navigate(`/gig/${gig.id}`)}
                                   style={{ background: 'none', border: 'none', padding: 0, margin: 0, cursor: 'pointer' }}
                                 >
                                   {gig.title}
                                 </button>
-                                <p className="text-base font-medium text-gray-700 mt-1">
+                                <p className="text-sm text-gray-500 mt-1">
                                   ${gig.price}
                                 </p>
                               </div>
                             </div>
-                            <div 
-                              className="text-sm text-gray-600 mt-2 line-clamp-2"
-                              dangerouslySetInnerHTML={createSafeHtml(
-                                gig.description 
-                                  ? truncateHtml(gig.description, 100)
-                                  : 'No description provided.'
-                              )}
-                            />
+                            <p className="text-xs text-gray-600 mt-2">
+                              {gig.description || 'No description provided.'}
+                            </p>
                           </div>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-base font-medium text-gray-900">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                           {stats.orders || 0}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-base font-medium text-gray-900">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                           {stats.cancellations || 0}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-base font-semibold text-gray-900">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                           ${stats.earnings || 0}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                          <div className="flex space-x-3">
+                          <div className="flex space-x-2">
                             <button
                               onClick={() => handleEdit(gig.id)}
-                              className="text-indigo-600 hover:text-indigo-900 hover:bg-indigo-50 p-2 rounded-lg transition-colors"
-                              title="Edit Gig"
+                              className="text-indigo-600 hover:text-indigo-900"
                             >
-                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                              </svg>
+                              Edit
                             </button>
+                            <span className="text-gray-300">|</span>
                             {gig.status === 'active' ? (
                               <button
                                 onClick={() => handlePause(gig.id)}
-                                className="text-orange-600 hover:text-orange-900 hover:bg-orange-50 p-2 rounded-lg transition-colors"
-                                title="Pause Gig"
+                                className="text-orange-600 hover:text-orange-900"
                               >
-                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                </svg>
+                                Pause
                               </button>
-                            ) : gig.status === 'paused' ? (
-                              <>
-                                <button
-                                  onClick={() => handleActivate(gig.id)}
-                                  className="text-green-600 hover:text-green-900 hover:bg-green-50 p-2 rounded-lg transition-colors"
-                                  title="Activate Gig"
-                                >
-                                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.828 14.828a4 4 0 01-5.656 0M9 10h1m4 0h1m-6 4h8m-10-4v4a2 2 0 002 2h8a2 2 0 002-2v-4M7 7V6a1 1 0 011-1h8a1 1 0 011 1v1" />
-                                  </svg>
-                                </button>
-                                <button
-                                  onClick={() => handleDelete(gig.id)}
-                                  className="text-red-600 hover:text-red-900 hover:bg-red-50 p-2 rounded-lg transition-colors"
-                                  title="Delete Gig"
-                                >
-                                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                  </svg>
-                                </button>
-                              </>
                             ) : (
                               <button
                                 onClick={() => handleActivate(gig.id)}
-                                className="text-green-600 hover:text-green-900 hover:bg-green-50 p-2 rounded-lg transition-colors"
-                                title="Activate Gig"
+                                className="text-green-600 hover:text-green-900"
                               >
-                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.828 14.828a4 4 0 01-5.656 0M9 10h1m4 0h1m-6 4h8m-10-4v4a2 2 0 002 2h8a2 2 0 002-2v-4M7 7V6a1 1 0 011-1h8a1 1 0 011 1v1" />
-                                </svg>
+                                Activate
                               </button>
                             )}
                           </div>
@@ -363,6 +324,27 @@ const ManageGigs = () => {
             </table>
           </div>
         </div>
+        {/* Summary Stats */}
+        {filteredGigs.length > 0 && (
+          <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6"> {/* Remove Impressions summary */}
+            <div className="bg-white p-6 rounded-lg shadow-sm">
+              <h3 className="text-lg font-medium text-gray-900">Total Gigs</h3>
+              <p className="text-3xl font-bold text-green-600 mt-2">{filteredGigs.length}</p>
+            </div>
+            <div className="bg-white p-6 rounded-lg shadow-sm">
+              <h3 className="text-lg font-medium text-gray-900">Total Orders</h3>
+              <p className="text-3xl font-bold text-purple-600 mt-2">
+                {filteredGigs.reduce((sum, gig) => sum + (getGigStats(gig).orders || 0), 0)}
+              </p>
+            </div>
+            <div className="bg-white p-6 rounded-lg shadow-sm">
+              <h3 className="text-lg font-medium text-gray-900">Total Earnings</h3>
+              <p className="text-3xl font-bold text-green-600 mt-2">
+                ${filteredGigs.reduce((sum, gig) => sum + (getGigStats(gig).earnings || 0), 0).toLocaleString()}
+              </p>
+            </div>
+          </div>
+        )}
         {/* Create New Gig Button */}
         <div className="mt-8 text-center">
           <button
@@ -374,19 +356,6 @@ const ManageGigs = () => {
         </div>
         </div>
       </div>
-      
-      {/* Delete Confirmation Modal */}
-      <ConfirmationModal
-        isOpen={showDeleteModal}
-        onClose={cancelDelete}
-        onConfirm={confirmDelete}
-        title="Delete Gig"
-        message="Are you sure you want to delete this gig? This action cannot be undone and will permanently remove the gig from your account."
-        confirmText="Delete"
-        cancelText="Cancel"
-        type="danger"
-      />
-      
       <Footer />
     </>
   );

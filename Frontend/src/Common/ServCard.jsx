@@ -14,8 +14,6 @@ import { HeartFilled } from '@ant-design/icons';
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from '../contexts/AuthContext';
-import { createSafeHtml } from '../utils/htmlSanitizer';
-import StarRating from '../components/Reviews/StarRating';
 
 /**
  * ServCard - A card component for displaying gig/service information
@@ -65,9 +63,7 @@ const ServCard = ({ gig, isPreview = false }) => {
         owner_username: 'username',
         owner_fullname: 'Seller Name',
         owner_avatar: 'https://placehold.co/300x300',
-        category_name: 'Category',
-        avg_review: 0,
-        total_review: 0
+        category_name: 'Category'
     };
 
     // Merge provided gig data with defaults to ensure all required fields exist
@@ -242,9 +238,9 @@ const ServCard = ({ gig, isPreview = false }) => {
                     {isPreview ? (
                         <div 
                             className="text-base text-gray-700 leading-relaxed font-medium"
-                            dangerouslySetInnerHTML={createSafeHtml(
-                                gigData.title || gigData.description || 'No description'
-                            )}
+                            dangerouslySetInnerHTML={{
+                                __html: gigData.title || gigData.description || 'No description'
+                            }}
                         />
                     ) : (
                         <p className="text-base text-gray-700 line-clamp-3 leading-relaxed max-h-[60px] min-h-[26px] font-medium">
@@ -255,27 +251,17 @@ const ServCard = ({ gig, isPreview = false }) => {
 
                 {/* Delivery Time and Rating */}
                 <div className="flex justify-between items-center pt-3 border-t border-gray-100/80">
-                    <div className="text-sm text-gray-600">
-                        {gigData.delivery_days} day{gigData.delivery_days !== 1 ? 's' : ''}
+                    <div className="flex items-center bg-blue-50 px-3 py-1 rounded-full">
+                        <span className="text-blue-500 text-sm">🚀</span>
+                        <span className="text-sm font-semibold text-blue-700 ml-1">
+                            {gigData.delivery_days} day{gigData.delivery_days !== 1 ? 's' : ''}
+                        </span>
                     </div>
-                    
-                    {/* Real Rating Display */}
+                    {/* Rating placeholder - can be enhanced with real data */}
                     <div className="flex items-center">
-                        {gigData.total_review > 0 ? (
-                            <>
-                                <svg className="w-4 h-4 text-yellow-400 fill-current" viewBox="0 0 20 20">
-                                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                                </svg>
-                                <span className="text-sm font-semibold text-gray-700 ml-1">
-                                    {(gigData.avg_review || 0).toFixed(1)}
-                                </span>
-                                <span className="text-xs text-gray-500 ml-1">
-                                    ({gigData.total_review})
-                                </span>
-                            </>
-                        ) : (
-                            <span className="text-xs text-gray-400 italic">No reviews yet</span>
-                        )}
+                        <span className="text-yellow-400 text-sm">⭐</span>
+                        <span className="text-sm font-semibold text-gray-700 ml-1">4.9</span>
+                        <span className="text-xs text-gray-500 ml-1">(127)</span>
                     </div>
                 </div>
             </div>

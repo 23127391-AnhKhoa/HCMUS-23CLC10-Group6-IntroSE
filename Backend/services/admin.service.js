@@ -107,76 +107,11 @@ const dismissReport = async (logId) => {
     return await AdminModel.updateLogStatus(logId, 'dismissed');
 };
 
-const getHeroStats = async () => {
-    try {
-        const stats = await AdminModel.getHeroStats();
-        return stats;
-    } catch (error) {
-        console.error('Error in getHeroStats service:', error);
-        throw error;
-    }
-};
-
-const getStatsSection = async () => {
-    try {
-        const stats = await AdminModel.getStatsSection();
-        return stats;
-    } catch (error) {
-        console.error('Error in getStatsSection service:', error);
-        throw error;
-    }
-};
-
-const getTopSellersByEarnings = async (limit = 6) => {
-    try {
-        const topSellers = await AdminModel.getTopSellersByEarnings(limit);
-        return topSellers;
-    } catch (error) {
-        console.error('Error in getTopSellersByEarnings service:', error);
-        throw error;
-    }
-};
-
-const getDashboardStats = async () => {
-    try {
-        const dashboardData = await AdminModel.getDashboardStats();
-        return dashboardData;
-    } catch (error) {
-        console.error('Error in getDashboardStats service:', error);
-        throw error;
-    }
-};
-
-const getAdminEarnings = async () => {
-    try {
-        const earningsData = await AdminModel.getAdminEarnings();
-        return earningsData;
-    } catch (error) {
-        console.error('Error in getAdminEarnings service:', error);
-        throw error;
-    }
-};
-
-const getAdminTransactionHistory = async () => {
-    try {
-        const transactions = await AdminModel.getAdminTransactionHistory();
-        return transactions;
-    } catch (error) {
-        console.error('Error in getAdminTransactionHistory service:', error);
-        throw error;
-    }
-};
 
 module.exports = {
     fetchAllAdminData,
     createAdminLog,
     fetchGigReports,
     dismissReport,
-    fetchUserReports,
-    getHeroStats,
-    getStatsSection,
-    getTopSellersByEarnings,
-    getDashboardStats,
-    getAdminEarnings,
-    getAdminTransactionHistory
+    fetchUserReports
 };

@@ -4,7 +4,6 @@ import { AuthProvider } from './contexts/AuthContext';
 import AuthPage from './pages/AuthPage';
 import Introduction from './pages/Introduction';
 import CreateGigsPage from './pages/Create_Gigs';
-import EditGig from './pages/EditGig';
 import AdminDashboard from './pages/Admin/AdminDashboard';
 import ExplorePage from './pages/ExplorePage';
 import GigDetail from './pages/GigDetail';
@@ -28,7 +27,6 @@ import ServicesManagement from './pages/Admin/ServiceManagement';
 import GigDetailContent from './pages/Admin/AdminGigContent';
 import AdminSellerInfor from './pages/Admin/AdminSellerInfor'; 
 import ManageReportedGigs from './pages/Admin/ManageReportedGigs'; 
-import AdminEarnings from './pages/Admin/AdminEarnings'; 
 import ReportUserPage from './pages/ReportUserPage';
 import NotificationPage from './pages/NotificationPage';
 import ReportGigPage from './pages/ReportGigPage'; 
@@ -45,7 +43,6 @@ function App() {
 
             <Route path="admin/AdminDashboard" element={<AdminDashboard />} />
             <Route path="/admin/manage-reported-gigs" element={<ManageReportedGigs />} />
-            <Route path="/admin/earnings" element={<AdminEarnings />} />
             {/* Route for signup page */}
             
             {/* Route for authentication page */}
@@ -54,9 +51,6 @@ function App() {
             <Route path="/admin/servicemanagement" element={<ServicesManagement />} />
             {/*ROUTE FOR CREATE GIGS*/}
             <Route path="/create-gig" element={<CreateGigsPage />} />
-            
-            {/*ROUTE FOR EDIT GIGS*/}
-            <Route path="/gigs/edit/:gigId" element={<EditGig />} />
             
             <Route path="/explore" element={<ExplorePage />} />
 

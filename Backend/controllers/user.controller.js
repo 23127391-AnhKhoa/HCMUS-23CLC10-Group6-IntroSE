@@ -288,7 +288,6 @@ const getProfile = async (req, res) => {
             seller_headline: user.seller_headline,
             seller_description: user.seller_description,
             seller_since: user.seller_since,
-            rating: user.rating || 0,
             status: user.status || 'Active'
         };
         
@@ -344,74 +343,6 @@ const updateProfile = async (req, res) => {
     }
 };
 
-// Cập nhật rating cho một user cụ thể
-const updateUserRating = async (req, res) => {
-    try {
-        const { userId } = req.params;
-        
-        const result = await User.updateUserRating(userId);
-        
-        res.status(200).json({
-            success: true,
-            message: 'Rating updated successfully',
-            data: result
-        });
-    } catch (error) {
-        console.error('Error updating user rating:', error);
-        res.status(500).json({
-            success: false,
-            message: error.message || 'Lỗi khi cập nhật rating'
-        });
-    }
-};
-
-// Cập nhật rating cho tất cả users
-const updateAllUsersRating = async (req, res) => {
-    try {
-        // Lấy tất cả users có reviews
-        const supabase = require('../config/supabaseClient');
-        const { data: sellersWithReviews, error } = await supabase
-            .from('Reviews')
-            .select('seller_id')
-            .order('seller_id');
-
-        if (error) throw error;
-
-        // Lấy danh sách unique seller IDs
-        const uniqueSellerIds = [...new Set(sellersWithReviews.map(r => r.seller_id))];
-        
-        const results = [];
-        
-        for (const sellerId of uniqueSellerIds) {
-            try {
-                const result = await User.updateUserRating(sellerId);
-                results.push(result);
-            } catch (error) {
-                console.error(`Error updating rating for seller ${sellerId}:`, error);
-                results.push({
-                    userId: sellerId,
-                    error: error.message
-                });
-            }
-        }
-        
-        res.status(200).json({
-            success: true,
-            message: `Updated rating for ${results.length} users`,
-            data: {
-                totalProcessed: results.length,
-                results: results
-            }
-        });
-    } catch (error) {
-        console.error('Error updating all users rating:', error);
-        res.status(500).json({
-            success: false,
-            message: error.message || 'Lỗi khi cập nhật rating cho tất cả users'
-        });
-    }
-};
-
 module.exports = {
     getAllUsers,
     updateUser,
@@ -423,7 +354,5 @@ module.exports = {
     getUserByUsername,
     searchUsers,
     getProfile,
-    updateProfile,
-    updateUserRating,
-    updateAllUsersRating
+    updateProfile
 };

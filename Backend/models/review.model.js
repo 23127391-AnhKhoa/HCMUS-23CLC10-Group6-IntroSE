@@ -11,91 +11,11 @@ const Review = {
         *,
         seller:seller_id(uuid, username, fullname, avt_url),
         buyer:buyer_id(uuid, username, fullname, avt_url),
-        order:order_id(
-          id, 
-          gig_id, 
-          price_at_purchase, 
-          requirement,
-          gig:gig_id(id, title, description)
-        )
+        order:order_id(id, gig_id, price_at_purchase, requirement)
       `);
 
     if (error) throw error;
     return data[0];
-  },
-
-  // Get reviews by gig ID (from order relationship)
-  findByGigId: async (gigId, options = {}) => {
-    try {
-      const { limit = 10, offset = 0, sort_order = 'desc' } = options;
-
-      const { data, error } = await supabase
-        .from('Reviews')
-        .select(`
-          *,
-          seller:seller_id(uuid, username, fullname, avt_url),
-          buyer:buyer_id(uuid, username, fullname, avt_url),
-          order:order_id(
-            id, 
-            gig_id, 
-            price_at_purchase, 
-            requirement,
-            gig:gig_id(id, title, description)
-          )
-        `)
-        .eq('order.gig_id', gigId)
-        .order('created_at', { ascending: sort_order === 'asc' })
-        .range(offset, offset + limit - 1);
-
-      if (error) throw error;
-      return data || [];
-    } catch (error) {
-      console.error('Review Model Error in findByGigId:', error);
-      throw error;
-    }
-  },
-
-  // Get gig rating statistics for a specific gig
-  getGigRatingStats: async (gigId) => {
-    try {
-      // First get all orders for this gig, then get reviews for those orders
-      const { data: orders, error: ordersError } = await supabase
-        .from('Orders')
-        .select('id')
-        .eq('gig_id', gigId);
-
-      if (ordersError) throw ordersError;
-
-      if (!orders || orders.length === 0) {
-        return { avgRating: null, totalReviews: 0 };
-      }
-
-      const orderIds = orders.map(order => order.id);
-
-      const { data: reviews, error: reviewsError } = await supabase
-        .from('Reviews')
-        .select('rating')
-        .in('order_id', orderIds);
-
-      if (reviewsError) throw reviewsError;
-
-      const reviewsData = reviews || [];
-      const totalReviews = reviewsData.length;
-      
-      if (totalReviews === 0) {
-        return { avgRating: null, totalReviews: 0 };
-      }
-
-      const avgRating = reviewsData.reduce((sum, review) => sum + review.rating, 0) / totalReviews;
-      
-      return { 
-        avgRating: Math.round(avgRating * 10) / 10, // Round to 1 decimal place
-        totalReviews 
-      };
-    } catch (error) {
-      console.error('Review Model Error in getGigRatingStats:', error);
-      throw error;
-    }
   },
 
   // Lấy review theo ID
@@ -126,12 +46,7 @@ const Review = {
         *,
         seller:seller_id(uuid, username, fullname, avt_url),
         buyer:buyer_id(uuid, username, fullname, avt_url),
-        order:order_id(
-          id, 
-          gig_id, 
-          price_at_purchase,
-          gig:gig_id(id, title, description)
-        )
+        order:order_id(id, gig_id, price_at_purchase)
       `, { count: 'exact' })
       .eq('seller_id', sellerId)
       .order('created_at', { ascending: false })
@@ -152,12 +67,7 @@ const Review = {
         *,
         seller:seller_id(uuid, username, fullname, avt_url),
         buyer:buyer_id(uuid, username, fullname, avt_url),
-        order:order_id(
-          id, 
-          gig_id, 
-          price_at_purchase,
-          gig:gig_id(id, title, description)
-        )
+        order:order_id(id, gig_id, price_at_purchase)
       `, { count: 'exact' })
       .eq('buyer_id', buyerId)
       .order('created_at', { ascending: false })

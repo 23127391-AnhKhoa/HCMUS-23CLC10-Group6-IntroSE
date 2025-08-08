@@ -1,6 +1,5 @@
 import React from 'react';
 import { FiArrowRight, FiUsers, FiDollarSign } from 'react-icons/fi';
-import { Link } from 'react-router-dom';
 
 const CTASection = () => {
   return (
@@ -44,13 +43,10 @@ const CTASection = () => {
               </li>
             </ul>
             
-            <Link 
-              to="/explore" 
-              className="w-full bg-white text-purple-600 py-3 px-6 rounded-lg font-semibold hover:bg-purple-50 transition-colors duration-300 flex items-center justify-center"
-            >
+            <button className="w-full bg-white text-purple-600 py-3 px-6 rounded-lg font-semibold hover:bg-purple-50 transition-colors duration-300 flex items-center justify-center">
               Find Services
               <FiArrowRight className="w-5 h-5 ml-2" />
-            </Link>
+            </button>
           </div>
 
           {/* For Sellers */}
@@ -81,14 +77,20 @@ const CTASection = () => {
               </li>
             </ul>
             
-            <Link 
-              to="/auth" 
-              className="w-full bg-transparent border-2 border-white text-white py-3 px-6 rounded-lg font-semibold hover:bg-white hover:text-purple-600 transition-all duration-300 flex items-center justify-center"
-            >
+            <button className="w-full bg-transparent border-2 border-white text-white py-3 px-6 rounded-lg font-semibold hover:bg-white hover:text-purple-600 transition-all duration-300 flex items-center justify-center">
               Start Selling
               <FiArrowRight className="w-5 h-5 ml-2" />
-            </Link>
+            </button>
           </div>
+        </div>
+
+        <div className="text-center mt-12">
+          <p className="text-purple-200 text-sm">
+            Already have an account? 
+            <a href="/login" className="text-white hover:underline ml-1 font-medium">
+              Sign in here
+            </a>
+          </p>
         </div>
       </div>
     </section>

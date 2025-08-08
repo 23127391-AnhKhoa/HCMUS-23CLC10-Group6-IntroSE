@@ -81,7 +81,8 @@ const updateUserByUuid = async (uuid, updateData) => {
 // New function for updating user profile (allows more fields)
 const updateUserProfile = async (uuid, updateData) => {
     const allowedProfileUpdates = [
-        'fullname', 'username', 'avt_url', 'seller_headline', 'seller_description'
+        'fullname', 'username', 'bio', 'skills', 'hourlyRate', 
+        'avt_url', 'seller_headline', 'seller_description'
     ];
     
     const finalUpdateData = {};
@@ -164,7 +165,7 @@ const getUserById = async (userId) => {
     }
 };
 
-// Get seller earnings data based on Transactions table with type 'received_payment'
+// Get seller earnings data based on Orders, Gigs, Transactions tables
 const getSellerEarnings = async (sellerId, period = 'allTime') => {
     try {
         // Get date range based on period
@@ -187,38 +188,7 @@ const getSellerEarnings = async (sellerId, period = 'allTime') => {
         }
 
         // Query Orders with Gigs data for seller earnings
-let earningsQuery = supabase
-            .from('Transactions')
-            .select(`
-                id,
-                amount,
-                created_at,
-                description,
-                order_id
-            `)
-            .eq('user_id', sellerId)
-            .eq('type', 'received_payment');
-
-        if (startDate) {
-            earningsQuery = earningsQuery.gte('created_at', startDate.toISOString());
-        }
-
-        const { data: receivedPayments, error: earningsError } = await earningsQuery;
-        if (earningsError) throw earningsError;
-
-        // Debug: Check if we have any received_payment transactions
-        console.log('🔍 [DEBUG] Seller ID:', sellerId);
-        console.log('🔍 [DEBUG] Received payments found:', receivedPayments?.length || 0);
-        console.log('🔍 [DEBUG] Received payments data:', receivedPayments);
-
-        // Calculate total earnings from received_payment transactions
-        const totalEarnings = receivedPayments.reduce((sum, transaction) => sum + parseFloat(transaction.amount), 0);
-        const averagePayment = receivedPayments.length > 0 ? totalEarnings / receivedPayments.length : 0;
-
-        console.log('💰 [DEBUG] Total earnings calculated:', totalEarnings);
-
-        // Get orders for seller to calculate pending earnings and completion rate
-        const { data: orders, error: ordersError } = await supabase
+        let ordersQuery = supabase
             .from('Orders')
             .select(`
                 id,
@@ -234,11 +204,20 @@ let earningsQuery = supabase
             `)
             .eq('Gigs.owner_id', sellerId);
 
+        if (startDate) {
+            ordersQuery = ordersQuery.gte('created_at', startDate.toISOString());
+        }
+
+        const { data: orders, error: ordersError } = await ordersQuery;
         if (ordersError) throw ordersError;
 
+        // Calculate earnings statistics
         const completedOrders = orders.filter(order => order.status === 'completed');
-         // Get pending earnings (only from orders with 'pending' status)
-        const pendingOrders = orders.filter(order => order.status === 'pending');
+        const totalEarnings = completedOrders.reduce((sum, order) => sum + parseFloat(order.price_at_purchase), 0);
+        const averageOrderValue = completedOrders.length > 0 ? totalEarnings / completedOrders.length : 0;
+        
+        // Get pending earnings (orders not completed yet)
+        const pendingOrders = orders.filter(order => order.status !== 'completed' && order.status !== 'cancelled');
         const pendingEarnings = pendingOrders.reduce((sum, order) => sum + parseFloat(order.price_at_purchase), 0);
 
         // Get active gigs count
@@ -259,23 +238,23 @@ let earningsQuery = supabase
             
         if (userError) throw userError;
 
-        // Get withdrawal transactions
-        const { data: withdrawals, error: withdrawError } = await supabase
+        // Get transactions for withdrawal calculation
+        const { data: transactions, error: transError } = await supabase
             .from('Transactions')
-            .select('amount')
+            .select('amount, description')
             .eq('user_id', sellerId)
-            .eq('type', 'withdrawal');
+            .ilike('description', '%withdraw%');
             
-       const totalWithdrawn = withdrawals 
-            ? withdrawals.reduce((sum, trans) => sum + Math.abs(parseFloat(trans.amount)), 0)
+        const totalWithdrawn = transactions 
+            ? transactions.reduce((sum, trans) => sum + Math.abs(parseFloat(trans.amount)), 0)
             : 0;
 
-         // Calculate monthly breakdown based on received_payment transactions
+        // Calculate monthly breakdown
         const monthlyBreakdown = [];
         const monthlyStats = {};
         
-        receivedPayments.forEach(transaction => {
-            const date = new Date(transaction.created_at);
+        completedOrders.forEach(order => {
+            const date = new Date(order.completed_at || order.created_at);
             const monthKey = `${date.getFullYear()}-${date.getMonth()}`;
             const monthName = date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
             
@@ -288,7 +267,7 @@ let earningsQuery = supabase
                 };
             }
             
-            monthlyStats[monthKey].earnings += parseFloat(transaction.amount);
+            monthlyStats[monthKey].earnings += parseFloat(order.price_at_purchase);
             monthlyStats[monthKey].orders += 1;
         });
 
@@ -299,7 +278,7 @@ let earningsQuery = supabase
         return {
             totalEarnings,
             completedOrders: completedOrders.length,
-            averageOrderValue: averagePayment,
+            averageOrderValue,
             pendingEarnings,
             availableBalance: parseFloat(user.balance || 0),
             totalWithdrawn,
