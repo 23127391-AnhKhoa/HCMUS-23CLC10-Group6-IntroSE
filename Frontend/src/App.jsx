@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import AuthPage from './pages/AuthPage';
 import Introduction from './pages/Introduction';
+import AboutUs from './pages/AboutUs';
 import CreateGigsPage from './pages/Create_Gigs';
 import AdminDashboard from './pages/Admin/AdminDashboard';
 import ExplorePage from './pages/ExplorePage';
@@ -41,6 +42,9 @@ function App() {
           <Routes>
             {/* Route for the introduction page */}
             <Route path="/" element={<Introduction />} />
+
+            {/* About Us page */}
+            <Route path="/about-us" element={<AboutUs />} />
 
             <Route path="admin/AdminDashboard" element={<AdminDashboard />} />
             <Route path="/admin/manage-reported-gigs" element={<ManageReportedGigs />} />
