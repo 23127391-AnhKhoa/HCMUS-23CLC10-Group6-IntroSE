@@ -224,6 +224,45 @@ const User = {
       console.error('Error in toggleFavorite:', error);
       throw error;
     }
+  },
+
+  // Cập nhật rating cho user
+  updateUserRating: async (userId) => {
+    try {
+      // Lấy tất cả reviews cho seller này
+      const { data: reviews, error: reviewError } = await supabase
+        .from('Reviews')
+        .select('rating')
+        .eq('seller_id', userId);
+
+      if (reviewError) throw reviewError;
+
+      let averageRating = 0;
+      
+      if (reviews && reviews.length > 0) {
+        const ratings = reviews.map(review => review.rating);
+        const totalRating = ratings.reduce((sum, rating) => sum + rating, 0);
+        averageRating = Math.round((totalRating / ratings.length) * 10) / 10;
+      }
+
+      // Cập nhật rating trong User table
+      const { data, error } = await supabase
+        .from('User')
+        .update({ rating: averageRating })
+        .eq('uuid', userId)
+        .select();
+
+      if (error) throw error;
+      
+      return {
+        userId,
+        newRating: averageRating,
+        totalReviews: reviews ? reviews.length : 0
+      };
+    } catch (error) {
+      console.error('Error updating user rating:', error);
+      throw error;
+    }
   }
 };
 

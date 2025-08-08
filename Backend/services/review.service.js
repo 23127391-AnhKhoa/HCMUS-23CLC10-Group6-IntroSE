@@ -2,7 +2,10 @@
 const Review = require('../models/review.model');
 const Order = require('../models/order.model');
 const Gig = require('../models/gig.model');
+const User = require('../models/user.model');
+const GigService = require('./gig.service');
 const notificationService = require('./notification.service');
+const supabase = require('../config/supabaseClient');
 const { v4: uuidv4 } = require('uuid');
 
 const reviewService = {
@@ -50,6 +53,15 @@ const reviewService = {
 
     const review = await Review.create(newReviewData);
 
+    // ✅ NEW: Update gig rating statistics after creating review
+    try {
+      await GigService.updateGigRatingStats(gig.id);
+      console.log('✅ Gig rating stats updated for gig:', gig.id);
+    } catch (ratingError) {
+      console.error('⚠️ Error updating gig rating stats:', ratingError);
+      // Don't throw error as review creation was successful
+    }
+
     // Gửi notification cho seller
     try {
       await notificationService.createNotification({
@@ -65,6 +77,15 @@ const reviewService = {
       });
     } catch (notificationError) {
       console.error('Error sending notification:', notificationError);
+      // Không throw error ở đây vì review đã được tạo thành công
+    }
+
+    // Cập nhật rating trung bình cho seller
+    try {
+      const ratingUpdate = await User.updateUserRating(gig.owner_id);
+      console.log('Seller rating updated:', ratingUpdate);
+    } catch (ratingError) {
+      console.error('Error updating seller rating:', ratingError);
       // Không throw error ở đây vì review đã được tạo thành công
     }
 
@@ -191,6 +212,52 @@ const reviewService = {
   // Lấy review theo ID
   getReviewById: async (reviewId) => {
     return await Review.findById(reviewId);
+  },
+
+  // Get reviews for a specific gig
+  getGigReviews: async (gigId, options = {}) => {
+    try {
+      const { limit = 10, offset = 0 } = options;
+
+      // Get all orders for this gig
+      const { data: orders, error: ordersError } = await supabase
+        .from('Orders')
+        .select('id')
+        .eq('gig_id', gigId);
+
+      if (ordersError) {
+        throw new Error(`Error fetching orders: ${ordersError.message}`);
+      }
+
+      if (!orders || orders.length === 0) {
+        return { reviews: [], total: 0 };
+      }
+
+      const orderIds = orders.map(order => order.id);
+
+      // Get reviews for these orders with pagination
+      const { data: reviews, error: reviewsError, count } = await supabase
+        .from('Reviews')
+        .select(`
+          *,
+          buyer:buyer_id(uuid, username, fullname, avt_url)
+        `, { count: 'exact' })
+        .in('order_id', orderIds)
+        .order('created_at', { ascending: false })
+        .range(offset, offset + limit - 1);
+
+      if (reviewsError) {
+        throw new Error(`Error fetching reviews: ${reviewsError.message}`);
+      }
+
+      return {
+        reviews: reviews || [],
+        total: count || 0
+      };
+    } catch (error) {
+      console.error('Error in getGigReviews:', error);
+      throw new Error(`Error fetching gig reviews: ${error.message}`);
+    }
   },
 
   // Lấy reviews gần đây
