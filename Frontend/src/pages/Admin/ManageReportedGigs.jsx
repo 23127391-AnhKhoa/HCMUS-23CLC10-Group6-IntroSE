@@ -592,7 +592,7 @@ const ReportsManagement = () => {
                 <td className="p-4">
                     <div className="flex items-center space-x-2">
                         <button
-                            onClick={() => window.open(activeTab === 'gigs' ? `/gig/${target?.id}` : `/profile/${target?.uuid}`, '_blank')}
+                            onClick={() => window.open(activeTab === 'gigs' ? `/admin/gig/${target?.id}` : `/admin/seller/${target?.uuid}`, '_blank')}
                             disabled={!target}
                             className="p-2 rounded-md bg-blue-100 text-blue-600 hover:bg-blue-200 disabled:opacity-50"
                             title="View Details"
@@ -651,7 +651,7 @@ const ReportsManagement = () => {
                                     <td className="p-4 font-medium">{item.gig_title || item.username}</td>
                                     <td className="p-4 text-gray-600 font-semibold">{item.report_count}</td>
                                     <td className="p-4">
-                                      <button onClick={() => window.open(activeTab === 'gigs' ? `/gig/${item.gig_id}` : `/profile/${item.user_id}`, '_blank')} className="font-semibold text-blue-600 hover:underline">View</button>
+                                      <button onClick={() => window.open(activeTab === 'gigs' ? `/admin/gig/${item.gig_id}` : `/admin/seller/${item.user_id}`, '_blank')} className="font-semibold text-blue-600 hover:underline">View</button>
                                     </td>
                                 </tr>
                             )}

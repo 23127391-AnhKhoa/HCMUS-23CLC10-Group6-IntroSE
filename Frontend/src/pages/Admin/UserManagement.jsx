@@ -558,7 +558,6 @@ const Pagination = ({ currentPage, totalPages, onPageChange }) => {
 
 // --- Main Component (Thay đổi nhiều nhất) ---
 const UserManagement = () => {
-  const { authUser } = useAuth(); // Thêm authUser ở đây
   const [users, setUsers] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -740,16 +739,6 @@ const UserManagement = () => {
        
 
       </main>
-      <div className="fixed bottom-10 right-10">
-            <img 
-              src={authUser?.avt_url || "https://i.pravatar.cc/150?u=bottom-admin"} 
-              alt="Admin" 
-              className="w-16 h-16 rounded-full cursor-pointer shadow-lg border-4 border-white hover-scale object-cover"
-              onError={(e) => {
-                e.target.src = "https://i.pravatar.cc/150?u=bottom-admin";
-              }}
-            />
-      </div>
     </div>
   );
 };
