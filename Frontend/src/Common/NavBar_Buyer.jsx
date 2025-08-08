@@ -3,7 +3,6 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Input, Avatar, Badge, Tooltip, Dropdown, Menu } from 'antd';
 import { SearchOutlined, MessageOutlined, BellOutlined, HeartOutlined, UserOutlined } from '@ant-design/icons';
 import { useAuth } from '../contexts/AuthContext'; // Đảm bảo đường dẫn đúng
-import NotificationBell from '../components/NotificationBell/NotificationBell';
 
 // Component con cho dropdown menu của categories
 const CategoryMenu = ({ category }) => {
@@ -171,7 +170,7 @@ const Navbar = () => {
       updateUser(updatedUser);
 
       // Chuyển đến trang seller
-      navigate('/dashboard_seller');
+      navigate('/profile_seller');
     } catch (error) {
       console.error('Error reactivating seller:', error);
       // Fallback về trang become-seller nếu có lỗi
@@ -187,15 +186,18 @@ const Navbar = () => {
   // Menu cho avatar người dùng
   const userMenu = (
     <Menu>
+      <Menu.Item key="profile">
+        <Link to="/profile_buyer">Profile</Link>
+      </Menu.Item>
       <Menu.Item key="dashboard">
-        <Link to="/dashboard_buyer">DashBoard</Link>
+        <Link to="/dashboard">Dashboard</Link>
       </Menu.Item>
       <Menu.Divider />
       <Menu.Item key="deposit">
-        <Link to="/wallet">💰 Deposit</Link>
+        <Link to="/deposit?tab=deposit">💰 Deposit</Link>
       </Menu.Item>
       <Menu.Item key="withdraw">
-        <Link to="/wallet">💸 Withdraw</Link>
+        <Link to="/withdraw?tab=withdraw">💸 Withdraw</Link>
       </Menu.Item>
       <Menu.Divider />
       <Menu.Item key="logout" onClick={handleLogout}>
@@ -264,7 +266,7 @@ const Navbar = () => {
                   </Badge>
                 </Tooltip>
                 <Tooltip title="Notifications">
-                  <NotificationBell />
+                  <BellOutlined className="text-xl hover:text-blue-600 cursor-pointer" />
                 </Tooltip>
                 <Tooltip title="Favorites">
                   <Link to="/favorites">
