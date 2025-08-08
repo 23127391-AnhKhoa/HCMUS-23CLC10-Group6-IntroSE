@@ -69,10 +69,12 @@ const OrderCard = ({
     onPaymentTrigger,
     onFileDownload,
     onDeliveryUpload,
+    onMarkAsDelivered,
     onMessage,
     onRevisionRequest,
     getStatusColor, 
-    getStatusIcon 
+    getStatusIcon,
+    isMarkingDelivered = false
 }) => {
     const navigate = useNavigate();
     const [deliveryFiles, setDeliveryFiles] = useState([]);
@@ -85,6 +87,12 @@ const OrderCard = ({
         // Always try to load delivery files for any order
         loadDeliveryFiles();
     }, [order.id, order.status]);
+    
+    // Force reload delivery files when deliveryFiles count changes (to update UI immediately)
+    useEffect(() => {
+        // This effect ensures UI updates when files are added/removed
+        console.log('📁 Delivery files count updated:', deliveryFiles.length);
+    }, [deliveryFiles.length]);
     
     const loadDeliveryFiles = async () => {
         try {
@@ -101,26 +109,9 @@ const OrderCard = ({
     };
     
     // Handle mark as delivered
-    const handleMarkAsDelivered = async () => {
-        try {
-            console.log('🚚 [OrderCard] Starting mark as delivered for order:', order.id);
-            
-            setProcessing(true);
-            const response = await ApiService.markOrderAsDelivered(order.id);
-            
-            console.log('✅ [OrderCard] Mark as delivered response:', response);
-            
-            if (response.status === 'success') {
-                safeOnStatusUpdate(order.id, 'delivered');
-                alert('Order marked as delivered successfully!');
-            } else {
-                throw new Error(response.message || 'Failed to mark order as delivered');
-            }
-        } catch (error) {
-            console.error('❌ [OrderCard] Error marking as delivered:', error);
-            alert('Failed to mark order as delivered: ' + error.message);
-        } finally {
-            setProcessing(false);
+    const handleMarkAsDelivered = () => {
+        if (onMarkAsDelivered && !isMarkingDelivered) {
+            onMarkAsDelivered(safeOrder);
         }
     };
     
@@ -197,7 +188,10 @@ const OrderCard = ({
             if (response.status === 'success') {
                 // Reload delivery files after upload
                 await loadDeliveryFiles();
-                alert('Delivery files uploaded successfully!');
+                alert('Delivery files uploaded successfully! You can continue uploading more files or mark as delivered.');
+                
+                // No need to reload page - just update the component state
+                // The loadDeliveryFiles() call above will refresh the file count display
             }
         } catch (error) {
             console.error('Error uploading files:', error);
@@ -369,7 +363,7 @@ const OrderCard = ({
                 if (safeOrder.status === 'revision_requested') {
                     // Upload revised files button
                     actions.push({
-                        label: 'Upload Revised Files',
+                        label: `Upload Revised Files${deliveryFiles.length > 0 ? ` (${deliveryFiles.length})` : ''}`,
                         action: () => {
                             if (safeOnDeliveryUpload) {
                                 safeOnDeliveryUpload(safeOrder);
@@ -438,7 +432,7 @@ const OrderCard = ({
                 }
                 
                 actions.push({
-                    label: 'Upload Delivery',
+                    label: `Upload Files${deliveryFiles.length > 0 ? ` (${deliveryFiles.length})` : ''}`,
                     action: () => {
                         if (safeOnDeliveryUpload) {
                             safeOnDeliveryUpload(safeOrder);
@@ -463,18 +457,18 @@ const OrderCard = ({
                 
                 // Always show Mark as Delivered button for seller in progress
                 actions.push({
-                    label: 'Mark as Delivered',
+                    label: isMarkingDelivered ? 'Marking...' : 'Mark as Delivered',
                     action: handleMarkAsDelivered,
                     className: deliveryFiles.length > 0 ? 
                         'bg-green-600 hover:bg-green-700 text-white' : 
                         'bg-gray-400 cursor-not-allowed text-white',
-                    icon: <SendOutlined />,
-                    disabled: processing || deliveryFiles.length === 0,
+                    icon: isMarkingDelivered ? <LoadingOutlined /> : <SendOutlined />,
+                    disabled: processing || deliveryFiles.length === 0 || isMarkingDelivered,
                     title: deliveryFiles.length === 0 ? 'Please upload delivery files first' : 'Mark order as delivered'
                 });
             } else if (safeOrder.status === 'delivered') {
                 actions.push({
-                    label: 'Upload More Files',
+                    label: `Upload More Files${deliveryFiles.length > 0 ? ` (${deliveryFiles.length})` : ''}`,
                     action: () => safeOnDeliveryUpload(safeOrder),
                     className: 'bg-blue-600 hover:bg-blue-700 text-white',
                     icon: <UploadOutlined />
@@ -666,6 +660,21 @@ const OrderCard = ({
                 {safeOrder.requirement && (
                     <div className="text-sm text-gray-600">
                         <strong>Requirements:</strong> {safeOrder.requirement}
+                    </div>
+                )}
+                
+                {/* Delivery Files Info - Show for seller when in progress or delivered */}
+                {userRole === 'seller' && (safeOrder.status === 'in_progress' || safeOrder.status === 'delivered' || safeOrder.status === 'revision_requested') && (
+                    <div className="mt-3 p-2 bg-blue-50 border-l-4 border-blue-400 rounded">
+                        <div className="flex items-center text-sm text-blue-700">
+                            <FileOutlined className="mr-2" />
+                            <span className="font-medium">
+                                Delivery Files: {deliveryFiles.length} uploaded
+                            </span>
+                            {deliveryFiles.length === 0 && (
+                                <span className="ml-2 text-blue-500 text-xs">(Upload files to enable delivery)</span>
+                            )}
+                        </div>
                     </div>
                 )}
             </div>

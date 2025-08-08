@@ -361,14 +361,16 @@ const Orders = () => {
                 // Upload files using ApiService
                 await ApiService.uploadDeliveryFiles(order.id, fileArray, deliveryMessage || '');
                 
-                // Update order status optimistically
+                // Update only delivery files array, NOT status
                 updateOrderInPlace(order.id, { 
-                    status: 'delivered',
                     delivery_message: deliveryMessage || '',
                     delivery_files: fileArray.map(file => ({ name: file.name }))
                 });
                 
-                alert('Delivery files uploaded successfully!');
+                alert('Delivery files uploaded successfully! You can continue uploading more files or manually mark as delivered.');
+                
+                // Just refresh the orders data instead of hard reload
+                fetchOrders(true); // This will refresh the current view
                 
             } catch (error) {
                 console.error('Error uploading delivery:', error);
@@ -393,6 +395,59 @@ const Orders = () => {
         };
         
         fileInput.click();
+    };
+
+    /**
+     * Handle manual mark as delivered action
+     */
+    const handleMarkAsDelivered = async (order) => {
+        console.log('✅ Marking order as delivered:', order.id);
+        
+        // Check if files are uploaded first
+        try {
+            const response = await ApiService.getDeliveryFiles(order.id);
+            const deliveryFiles = response.data?.files || [];
+            
+            if (deliveryFiles.length === 0) {
+                alert('Please upload delivery files before marking as delivered.');
+                return;
+            }
+        } catch (error) {
+            console.error('Error checking delivery files:', error);
+            alert('Error checking delivery files. Please try again.');
+            return;
+        }
+        
+        // Confirm action
+        const confirmed = window.confirm(
+            `Are you sure you want to mark Order #${order.id} as delivered?\n\nThis will notify the buyer that the work is complete.`
+        );
+        
+        if (!confirmed) return;
+        
+        try {
+            // Set loading state
+            setActionLoading('markDelivered', order.id, true);
+            
+            // Call API to mark as delivered
+            const response = await ApiService.updateOrderStatus(order.id, 'delivered');
+            
+            if (response.status === 'success') {
+                // Update order status optimistically
+                updateOrderInPlace(order.id, { status: 'delivered' });
+                
+                alert('Order marked as delivered successfully!');
+                
+                // Just refresh the orders data instead of hard reload
+                fetchOrders(true); // This will refresh the current view
+            }
+            
+        } catch (error) {
+            console.error('Error marking as delivered:', error);
+            alert('Failed to mark as delivered: ' + (error.message || 'Unknown error'));
+        } finally {
+            setActionLoading('markDelivered', order.id, false);
+        }
     };
 
     /**
@@ -721,6 +776,7 @@ const Orders = () => {
                                                 onPaymentTrigger={handlePaymentTrigger}
                                                 onFileDownload={handleFileDownload}
                                                 onDeliveryUpload={handleDeliveryUpload}
+                                                onMarkAsDelivered={handleMarkAsDelivered}
                                                 onMessage={handleMessage}
                                                 onRevisionRequest={handleRevisionRequest}
                                                 getStatusColor={getStatusColor}
@@ -728,6 +784,7 @@ const Orders = () => {
                                                 // Loading states for each action
                                                 isStatusUpdating={getActionLoading('statusUpdate', order.id)}
                                                 isDeliveryUploading={getActionLoading('deliveryUpload', order.id)}
+                                                isMarkingDelivered={getActionLoading('markDelivered', order.id)}
                                                 isFileDownloading={getActionLoading('fileDownload', order.id)}
                                                 isRevisionRequesting={getActionLoading('revisionRequest', order.id)}
                                             />
