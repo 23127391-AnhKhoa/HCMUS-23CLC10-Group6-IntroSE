@@ -1,6 +1,6 @@
 // src/pages/WalletPage.jsx
 import React, { useState } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { Tabs } from 'antd';
 import { DollarOutlined, WalletOutlined, SecurityScanOutlined, CreditCardOutlined, ArrowUpOutlined, HistoryOutlined, CloseOutlined } from '@ant-design/icons';
 import { useAuth } from '../contexts/AuthContext';
@@ -12,9 +12,6 @@ import TransactionHistory from '../components/Wallet/TransactionHistory';
 const WalletPage = () => {
   const { authUser, token, updateUser } = useAuth();
   const navigate = useNavigate();
-  const location = useLocation();
-  const queryParams = new URLSearchParams(location.search);
-  const defaultTab = queryParams.get('tab') || 'deposit'; 
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   // Function to trigger transaction history refresh
@@ -71,8 +68,8 @@ const WalletPage = () => {
         </div>
 
         {/* Main Content with Tabs */}
-        <Tabs
-          defaultActiveKey={defaultTab}
+        <Tabs 
+          defaultActiveKey="deposit" 
           size="large"
           className="bg-white rounded-2xl shadow-xl p-2"
           items={[

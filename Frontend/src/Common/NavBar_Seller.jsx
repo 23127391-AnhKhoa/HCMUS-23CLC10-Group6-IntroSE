@@ -4,6 +4,7 @@ import { Link, NavLink, useNavigate  } from 'react-router-dom';
 import { Avatar, Badge, Dropdown, Menu, message } from 'antd';
 import { BellOutlined, UserOutlined } from '@ant-design/icons';
 import { useAuth } from '../contexts/AuthContext';
+import NotificationBell from '../components/NotificationBell/NotificationBell';
 
 const SellerNavbar = () => {
     const { authUser, logout, updateUser } = useAuth();
@@ -66,19 +67,19 @@ const SellerNavbar = () => {
     // Định nghĩa menu theo cách mới, dùng mảng items
     const userMenuItems = [
         {
-            key: 'profile',
-            label: <Link to="/profile_seller">My Profile</Link>,
-        },
-        {
             key: 'dashboard',
-            label: <Link to="/dashboard">Dashboard</Link>,
+            label: <Link to="/dashboard_seller">DashBoard</Link>,
         },
         {
             type: 'divider',
         },
         {
+            key: 'deposit',
+            label: <Link to="/deposit">💰 Deposit</Link>,
+        },
+        {
             key: 'withdraw',
-            label: <Link to="/withdraw?tab=withdraw">💸 Withdraw</Link>,
+            label: <Link to="/withdraw">💸 Withdraw</Link>,
         },
         {
             type: 'divider',
@@ -98,11 +99,9 @@ const SellerNavbar = () => {
         <div className="flex items-center justify-between h-16">
           {/* Phần bên trái: Logo và Menu Seller */}
           <div className="flex items-center space-x-8">
-            <Link to="/profile_seller" className="flex items-center">
               <img src="/logo.svg" alt="FREELAND Logo" className="h-4 w-auto" />
-            </Link>
             <nav className="flex items-center space-x-6 font-medium text-gray-600">
-              <NavLink to="/dashboard" className={({ isActive }) => isActive ? "text-blue-600" : "hover:text-blue-600"}>
+              <NavLink to="/dashboard_seller" className={({ isActive }) => isActive ? "text-blue-600" : "hover:text-blue-600"}>
                 Dashboard
               </NavLink>
               <NavLink to="/orders" className={({ isActive }) => isActive ? "text-blue-600" : "hover:text-blue-600"}>
@@ -128,9 +127,7 @@ const SellerNavbar = () => {
               {loading ? 'Switching...' : 'Switch to Buying'}
             </button>
             
-            <Badge count={3} size="small">
-                <BellOutlined className="text-xl text-gray-600 hover:text-blue-600 cursor-pointer" />
-            </Badge>
+            <NotificationBell />
             <div className="px-4 py-1.5 bg-green-100 text-green-700 rounded-full font-semibold text-sm">
                 {authUser?.balance ? `$${authUser.balance.toFixed(2)}` : '$0.00'}
             </div>
