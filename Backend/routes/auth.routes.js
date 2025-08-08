@@ -1,6 +1,7 @@
 // Xử lý đăng nhập, đăng ký
 const router = require('express').Router();
 const authController = require('../controllers/auth.controller');
+const { authenticateToken } = require('../middleware/auth.middleware');
 
 router.post('/register', authController.register);
 

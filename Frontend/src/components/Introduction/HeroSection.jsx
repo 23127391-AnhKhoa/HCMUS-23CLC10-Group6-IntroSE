@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { FiPlay, FiArrowRight, FiStar, FiUsers, FiTrendingUp, FiShield, FiGlobe, FiZap } from 'react-icons/fi';
+import React, { useState, useEffect, useRef } from 'react';
+import { FiArrowRight, FiStar, FiUsers, FiTrendingUp, FiShield, FiGlobe, FiZap } from 'react-icons/fi';
 
 const HeroSection = () => {
   const [isVisible, setIsVisible] = useState(false);
@@ -10,6 +10,15 @@ const HeroSection = () => {
     completedOrders: 0,
     totalCategories: 0
   });
+  const [animatedStats, setAnimatedStats] = useState({
+    totalUsers: 0,
+    totalGigs: 0,
+    completedOrders: 0,
+    totalCategories: 0
+  });
+  const [hasAnimated, setHasAnimated] = useState(false);
+  const statsRef = useRef();
+  const timersRef = useRef([]);
 
   const features = [
     { icon: <FiStar className="w-5 h-5" />, text: "Premium Quality Services" },
@@ -19,6 +28,47 @@ const HeroSection = () => {
     { icon: <FiGlobe className="w-5 h-5" />, text: "Worldwide Accessibility" },
     { icon: <FiZap className="w-5 h-5" />, text: "Fast & Reliable Delivery" }
   ];
+
+  // Counter animation function
+  const animateValue = (start, end, duration, key) => {
+    if (start === end) return;
+    
+    const startTime = Date.now();
+    const startValue = start;
+    const endValue = end;
+    
+    const timer = setInterval(() => {
+      const elapsed = Date.now() - startTime;
+      const progress = Math.min(elapsed / duration, 1); // Ensure progress never exceeds 1
+      
+      if (progress >= 1) {
+        setAnimatedStats(prev => ({ ...prev, [key]: endValue }));
+        clearInterval(timer);
+        // Remove timer from ref array
+        timersRef.current = timersRef.current.filter(t => t !== timer);
+      } else {
+        // Use easing function for smooth animation
+        const easeOutQuart = 1 - Math.pow(1 - progress, 4);
+        const currentValue = Math.floor(startValue + (endValue - startValue) * easeOutQuart);
+        
+        // Ensure value never decreases
+        setAnimatedStats(prev => ({ 
+          ...prev, 
+          [key]: Math.max(prev[key] || 0, currentValue)
+        }));
+      }
+    }, 16);
+    
+    // Store timer reference for cleanup
+    timersRef.current.push(timer);
+    return timer;
+  };
+
+  // Cleanup function to clear all timers
+  const clearAllTimers = () => {
+    timersRef.current.forEach(timer => clearInterval(timer));
+    timersRef.current = [];
+  };
 
   useEffect(() => {
     setIsVisible(true);
@@ -32,32 +82,15 @@ const HeroSection = () => {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        // Fetch total users
-        const usersResponse = await fetch('/api/users');
-        const usersData = await usersResponse.json();
-        const totalUsers = usersData?.data?.length || 0;
-
-        // Fetch total gigs
-        const gigsResponse = await fetch('/api/gigs');
-        const gigsData = await gigsResponse.json();
-        const totalGigs = gigsData?.data?.length || 0;
-
-        // Fetch completed orders
-        const ordersResponse = await fetch('/api/orders');
-        const ordersData = await ordersResponse.json();
-        const completedOrders = ordersData?.data?.filter(order => order.status === 'completed')?.length || 0;
-
-        // Fetch categories
-        const categoriesResponse = await fetch('/api/categories');
-        const categoriesData = await categoriesResponse.json();
-        const totalCategories = categoriesData?.data?.length || 0;
-
-        setStats({
-          totalUsers,
-          totalGigs,
-          completedOrders,
-          totalCategories
-        });
+        // Fetch hero stats from new dedicated endpoint
+        const response = await fetch('/api/admin/hero-stats');
+        const result = await response.json();
+        
+        if (result.status === 'success' && result.data) {
+          setStats(result.data);
+        } else {
+          throw new Error('Failed to fetch stats');
+        }
       } catch (error) {
         console.error('Error fetching hero stats:', error);
         // Fallback data
@@ -72,6 +105,60 @@ const HeroSection = () => {
 
     fetchStats();
   }, []);
+
+  // Intersection Observer for stats animation
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && !hasAnimated && stats.totalUsers > 0) {
+          setHasAnimated(true);
+          
+          // Clear any existing timers
+          clearAllTimers();
+          
+          // Reset animated stats to 0 before starting animations
+          setAnimatedStats({
+            totalUsers: 0,
+            totalGigs: 0,
+            completedOrders: 0,
+            totalCategories: 0
+          });
+          
+          // Start all animations independently with different durations
+          setTimeout(() => animateValue(0, stats.totalUsers, 1800, 'totalUsers'), 50);
+          setTimeout(() => animateValue(0, stats.totalGigs, 2000, 'totalGigs'), 100);
+          setTimeout(() => animateValue(0, stats.completedOrders, 2200, 'completedOrders'), 150);
+          setTimeout(() => animateValue(0, stats.totalCategories, 1600, 'totalCategories'), 200);
+        }
+      },
+      { threshold: 0.5 }
+    );
+
+    if (statsRef.current) {
+      observer.observe(statsRef.current);
+    }
+
+    return () => {
+      observer.disconnect();
+      clearAllTimers(); // Cleanup on unmount
+    };
+  }, [stats, hasAnimated]);
+
+  // Reset animation when stats change
+  useEffect(() => {
+    if (stats.totalUsers > 0 || stats.totalGigs > 0 || stats.completedOrders > 0) {
+      setHasAnimated(false);
+      // Clear any running animations
+      clearAllTimers();
+      // Reset animated values when stats change
+      setAnimatedStats({
+        totalUsers: 0,
+        totalGigs: 0,
+        completedOrders: 0,
+        totalCategories: 0
+      });
+    }
+  }, [stats]);
 
   return (
     <section className="relative min-h-screen flex items-center justify-center text-white overflow-hidden">
@@ -119,15 +206,14 @@ const HeroSection = () => {
         </div>
 
         {/* Action Buttons */}
-        <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-16">
-          <button className="group bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 px-8 py-4 rounded-full font-semibold text-lg shadow-lg transform hover:scale-105 transition-all duration-300 flex items-center">
+        <div className="flex justify-center items-center mb-16">
+          <a 
+            href="/auth" 
+            className="group bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 px-8 py-4 rounded-full font-semibold text-lg shadow-lg transform hover:scale-105 transition-all duration-300 flex items-center text-white no-underline"
+          >
             Get Started Now
             <FiArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
-          </button>
-          <button className="group border-2 border-white/30 hover:border-white/60 px-8 py-4 rounded-full font-semibold text-lg backdrop-blur-sm hover:bg-white/10 transition-all duration-300 flex items-center">
-            <FiPlay className="w-5 h-5 mr-2 group-hover:scale-110 transition-transform" />
-            Watch Demo
-          </button>
+          </a>
         </div>
 
         {/* Features Grid */}
@@ -152,22 +238,22 @@ const HeroSection = () => {
         </div>
 
         {/* Stats */}
-        <div className="mt-16 grid grid-cols-2 md:grid-cols-4 gap-8">
+        <div ref={statsRef} className="mt-16 grid grid-cols-2 md:grid-cols-4 gap-8">
           {[
             { 
-              number: `${stats.totalUsers.toLocaleString()}+`, 
+              number: `${animatedStats.totalUsers.toLocaleString()}+`, 
               label: "Active Users" 
             },
             { 
-              number: `${stats.totalGigs.toLocaleString()}+`, 
+              number: `${animatedStats.totalGigs.toLocaleString()}+`, 
               label: "Available Gigs" 
             },
             { 
-              number: `${stats.completedOrders.toLocaleString()}+`, 
+              number: `${animatedStats.completedOrders.toLocaleString()}+`, 
               label: "Projects Done" 
             },
             { 
-              number: `${stats.totalCategories}+`, 
+              number: `${animatedStats.totalCategories}+`, 
               label: "Categories" 
             }
           ].map((stat, index) => (

@@ -2,6 +2,7 @@
 import React from 'react';
 import { StarFilled, UserOutlined } from '@ant-design/icons';
 
+//review card component
 const ReviewCard = ({ review, compact = false }) => {
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString('vi-VN', {

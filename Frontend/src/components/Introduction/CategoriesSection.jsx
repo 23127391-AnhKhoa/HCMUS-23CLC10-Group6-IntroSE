@@ -1,66 +1,52 @@
 import React, { useState, useEffect } from 'react';
-import { FiCode, FiPenTool, FiVideo, FiTrendingUp, FiMusic, FiEdit3, FiCamera, FiSpeaker } from 'react-icons/fi';
+import { FiCode, FiPenTool, FiVideo, FiDatabase, FiBriefcase, FiUser } from 'react-icons/fi';
 
 const CategoriesSection = () => {
   const [categories, setCategories] = useState([]);
 
-  // Default categories with icons
+  // Default categories with icons - matching database structure
   const defaultCategories = [
     {
       id: 1,
-      name: 'Programming & Tech',
-      icon: <FiCode className="w-8 h-8" />,
-      description: 'Web development, mobile apps, software solutions',
-      color: 'bg-blue-100 text-blue-600'
-    },
-    {
-      id: 2,
-      name: 'Graphics & Design',
-      icon: <FiPenTool className="w-8 h-8" />,
-      description: 'Logo design, branding, web design, illustrations',
-      color: 'bg-pink-100 text-pink-600'
-    },
-    {
-      id: 3,
       name: 'Video & Animation',
       icon: <FiVideo className="w-8 h-8" />,
-      description: 'Video editing, motion graphics, 3D animation',
+      description: 'Creating and editing videos, motion graphics, and animated content.',
       color: 'bg-red-100 text-red-600'
     },
     {
-      id: 4,
-      name: 'Digital Marketing',
-      icon: <FiTrendingUp className="w-8 h-8" />,
-      description: 'SEO, social media marketing, content marketing',
+      id: 2,
+      name: 'Programming & Tech',
+      icon: <FiCode className="w-8 h-8" />,
+      description: 'Building and maintaining websites, mobile apps, and software.',
+      color: 'bg-blue-100 text-blue-600'
+    },
+    {
+      id: 3,
+      name: 'Data',
+      icon: <FiDatabase className="w-8 h-8" />,
+      description: 'Analyzing, organizing, and visualizing data to uncover insights.',
       color: 'bg-green-100 text-green-600'
     },
     {
+      id: 4,
+      name: 'Graphic & Design',
+      icon: <FiPenTool className="w-8 h-8" />,
+      description: 'Designing logos, branding, and visual materials for digital and print.',
+      color: 'bg-pink-100 text-pink-600'
+    },
+    {
       id: 5,
-      name: 'Music & Audio',
-      icon: <FiMusic className="w-8 h-8" />,
-      description: 'Audio editing, voice overs, music production',
-      color: 'bg-purple-100 text-purple-600'
+      name: 'Business',
+      icon: <FiBriefcase className="w-8 h-8" />,
+      description: 'Providing strategic consulting, market research, and business support.',
+      color: 'bg-orange-100 text-orange-600'
     },
     {
       id: 6,
-      name: 'Writing & Translation',
-      icon: <FiEdit3 className="w-8 h-8" />,
-      description: 'Content writing, copywriting, translation services',
-      color: 'bg-yellow-100 text-yellow-600'
-    },
-    {
-      id: 7,
-      name: 'Photography',
-      icon: <FiCamera className="w-8 h-8" />,
-      description: 'Photo editing, product photography, portraits',
-      color: 'bg-indigo-100 text-indigo-600'
-    },
-    {
-      id: 8,
-      name: 'Business',
-      icon: <FiSpeaker className="w-8 h-8" />,
-      description: 'Business consulting, market research, presentations',
-      color: 'bg-orange-100 text-orange-600'
+      name: 'Lifestyle',
+      icon: <FiUser className="w-8 h-8" />,
+      description: 'Offering coaching, planning, and advice for personal development and well-being.',
+      color: 'bg-purple-100 text-purple-600'
     }
   ];
 
@@ -73,24 +59,30 @@ const CategoriesSection = () => {
           const data = await response.json();
           
           if (data.success && data.data && data.data.length > 0) {
+            // Filter only parent categories (parent_id = null) and exclude "General"
+            const parentCategories = data.data
+              .filter(cat => cat.parent_id === null && cat.name !== "General")
+              .slice(0, 6); // Only take 6 categories
+            
             // Map real categories with icons
-            const mappedCategories = data.data.slice(0, 8).map((cat, index) => ({
+            const mappedCategories = parentCategories.map((cat, index) => ({
               id: cat.id,
               name: cat.name,
+              slug: cat.slug,
               icon: defaultCategories[index % defaultCategories.length]?.icon || <FiCode className="w-8 h-8" />,
               description: cat.description || `Professional ${cat.name.toLowerCase()} services`,
               color: defaultCategories[index % defaultCategories.length]?.color || 'bg-gray-100 text-gray-600'
             }));
             setCategories(mappedCategories);
           } else {
-            setCategories(defaultCategories);
+            setCategories(defaultCategories.slice(0, 6));
           }
         } else {
-          setCategories(defaultCategories);
+          setCategories(defaultCategories.slice(0, 6));
         }
       } catch (error) {
         console.error('Error fetching categories:', error);
-        setCategories(defaultCategories);
+        setCategories(defaultCategories.slice(0, 6));
       }
     };
 
@@ -109,11 +101,12 @@ const CategoriesSection = () => {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {categories.slice(0, 8).map((category) => (
-            <div
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {categories.map((category) => (
+            <a
               key={category.id}
-              className="group p-6 bg-white border border-gray-200 rounded-lg hover:shadow-lg transition-all duration-300 cursor-pointer hover:-translate-y-1"
+              href={`/search?category=${category.id}`}
+              className="group p-6 bg-white border border-gray-200 rounded-lg hover:shadow-lg transition-all duration-300 cursor-pointer hover:-translate-y-1 block no-underline text-inherit"
             >
               <div className={`w-16 h-16 ${category.color} rounded-lg flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300`}>
                 {category.icon}
@@ -127,14 +120,8 @@ const CategoriesSection = () => {
               <div className="text-sm text-purple-600 font-medium group-hover:underline">
                 Explore services →
               </div>
-            </div>
+            </a>
           ))}
-        </div>
-
-        <div className="text-center mt-12">
-          <button className="bg-purple-600 text-white px-8 py-3 rounded-lg font-semibold hover:bg-purple-700 transition-colors duration-300">
-            View All Categories
-          </button>
         </div>
       </div>
     </section>
