@@ -1,13 +1,13 @@
 // src/components/SellerNavbar.jsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, NavLink, useNavigate  } from 'react-router-dom';
-import { Avatar, Badge, Dropdown, Menu, message } from 'antd';
-import { BellOutlined, UserOutlined } from '@ant-design/icons';
+import { Avatar, Badge, Dropdown, Menu, message, Tooltip } from 'antd';
+import { BellOutlined, UserOutlined, MessageOutlined } from '@ant-design/icons';
 import { useAuth } from '../contexts/AuthContext';
 import NotificationBell from '../components/NotificationBell/NotificationBell';
 
 const SellerNavbar = () => {
-    const { authUser, logout, updateUser } = useAuth();
+    const { authUser, logout, updateUser, refreshUserData } = useAuth();
     const navigate = useNavigate();
     const [loading, setLoading] = useState(false);
 
@@ -74,12 +74,8 @@ const SellerNavbar = () => {
             type: 'divider',
         },
         {
-            key: 'deposit',
-            label: <Link to="/deposit">💰 Deposit</Link>,
-        },
-        {
             key: 'withdraw',
-            label: <Link to="/withdraw">💸 Withdraw</Link>,
+            label: <Link to="/withdraw?tab=withdraw">💸 Withdraw</Link>,
         },
         {
             type: 'divider',
@@ -127,9 +123,32 @@ const SellerNavbar = () => {
               {loading ? 'Switching...' : 'Switch to Buying'}
             </button>
             
+            <Tooltip title="Inbox">
+              <Badge count={5} size="small">
+                <Link to="/inbox">
+                  <MessageOutlined className="text-xl hover:text-blue-600 cursor-pointer" />
+                </Link>
+              </Badge>
+            </Tooltip>
+            
             <NotificationBell />
-            <div className="px-4 py-1.5 bg-green-100 text-green-700 rounded-full font-semibold text-sm">
+            <div 
+                className="px-4 py-1.5 rounded-full font-semibold text-sm cursor-pointer transition-all duration-300 bg-green-100 text-green-700 hover:bg-green-200"
+                onClick={async () => {
+                    try {
+                        setLoading(true);
+                        await refreshUserData();
+                        message.success('Balance refreshed!');
+                    } catch (error) {
+                        message.error('Failed to refresh balance');
+                    } finally {
+                        setLoading(false);
+                    }
+                }}
+                title="Click to refresh balance"
+            >
                 {authUser?.balance ? `$${authUser.balance.toFixed(2)}` : '$0.00'}
+                {loading && <span className="ml-1">🔄</span>}
             </div>
             <Dropdown menu={{ items: userMenuItems }} trigger={['click']}>
               <Avatar 

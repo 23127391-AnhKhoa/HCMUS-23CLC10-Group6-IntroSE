@@ -4,7 +4,6 @@ import { useAuth } from '../contexts/AuthContext';
 import NavBarSeller from '../Common/NavBar_Seller';
 import Footer from '../Common/Footer';
 import { Calendar, DollarSign, TrendingUp, Target, Clock, CheckCircle } from 'lucide-react';
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, AreaChart, Area, BarChart, Bar } from 'recharts';
 
 const EarningsPage = () => {
   const { authUser, token } = useAuth();
@@ -28,22 +27,15 @@ const EarningsPage = () => {
     const savedMonthly = localStorage.getItem('seller-monthly-earnings');
     return savedMonthly ? JSON.parse(savedMonthly) : [];
   });
-  const [dailyEarnings, setDailyEarnings] = useState(() => {
-    const savedDaily = localStorage.getItem('seller-daily-earnings');
-    return savedDaily ? JSON.parse(savedDaily) : [];
-  });
   const [loading, setLoading] = useState(false); // Changed to false to show cached data immediately
   const [selectedPeriod, setSelectedPeriod] = useState('all');
-  const [chartType, setChartType] = useState('area'); // 'area' or 'line'
-  const [timeframe, setTimeframe] = useState('month'); // 'day' or 'month'
 
   useEffect(() => {
     if (authUser?.uuid) {
       // Check if we have cached data, if not, show loading
       const hasData = localStorage.getItem('seller-earnings') && 
                      localStorage.getItem('seller-transactions') && 
-                     localStorage.getItem('seller-monthly-earnings') &&
-                     localStorage.getItem('seller-daily-earnings');
+                     localStorage.getItem('seller-monthly-earnings');
       
       if (!hasData) {
         setLoading(true);
@@ -59,7 +51,6 @@ const EarningsPage = () => {
       localStorage.removeItem('seller-earnings');
       localStorage.removeItem('seller-transactions');
       localStorage.removeItem('seller-monthly-earnings');
-      localStorage.removeItem('seller-daily-earnings');
     }
   }, [authUser]);
 
@@ -140,79 +131,6 @@ const EarningsPage = () => {
         setMonthlyEarnings(earningsData.monthlyBreakdown);
         localStorage.setItem('seller-monthly-earnings', JSON.stringify(earningsData.monthlyBreakdown));
       }
-
-      // Generate daily earnings data for the last 30 days
-      const generateDailyEarnings = async () => {
-        try {
-          // Try to fetch daily data from API first
-          const dailyResponse = await fetch(`http://localhost:8000/api/users/${sellerId}/earnings/daily?days=30`, {
-            headers: {
-              'Authorization': `Bearer ${token}`,
-              'Content-Type': 'application/json',
-            },
-          });
-
-          if (dailyResponse.ok) {
-            const dailyResult = await dailyResponse.json();
-            if (dailyResult.data && dailyResult.data.length > 0) {
-              setDailyEarnings(dailyResult.data);
-              localStorage.setItem('seller-daily-earnings', JSON.stringify(dailyResult.data));
-              return;
-            }
-          }
-
-          // Fallback: Generate daily data from transactions
-          const last30Days = [];
-          const today = new Date();
-          
-          for (let i = 29; i >= 0; i--) {
-            const date = new Date(today);
-            date.setDate(today.getDate() - i);
-            // Use local date string instead of UTC
-            const year = date.getFullYear();
-            const month = String(date.getMonth() + 1).padStart(2, '0');
-            const day = String(date.getDate()).padStart(2, '0');
-            const dateString = `${year}-${month}-${day}`;
-            
-            last30Days.push({
-              date: dateString,
-              day: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-              earnings: 0
-            });
-          }
-
-          // If we have recent transactions, calculate daily earnings from them
-          if (recentTransactions.length > 0) {
-            recentTransactions.forEach(transaction => {
-              // Parse transaction date in user's timezone
-              const transactionDate = new Date(transaction.created_at);
-              const year = transactionDate.getFullYear();
-              const month = String(transactionDate.getMonth() + 1).padStart(2, '0');
-              const day = String(transactionDate.getDate()).padStart(2, '0');
-              const localDateString = `${year}-${month}-${day}`;
-              
-              const dayData = last30Days.find(day => day.date === localDateString);
-              if (dayData) {
-                dayData.earnings += parseFloat(transaction.amount) || 0;
-              }
-            });
-          } else {
-            // Generate sample data for demonstration
-            last30Days.forEach((day, index) => {
-              if (Math.random() > 0.7) { // 30% chance of earnings on any given day
-                day.earnings = Math.random() * 200 + 50; // Random earnings between $50-$250
-              }
-            });
-          }
-
-          setDailyEarnings(last30Days);
-          localStorage.setItem('seller-daily-earnings', JSON.stringify(last30Days));
-        } catch (error) {
-          console.error('Error generating daily earnings:', error);
-        }
-      };
-
-      await generateDailyEarnings();
 
       // Fetch transactions with type received_payment
       console.log('🔍 Fetching received_payment transactions...');
@@ -522,297 +440,97 @@ const EarningsPage = () => {
             <div className="lg:col-span-2 bg-white rounded-lg shadow-sm p-6 border border-gray-200">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-xl font-semibold text-gray-900">Earnings Overview</h2>
-                <div className="flex items-center space-x-4">
-                  <div className="flex items-center space-x-2">
-                    <label className="text-sm font-medium text-gray-700">Timeframe:</label>
-                    <select 
-                      value={timeframe}
-                      onChange={(e) => setTimeframe(e.target.value)}
-                      className="border border-gray-300 rounded-md px-2 py-1 text-sm"
-                    >
-                      <option value="day">Daily (Last 30 days)</option>
-                      <option value="month">Monthly</option>
-                    </select>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <label className="text-sm font-medium text-gray-700">Chart:</label>
-                    <select 
-                      value={chartType}
-                      onChange={(e) => setChartType(e.target.value)}
-                      className="border border-gray-300 rounded-md px-2 py-1 text-sm"
-                    >
-                      <option value="area">Area Chart</option>
-                      <option value="line">Line Chart</option>
-                      <option value="bar">Bar Chart</option>
-                    </select>
-                  </div>
-                  {timeframe === 'month' && (
-                    <div className="flex items-center space-x-2">
-                      <label className="text-sm font-medium text-gray-700">Period:</label>
-                      <select 
-                        value={selectedPeriod}
-                        onChange={(e) => setSelectedPeriod(e.target.value)}
-                        className="border border-gray-300 rounded-md px-2 py-1 text-sm"
-                      >
-                        <option value="all">All Time</option>
-                        <option value="year">This Year</option>
-                        <option value="month">This Month</option>
-                      </select>
-                    </div>
-                  )}
-                </div>
+                <select 
+                  value={selectedPeriod}
+                  onChange={(e) => setSelectedPeriod(e.target.value)}
+                  className="border border-gray-300 rounded-md px-3 py-1 text-sm"
+                >
+                  <option value="all">All Time</option>
+                  <option value="year">This Year</option>
+                  <option value="month">This Month</option>
+                </select>
               </div>
               
-              {(timeframe === 'month' ? monthlyEarnings : dailyEarnings).length > 0 ? (
+              {monthlyEarnings.length > 0 ? (
                 <div className="space-y-6">
                   {/* Summary Stats */}
                   <div className="grid grid-cols-3 gap-4 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg">
                     <div className="text-center">
                       <div className="text-2xl font-bold text-blue-600">
-                        {timeframe === 'month' ? monthlyEarnings.length : dailyEarnings.filter(d => d.earnings > 0).length}
+                        {monthlyEarnings.length}
                       </div>
-                      <div className="text-xs text-gray-600">
-                        {timeframe === 'month' ? 'Active Months' : 'Active Days'}
-                      </div>
+                      <div className="text-xs text-gray-600">Active Months</div>
                     </div>
                     <div className="text-center">
                       <div className="text-2xl font-bold text-green-600">
-                        ${timeframe === 'month' 
-                          ? Math.max(...monthlyEarnings.map(m => m.earnings)).toFixed(0)
-                          : Math.max(...dailyEarnings.map(d => d.earnings)).toFixed(0)
-                        }
+                        ${Math.max(...monthlyEarnings.map(m => m.earnings)).toFixed(0)}
                       </div>
-                      <div className="text-xs text-gray-600">
-                        {timeframe === 'month' ? 'Best Month' : 'Best Day'}
-                      </div>
+                      <div className="text-xs text-gray-600">Best Month</div>
                     </div>
                     <div className="text-center">
                       <div className="text-2xl font-bold text-purple-600">
-                        ${timeframe === 'month' 
-                          ? (monthlyEarnings.reduce((sum, m) => sum + m.earnings, 0) / monthlyEarnings.length).toFixed(0)
-                          : (dailyEarnings.reduce((sum, d) => sum + d.earnings, 0) / dailyEarnings.filter(d => d.earnings > 0).length || 0).toFixed(0)
-                        }
+                        ${(monthlyEarnings.reduce((sum, m) => sum + m.earnings, 0) / monthlyEarnings.length).toFixed(0)}
                       </div>
                       <div className="text-xs text-gray-600">Average</div>
                     </div>
                   </div>
 
                   {/* Chart */}
-                  <div style={{ width: '100%', height: 300 }}>
-                    <ResponsiveContainer>
-                      {chartType === 'area' ? (
-                        <AreaChart 
-                          data={timeframe === 'month' ? monthlyEarnings : dailyEarnings} 
-                          margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
-                        >
-                          <defs>
-                            <linearGradient id="colorEarnings" x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="5%" stopColor="#10b981" stopOpacity={0.8}/>
-                              <stop offset="95%" stopColor="#10b981" stopOpacity={0.1}/>
-                            </linearGradient>
-                          </defs>
-                          <XAxis 
-                            dataKey={timeframe === 'month' ? 'month' : 'day'}
-                            axisLine={false} 
-                            tickLine={false}
-                            tick={{ fontSize: 12, fill: '#6b7280' }}
-                            interval={timeframe === 'day' ? 4 : 'preserveStartEnd'} // Show every 5th day for daily view
-                          />
-                          <YAxis 
-                            axisLine={false} 
-                            tickLine={false}
-                            tick={{ fontSize: 12, fill: '#6b7280' }}
-                            tickFormatter={(value) => `$${value}`}
-                          />
-                          <Tooltip 
-                            formatter={(value) => [`$${value.toFixed(2)}`, 'Earnings']}
-                            labelFormatter={(label) => `${timeframe === 'month' ? 'Month' : 'Day'}: ${label}`}
-                            contentStyle={{
-                              backgroundColor: '#f9fafb',
-                              border: '1px solid #e5e7eb',
-                              borderRadius: '8px',
-                              fontSize: '14px'
-                            }}
-                          />
-                          <Area 
-                            type="monotone" 
-                            dataKey="earnings" 
-                            stroke="#10b981" 
-                            fill="url(#colorEarnings)" 
-                            strokeWidth={3}
-                            dot={timeframe === 'day' ? false : { fill: '#10b981', strokeWidth: 2, r: 4 }}
-                            activeDot={{ r: 6, stroke: '#10b981', strokeWidth: 2 }}
-                          />
-                        </AreaChart>
-                      ) : chartType === 'line' ? (
-                        <LineChart 
-                          data={timeframe === 'month' ? monthlyEarnings : dailyEarnings} 
-                          margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
-                        >
-                          <XAxis 
-                            dataKey={timeframe === 'month' ? 'month' : 'day'}
-                            axisLine={false} 
-                            tickLine={false}
-                            tick={{ fontSize: 12, fill: '#6b7280' }}
-                            interval={timeframe === 'day' ? 4 : 'preserveStartEnd'}
-                          />
-                          <YAxis 
-                            axisLine={false} 
-                            tickLine={false}
-                            tick={{ fontSize: 12, fill: '#6b7280' }}
-                            tickFormatter={(value) => `$${value}`}
-                          />
-                          <Tooltip 
-                            formatter={(value) => [`$${value.toFixed(2)}`, 'Earnings']}
-                            labelFormatter={(label) => `${timeframe === 'month' ? 'Month' : 'Day'}: ${label}`}
-                            contentStyle={{
-                              backgroundColor: '#f9fafb',
-                              border: '1px solid #e5e7eb',
-                              borderRadius: '8px',
-                              fontSize: '14px'
-                            }}
-                          />
-                          <Line 
-                            type="monotone" 
-                            dataKey="earnings" 
-                            stroke="#3b82f6" 
-                            strokeWidth={3}
-                            dot={timeframe === 'day' ? false : { fill: '#3b82f6', strokeWidth: 2, r: 4 }}
-                            activeDot={{ r: 6, stroke: '#3b82f6', strokeWidth: 2 }}
-                          />
-                        </LineChart>
-                      ) : (
-                        <BarChart 
-                          data={timeframe === 'month' ? monthlyEarnings : dailyEarnings} 
-                          margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
-                        >
-                          <XAxis 
-                            dataKey={timeframe === 'month' ? 'month' : 'day'}
-                            axisLine={false} 
-                            tickLine={false}
-                            tick={{ fontSize: 12, fill: '#6b7280' }}
-                            interval={timeframe === 'day' ? 4 : 'preserveStartEnd'}
-                          />
-                          <YAxis 
-                            axisLine={false} 
-                            tickLine={false}
-                            tick={{ fontSize: 12, fill: '#6b7280' }}
-                            tickFormatter={(value) => `$${value}`}
-                          />
-                          <Tooltip 
-                            formatter={(value) => [`$${value.toFixed(2)}`, 'Earnings']}
-                            labelFormatter={(label) => `${timeframe === 'month' ? 'Month' : 'Day'}: ${label}`}
-                            contentStyle={{
-                              backgroundColor: '#f9fafb',
-                              border: '1px solid #e5e7eb',
-                              borderRadius: '8px',
-                              fontSize: '14px'
-                            }}
-                          />
-                          <Bar 
-                            dataKey="earnings" 
-                            fill="#8b5cf6"
-                            radius={[4, 4, 0, 0]}
-                          />
-                        </BarChart>
-                      )}
-                    </ResponsiveContainer>
-                  </div>
-
-                  {/* Breakdown Table */}
-                  <div className="mt-6">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                      {timeframe === 'month' ? 'Monthly Breakdown' : 'Daily Breakdown (Last 30 Days)'}
-                    </h3>
-                    <div className="overflow-x-auto max-h-80">
-                      <table className="w-full text-sm">
-                        <thead className="sticky top-0 bg-white">
-                          <tr className="border-b border-gray-200">
-                            <th className="text-left py-2 px-3 font-medium text-gray-600">
-                              {timeframe === 'month' ? 'Month' : 'Date'}
-                            </th>
-                            <th className="text-right py-2 px-3 font-medium text-gray-600">Earnings</th>
-                            <th className="text-right py-2 px-3 font-medium text-gray-600">Growth</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {timeframe === 'month' ? (
-                            monthlyEarnings.map((month, index) => {
-                              const prevMonth = monthlyEarnings[index - 1];
-                              const growth = prevMonth ? ((month.earnings - prevMonth.earnings) / prevMonth.earnings) * 100 : 0;
-                              const isCurrentMonth = new Date().toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) === month.month;
-                              
-                              return (
-                                <tr key={index} className={`border-b border-gray-100 hover:bg-gray-50 ${isCurrentMonth ? 'bg-blue-50' : ''}`}>
-                                  <td className="py-3 px-3">
-                                    <div className="flex items-center space-x-2">
-                                      <span className={`font-medium ${isCurrentMonth ? 'text-blue-700' : 'text-gray-900'}`}>
-                                        {month.month}
-                                      </span>
-                                      {isCurrentMonth && (
-                                        <span className="px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded-full">
-                                          Current
-                                        </span>
-                                      )}
-                                    </div>
-                                  </td>
-                                  <td className="py-3 px-3 text-right font-semibold text-gray-900">
-                                    ${month.earnings.toFixed(2)}
-                                  </td>
-                                  <td className="py-3 px-3 text-right">
-                                    {index > 0 ? (
-                                      <span className={`font-medium ${growth >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                        {growth >= 0 ? '+' : ''}{growth.toFixed(1)}%
-                                      </span>
-                                    ) : (
-                                      <span className="text-gray-400">-</span>
-                                    )}
-                                  </td>
-                                </tr>
-                              );
-                            })
-                          ) : (
-                            dailyEarnings.slice().reverse().map((day, index) => {
-                              const prevDay = dailyEarnings[dailyEarnings.length - index];
-                              const growth = prevDay && prevDay.earnings > 0 ? ((day.earnings - prevDay.earnings) / prevDay.earnings) * 100 : 0;
-                              // Use local date comparison for "Today" highlight
-                              const today = new Date();
-                              const todayString = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-                              const isToday = day.date === todayString;
-                              
-                              return (
-                                <tr key={index} className={`border-b border-gray-100 hover:bg-gray-50 ${isToday ? 'bg-blue-50' : day.earnings === 0 ? 'bg-gray-25' : ''}`}>
-                                  <td className="py-2 px-3">
-                                    <div className="flex items-center space-x-2">
-                                      <span className={`font-medium ${isToday ? 'text-blue-700' : day.earnings > 0 ? 'text-gray-900' : 'text-gray-500'}`}>
-                                        {day.day}
-                                      </span>
-                                      {isToday && (
-                                        <span className="px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded-full">
-                                          Today
-                                        </span>
-                                      )}
-                                    </div>
-                                  </td>
-                                  <td className={`py-2 px-3 text-right font-semibold ${day.earnings > 0 ? 'text-gray-900' : 'text-gray-400'}`}>
-                                    ${day.earnings.toFixed(2)}
-                                  </td>
-                                  <td className="py-2 px-3 text-right">
-                                    {day.earnings > 0 && prevDay && prevDay.earnings > 0 ? (
-                                      <span className={`font-medium ${growth >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                        {growth >= 0 ? '+' : ''}{growth.toFixed(1)}%
-                                      </span>
-                                    ) : (
-                                      <span className="text-gray-400">-</span>
-                                    )}
-                                  </td>
-                                </tr>
-                              );
-                            })
-                          )}
-                        </tbody>
-                      </table>
-                    </div>
+                  <div className="space-y-3">
+                    {monthlyEarnings.map((month, index) => {
+                      const maxEarnings = Math.max(...monthlyEarnings.map(m => m.earnings));
+                      const percentage = (month.earnings / maxEarnings) * 100;
+                      const isCurrentMonth = new Date().toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) === month.month;
+                      
+                      return (
+                        <div key={index} className={`p-4 rounded-lg border transition-all hover:shadow-md ${
+                          isCurrentMonth ? 'bg-blue-50 border-blue-200' : 'bg-gray-50 border-gray-200 hover:bg-gray-100'
+                        }`}>
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="flex items-center space-x-2">
+                              <span className={`text-sm font-medium ${
+                                isCurrentMonth ? 'text-blue-700' : 'text-gray-700'
+                              }`}>
+                                {month.month}
+                              </span>
+                              {isCurrentMonth && (
+                                <span className="px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded-full">
+                                  Current
+                                </span>
+                              )}
+                            </div>
+                            <span className={`text-lg font-bold ${
+                              isCurrentMonth ? 'text-blue-700' : 'text-gray-900'
+                            }`}>
+                              ${month.earnings.toFixed(2)}
+                            </span>
+                          </div>
+                          
+                          <div className="relative">
+                            <div className={`w-full h-3 rounded-full ${
+                              isCurrentMonth ? 'bg-blue-100' : 'bg-gray-200'
+                            }`}>
+                              <div 
+                                className={`h-3 rounded-full transition-all duration-700 ${
+                                  isCurrentMonth 
+                                    ? 'bg-gradient-to-r from-blue-400 to-blue-600' 
+                                    : 'bg-gradient-to-r from-green-400 to-green-600'
+                                }`}
+                                style={{ 
+                                  width: `${Math.max(percentage, 5)}%`,
+                                  boxShadow: isCurrentMonth ? '0 2px 4px rgba(59, 130, 246, 0.3)' : '0 2px 4px rgba(34, 197, 94, 0.2)'
+                                }}
+                              ></div>
+                            </div>
+                            <div className="absolute inset-0 flex items-center justify-center">
+                              <span className="text-xs text-white font-medium drop-shadow-sm">
+                                {percentage.toFixed(0)}%
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               ) : (
@@ -837,18 +555,18 @@ const EarningsPage = () => {
               {recentTransactions.length > 0 ? (
                 <div className="space-y-3">
                   {recentTransactions.map((transaction, index) => (
-                    <div key={index} className="flex items-start justify-between p-4 bg-gray-50 rounded-lg border border-gray-100 hover:bg-gray-100 transition-colors">
-                      <div className="flex items-center space-x-3 flex-1 min-w-0">
+                    <div key={index} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-100 hover:bg-gray-100 transition-colors">
+                      <div className="flex items-center space-x-4">
                         <div className="flex-shrink-0">
                           <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
                             <DollarSign className="h-5 w-5 text-green-600" />
                           </div>
                         </div>
-                        <div className="flex-1 min-w-0">
+                        <div>
                           <p className="text-sm font-medium text-gray-900">
                             Payment Received
                           </p>
-                          <p className="text-xs text-gray-500 truncate">
+                          <p className="text-xs text-gray-500 truncate max-w-48">
                             {transaction.description || 'Order payment'}
                           </p>
                           <p className="text-xs text-gray-400">
@@ -860,12 +578,12 @@ const EarningsPage = () => {
                           </p>
                         </div>
                       </div>
-                      <div className="text-right flex-shrink-0 ml-3">
-                        <span className="text-sm font-semibold text-green-600 block">
+                      <div className="text-right">
+                        <span className="text-lg font-semibold text-green-600">
                           +${parseFloat(transaction.amount).toFixed(2)}
                         </span>
                         {transaction.order_id && (
-                          <p className="text-xs text-gray-400 mt-1">
+                          <p className="text-xs text-gray-400">
                             Order #{transaction.order_id}
                           </p>
                         )}

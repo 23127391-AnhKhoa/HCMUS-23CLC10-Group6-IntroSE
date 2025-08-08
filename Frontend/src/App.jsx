@@ -5,7 +5,6 @@ import AuthPage from './pages/AuthPage';
 import Introduction from './pages/Introduction';
 import AboutUs from './pages/AboutUs';
 import CreateGigsPage from './pages/Create_Gigs';
-import EditGig from './pages/EditGig';
 import AdminDashboard from './pages/Admin/AdminDashboard';
 import ExplorePage from './pages/ExplorePage';
 import GigDetail from './pages/GigDetail';
@@ -58,9 +57,6 @@ function App() {
             <Route path="/admin/servicemanagement" element={<ServicesManagement />} />
             {/*ROUTE FOR CREATE GIGS*/}
             <Route path="/create-gig" element={<CreateGigsPage />} />
-            
-            {/*ROUTE FOR EDIT GIGS*/}
-            <Route path="/gigs/edit/:gigId" element={<EditGig />} />
             
             <Route path="/explore" element={<ExplorePage />} />
 

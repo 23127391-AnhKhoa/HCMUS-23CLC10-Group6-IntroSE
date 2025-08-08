@@ -11,7 +11,7 @@
 
 import React, { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
-import { CloseOutlined, SearchOutlined, ShoppingCartOutlined, CheckCircleOutlined } from '@ant-design/icons';
+import { CloseOutlined, SearchOutlined, ShoppingCartOutlined } from '@ant-design/icons';
 
 /**
  * CreateOrderModal component for creating new orders
@@ -146,15 +146,7 @@ const CreateOrderModal = ({ onClose, onSubmit, gig = null }) => {
         
         try {
             setSubmitting(true);
-            
-            // Get the selected or pre-selected gig
-            const selectedGigData = selectedGig || gig;
-            
-            if (!selectedGigData || !selectedGigData.id) {
-                throw new Error('No gig selected');
-            }
-            
-            // Format the data for submission with all required fields
+            // Format the data for submission
             const submissionData = {
                 gig_id: selectedGigData.id,
                 price_at_purchase: formData.price_at_purchase,
@@ -188,7 +180,6 @@ const CreateOrderModal = ({ onClose, onSubmit, gig = null }) => {
         }
     };
 
-    // Render
     return (
         <div 
             className="fixed inset-0 bg-black bg-opacity-50 z-[9997] flex items-center justify-center p-4"
@@ -210,17 +201,8 @@ const CreateOrderModal = ({ onClose, onSubmit, gig = null }) => {
                 </div>
 
                 {/* Content */}
-                {orderSuccess ? (
-                    <div className="p-6 flex flex-col items-center justify-center">
-                        <CheckCircleOutlined className="text-green-500 text-6xl mb-4" />
-                        <p className="text-lg font-semibold text-green-700 mb-4">Order created successfully!</p>
-                        <button onClick={onClose} className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
-                            Close
-                        </button>
-                    </div>
-                ) : (
-                    <div className="p-6 overflow-y-auto max-h-[calc(90vh-180px)]">
-                     <form onSubmit={handleSubmit} className="space-y-6">
+                <div className="p-6 overflow-y-auto max-h-[calc(90vh-180px)]">
+                    <form onSubmit={handleSubmit} className="space-y-6">
                         {/* Gig Selection */}
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -415,7 +397,6 @@ const CreateOrderModal = ({ onClose, onSubmit, gig = null }) => {
                         )}
                     </form>
                 </div>
-                )}
 
                 {/* Footer */}
                 <div className="flex items-center justify-end space-x-4 p-6 border-t border-gray-200 bg-gray-50">

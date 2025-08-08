@@ -97,12 +97,6 @@ const GigService = {
             created_at: gig.created_at,
             updated_at: gig.updated_at,
             category_id: gig.category_id,
-            // New schema fields
-            response_time_hours: gig.response_time_hours,
-            ban_reason: gig.ban_reason,
-            banned_until: gig.banned_until,
-            avg_review: gig.avg_review,
-            total_review: gig.total_review,
             // Owner information
             owner_username: gig.User?.username,
             owner_fullname: gig.User?.fullname,
@@ -185,12 +179,6 @@ const GigService = {
         created_at: gigWithDetails.created_at,
         updated_at: gigWithDetails.updated_at,
         category_id: gigWithDetails.category_id,
-        // New schema fields
-        response_time_hours: gigWithDetails.response_time_hours,
-        ban_reason: gigWithDetails.ban_reason,
-        banned_until: gigWithDetails.banned_until,
-        avg_review: gigWithDetails.avg_review,
-        total_review: gigWithDetails.total_review,
         // Owner information
         owner_username: gigWithDetails.User?.username,
         owner_fullname: gigWithDetails.User?.fullname,
@@ -253,7 +241,6 @@ const GigService = {
         delivery_days: parseInt(gigData.delivery_days),
         num_of_edits: gigData.num_of_edits ? parseInt(gigData.num_of_edits) : null,
         category_id: parseInt(gigData.category_id),
-        response_time_hours: gigData.response_time_hours ? parseInt(gigData.response_time_hours) : 24, // Default 24 hours
         created_at: new Date(),
         updated_at: null
       };
@@ -374,7 +361,7 @@ const GigService = {
         let score = 0;
         
         // Rating factor (40% weight)
-        const rating = gig.avg_review || gig.rating || 4.0; // Use new avg_review field
+        const rating = gig.rating || 4.0;
         score += rating * 0.4;
         
         // Price factor (20% weight)
@@ -423,14 +410,10 @@ const GigService = {
         title: gig.title,
         description: gig.description,
         price: gig.price,
-        delivery_days: gig.delivery_days,
-        rating: gig.avg_review || gig.rating || 4.0, // Use new avg_review field
-        total_reviews: gig.total_review || 0, // Include review count
+        rating: gig.rating || 4.0,
         seller_name: gig.seller_name,
         created_at: gig.created_at,
-        recommendation_score: gig.recommendation_score,
-        cover_image: gig.cover_image,
-        response_time_hours: gig.response_time_hours
+        recommendation_score: gig.recommendation_score
       }));
       
     } catch (error) {
@@ -512,130 +495,6 @@ const GigService = {
     } catch (error) {
       console.error('💥 [Gig Service] Error in getSellerGigsWithStats:', error);
       throw new Error(`Error fetching seller gigs with stats: ${error.message}`);
-    }
-  },
-
-  /**
-   * Update gig rating statistics (avg_review and total_review)
-   * This should be called whenever a new review is added for a gig
-   * 
-   * @param {string} gigId - Gig ID
-   * @returns {Promise<Object>} Updated gig with new rating stats
-   */
-  updateGigRatingStats: async (gigId) => {
-    try {
-      console.log('📊 [Gig Service] Updating rating stats for gig:', gigId);
-
-      // Get all orders for this gig
-      const { data: orders, error: ordersError } = await supabase
-        .from('Orders')
-        .select('id')
-        .eq('gig_id', gigId);
-
-      if (ordersError) {
-        throw new Error(`Error fetching orders: ${ordersError.message}`);
-      }
-
-      if (!orders || orders.length === 0) {
-        // No orders, so no reviews possible
-        await Gig.updateById(gigId, {
-          avg_review: null,
-          total_review: 0
-        });
-        return { avgRating: null, totalReviews: 0 };
-      }
-
-      const orderIds = orders.map(order => order.id);
-
-      // Get all reviews for these orders
-      const { data: reviews, error: reviewsError } = await supabase
-        .from('Reviews')
-        .select('rating')
-        .in('order_id', orderIds);
-
-      if (reviewsError) {
-        throw new Error(`Error fetching reviews: ${reviewsError.message}`);
-      }
-
-      const reviewsData = reviews || [];
-      const totalReviews = reviewsData.length;
-      
-      let avgRating = null;
-      if (totalReviews > 0) {
-        avgRating = reviewsData.reduce((sum, review) => sum + review.rating, 0) / totalReviews;
-        avgRating = Math.round(avgRating * 10) / 10; // Round to 1 decimal place
-      }
-
-      // Update the gig with new stats
-      await Gig.updateById(gigId, {
-        avg_review: avgRating,
-        total_review: totalReviews
-      });
-
-      console.log('✅ [Gig Service] Rating stats updated:', { avgRating, totalReviews });
-      return { avgRating, totalReviews };
-    } catch (error) {
-      console.error('💥 [Gig Service] Error updating rating stats:', error);
-      throw new Error(`Error updating gig rating stats: ${error.message}`);
-    }
-  },
-
-  /**
-   * Get gig with reviews
-   * 
-   * @param {string} gigId - Gig ID
-   * @param {Object} options - Query options for reviews
-   * @returns {Promise<Object>} Gig data with reviews
-   */
-  getGigWithReviews: async (gigId, options = {}) => {
-    try {
-      const { reviews_limit = 5, reviews_offset = 0 } = options;
-
-      // Get gig details
-      const gig = await GigService.getGigById(gigId);
-      if (!gig) {
-        throw new Error('Gig not found');
-      }
-
-      // Get orders for this gig
-      const { data: orders, error: ordersError } = await supabase
-        .from('Orders')
-        .select('id')
-        .eq('gig_id', gigId);
-
-      if (ordersError) {
-        throw new Error(`Error fetching orders: ${ordersError.message}`);
-      }
-
-      let reviews = [];
-      if (orders && orders.length > 0) {
-        const orderIds = orders.map(order => order.id);
-
-        // Get reviews for these orders
-        const { data: reviewsData, error: reviewsError } = await supabase
-          .from('Reviews')
-          .select(`
-            *,
-            buyer:buyer_id(uuid, username, fullname, avt_url)
-          `)
-          .in('order_id', orderIds)
-          .order('created_at', { ascending: false })
-          .range(reviews_offset, reviews_offset + reviews_limit - 1);
-
-        if (reviewsError) {
-          throw new Error(`Error fetching reviews: ${reviewsError.message}`);
-        }
-
-        reviews = reviewsData || [];
-      }
-
-      return {
-        ...gig,
-        reviews: reviews
-      };
-    } catch (error) {
-      console.error('💥 [Gig Service] Error in getGigWithReviews:', error);
-      throw new Error(`Error fetching gig with reviews: ${error.message}`);
     }
   }
 };

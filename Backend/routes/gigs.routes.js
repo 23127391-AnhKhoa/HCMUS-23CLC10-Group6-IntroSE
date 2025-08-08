@@ -26,6 +26,9 @@ const optionalAuth = (req, res, next) => {
   }
 };
 
+// Include gigMedia routes
+router.use('/', gigMediaRoutes);
+
 // GET /api/gigs/health - Health check endpoint
 router.get('/health', gigController.healthCheck);
 
@@ -38,14 +41,8 @@ router.get('/seller/:sellerId/stats', gigController.getSellerGigsWithStats);
 // GET /api/gigs - Get all gigs with pagination and filtering
 router.get('/', gigController.getAllGigs);
 
-// Include gigMedia routes (these are more specific like /:gigId/media)
-router.use('/', gigMediaRoutes);
-
 // GET /api/gigs/:id - Get a single gig by ID
 router.get('/:id', gigController.getGigById);
-
-// GET /api/gigs/:id/reviews - Get gig with reviews
-router.get('/:id/reviews', gigController.getGigWithReviews);
 
 // POST /api/gigs - Create a new gig (with optional authentication)
 router.post('/', optionalAuth, gigController.createGig);

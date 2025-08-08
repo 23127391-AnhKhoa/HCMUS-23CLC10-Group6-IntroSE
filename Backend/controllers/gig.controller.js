@@ -80,7 +80,6 @@ const getGigById = async (req, res) => {
       data: gig
     });
   } catch (error) {
-    console.error('Error in getGigById controller:', error);
     res.status(400).json({
       status: 'error',
       message: error.message
@@ -266,37 +265,12 @@ const getSellerGigsWithStats = async (req, res) => {
   }
 };
 
-const getGigWithReviews = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { reviews_limit = 5, reviews_offset = 0 } = req.query;
-
-    const gigWithReviews = await GigService.getGigWithReviews(id, {
-      reviews_limit: parseInt(reviews_limit),
-      reviews_offset: parseInt(reviews_offset)
-    });
-
-    res.status(200).json({
-      status: 'success',
-      data: gigWithReviews
-    });
-  } catch (error) {
-    console.error('Get gig with reviews error:', error);
-    res.status(500).json({
-      status: 'error',
-      message: 'Failed to get gig with reviews',
-      error: error.message
-    });
-  }
-};
-
 module.exports = {
   healthCheck,
   getAllGigs,
   getRecommendedGigs,  // THÊM MỚI
   getSellerGigsWithStats, // NEW
   getGigById,
-  getGigWithReviews, // NEW
   createGig,
   updateGig,
   deleteGig

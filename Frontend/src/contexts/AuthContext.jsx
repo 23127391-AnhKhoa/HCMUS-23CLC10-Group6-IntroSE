@@ -1,7 +1,5 @@
 // src/contexts/AuthContext.js
-// src/contexts/AuthContext.jsx
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { supabase } from '../lib/supabase'; // sửa đường dẫn nếu khác
+import React, { createContext, useState, useContext, useEffect } from 'react';
 
 // Tạo Context
 const AuthContext = createContext(null);
@@ -22,13 +20,6 @@ export const AuthProvider = ({ children }) => {
     }
     setIsLoading(false);
   }, []);
-  useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      supabase.auth.setSession({ access_token: token, refresh_token: '' });
-    }
-  }, []);
-
 
   // Hàm để gọi khi đăng nhập thành công
   const login = (userData, userToken) => {
@@ -55,6 +46,33 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // Hàm để refresh user data từ server (dùng khi cần cập nhật balance mới nhất)
+  const refreshUserData = async () => {
+    try {
+      const storedToken = localStorage.getItem('token');
+      if (!storedToken || !authUser?.uuid) return;
+
+      const response = await fetch(`http://localhost:8000/api/users/profile`, {
+        headers: {
+          'Authorization': `Bearer ${storedToken}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.status === 'success' && data.data) {
+          console.log('🔄 AuthContext: Refreshed user data from server:', data.data);
+          updateUser(data.data);
+          return data.data;
+        }
+      }
+    } catch (error) {
+      console.error('Error refreshing user data:', error);
+    }
+    return null;
+  };
+
   // Hàm để gọi khi đăng xuất
   const logout = () => {
     setAuthUser(null);
@@ -71,6 +89,7 @@ export const AuthProvider = ({ children }) => {
     logout,
     updateUser,
     updateUserWithToken,
+    refreshUserData,
   };
 
   // Chỉ render children khi đã kiểm tra xong localStorage

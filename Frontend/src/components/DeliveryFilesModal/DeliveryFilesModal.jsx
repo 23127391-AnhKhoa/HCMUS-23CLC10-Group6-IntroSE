@@ -151,6 +151,10 @@ const DeliveryFilesModal = ({
                 updateUser(data.data.payment.updatedBuyerData);
             }
 
+            // Note: Seller balance will be updated automatically when they refresh or navigate
+            // We could also trigger a notification here for the seller
+            console.log('💰 Seller will receive payment:', data.data?.payment?.sellerNewBalance);
+
             showToast('Order completed successfully! Payment has been processed.', 'success');
             
             // Close modal and refresh order data
