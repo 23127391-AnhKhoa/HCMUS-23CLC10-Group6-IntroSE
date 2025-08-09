@@ -469,45 +469,32 @@ const WithdrawModal = ({ visible, onClose, currentBalance, onWithdrawSuccess }) 
 
   const handleWithdraw = async () => {
     const amount = parseFloat(withdrawAmount);
-    
     if (!amount || amount <= 0) {
       message.error('Please enter a valid amount');
       return;
     }
-    
     if (amount > currentBalance) {
       message.error('Insufficient balance');
       return;
     }
-
     try {
       setLoading(true);
-      
-      // Create admin withdrawal transaction
-      const response = await fetch('/api/transactions/withdraw', {
+      const response = await fetch('/api/admin/withdraw', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({
-          amount: amount,
-          type: 'admin_withdraw',
-          description: 'Admin withdrawal from website profits'
-        })
+        body: JSON.stringify({ amount })
       });
-
       const data = await response.json();
-
-      if (!response.ok) {
+      if (!response.ok || data.status !== 'success') {
         throw new Error(data.message || 'Failed to process admin withdrawal');
       }
-
       message.success(`Successfully withdrew $${amount.toFixed(2)} from admin earnings`);
       setWithdrawAmount('');
       onClose();
       onWithdrawSuccess();
-      
     } catch (error) {
       console.error('Error processing admin withdrawal:', error);
       message.error(error.message || 'Something went wrong. Please try again.');
