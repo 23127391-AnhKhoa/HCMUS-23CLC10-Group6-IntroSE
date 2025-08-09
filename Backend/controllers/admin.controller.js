@@ -202,6 +202,50 @@ const getAdminTransactionHistory = async (req, res) => {
     }
 };
 
+const adminWithdraw = async (req, res) => {
+    try {
+        if (!req.user || req.user.role !== 'admin') {
+            return res.status(403).json({ status: 'error', message: 'Forbidden: Admin only' });
+        }
+        const { amount } = req.body;
+        const parsedAmount = parseFloat(amount);
+        if (!parsedAmount || parsedAmount <= 0) {
+            return res.status(400).json({ status: 'error', message: 'Amount must be greater than 0' });
+        }
+
+        // Lấy earnings hiện tại để kiểm tra availableBalance
+        const earningsData = await AdminService.getAdminEarnings();
+        if (parsedAmount > earningsData.availableBalance) {
+            return res.status(400).json({ status: 'error', message: 'Amount exceeds available admin balance' });
+        }
+
+        // Ghi transaction admin_withdraw (không cập nhật User.balance)
+        const Transaction = require('../models/transactions.model');
+        const { error: insertError } = await Transaction.create({
+            user_id: req.user.uuid, // Lưu lại admin uuid để truy vết
+            amount: parsedAmount,
+            description: 'Admin withdrawal from website profits',
+            type: 'admin_withdraw'
+        });
+        if (insertError) throw insertError;
+
+        // Lấy lại earnings sau khi withdraw
+        const updatedEarnings = await AdminService.getAdminEarnings();
+
+        return res.status(201).json({
+            status: 'success',
+            message: `Admin withdrew $${parsedAmount.toFixed(2)}`,
+            data: {
+                withdrawnAmount: parsedAmount,
+                earnings: updatedEarnings
+            }
+        });
+    } catch (error) {
+        console.error('Error in adminWithdraw:', error);
+        return res.status(500).json({ status: 'error', message: 'Internal server error', error: error.message });
+    }
+};
+
 module.exports = {
     getAdminStats,
     createAdminLog,
@@ -213,5 +257,6 @@ module.exports = {
     getTopSellersByEarnings,
     getDashboardStats,
     getAdminEarnings,
-    getAdminTransactionHistory
+    getAdminTransactionHistory,
+    adminWithdraw
 };

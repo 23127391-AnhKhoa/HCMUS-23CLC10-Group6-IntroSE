@@ -324,7 +324,7 @@ const ServicesManagement = () => {
         
         setError(null);
         
-        // Lọc status dựa trên tab: pending cho tab pending, còn lại không lọc để lấy tất cả (active, paused, denied)
+        // Lọc status dựa trên tab: pending cho tab pending, còn lại không lọc ở server
         const statusFilter = tab === 'pending' ? 'pending' : '';
         
         try {
@@ -337,7 +337,13 @@ const ServicesManagement = () => {
                 if (isTabChange) {
                     await new Promise(resolve => setTimeout(resolve, 200));
                 }
-                setGigs(result.data);
+                // Client-side guard: nếu ở tab 'current' thì loại bỏ các gig có status 'pending'
+                let data = Array.isArray(result.data) ? result.data : [];
+                if (tab !== 'pending') {
+                    const allowed = new Set(['active', 'paused', 'denied']);
+                    data = data.filter(g => allowed.has((g.status || '').toLowerCase()));
+                }
+                setGigs(data);
                 setPaginationInfo(result.pagination);
             } else {
                 throw new Error(result.message || 'Failed to fetch services.');
