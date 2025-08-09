@@ -34,11 +34,13 @@ const Orders = () => {
     
     // State management
     const [orders, setOrders] = useState([]);
+    const [allOrdersCounts, setAllOrdersCounts] = useState({}); // Cache for all order counts
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [activeTab, setActiveTab] = useState(authUser?.role === 'seller' ? 'seller' : 'buyer'); // Set based on user role
     const [statusFilter, setStatusFilter] = useState('all');
     const [selectedOrderId, setSelectedOrderId] = useState(null);
+    const [hasInitialLoad, setHasInitialLoad] = useState(false); // Track if we've completed initial load
 
     // Separate loading states for different actions
     const [actionLoadings, setActionLoadings] = useState({
@@ -69,13 +71,49 @@ const Orders = () => {
         }
     }, [authUser, token, authLoading, navigate]);
 
+    // Sync filter with selected order status
+    useEffect(() => {
+        if (selectedOrderId && orders.length > 0) {
+            const selectedOrder = orders.find(order => order.id === selectedOrderId);
+            if (selectedOrder && selectedOrder.status) {
+                console.log('🔄 Syncing filter with selected order status:', selectedOrder.status);
+                // Always sync to the order's current status when viewing details
+                if (statusFilter !== selectedOrder.status) {
+                    setStatusFilter(selectedOrder.status);
+                }
+            }
+        }
+    }, [selectedOrderId, orders]);
+
+    // Auto-refresh data when certain actions complete (for real-time updates)
+    useEffect(() => {
+        if (selectedOrderId) {
+            const interval = setInterval(() => {
+                console.log('🔄 Auto-refreshing order data for real-time updates');
+                refreshOrders();
+            }, 30000); // Refresh every 30 seconds when viewing detailed view
+
+            return () => clearInterval(interval);
+        }
+    }, [selectedOrderId]);
+
     // Fetch orders when component mounts or filters change
     useEffect(() => {
         if (!authLoading && authUser && token) {
             // Reset orders when filters change and fetch new data
+            setHasInitialLoad(false); // Reset the initial load flag when fetching new data
             fetchOrders(true);
         }
     }, [authUser, token, authLoading, activeTab, statusFilter]);
+
+    // Fetch all orders counts when we switch to a specific filter and don't have cached counts
+    useEffect(() => {
+        if (!authLoading && authUser && token && statusFilter !== 'all' && 
+            Object.keys(allOrdersCounts).length === 0) {
+            console.log('🔄 Fetching counts because we switched to specific filter without cached counts');
+            fetchAllOrdersCounts();
+        }
+    }, [authUser, token, authLoading, activeTab, statusFilter, allOrdersCounts]);
 
     // Initialize with correct tab and setup scroll listener
     useEffect(() => {
@@ -126,18 +164,73 @@ const Orders = () => {
     };
 
     /**
+     * Fetch all orders counts for caching (used when not on 'all' filter)
+     */
+    const fetchAllOrdersCounts = async () => {
+        try {
+            console.log('🔄 Fetching all orders counts for caching...');
+            
+            let url = '';
+            const params = new URLSearchParams({
+                page: '1',
+                limit: '1000', // Get a large number to get all orders for counting
+                sort_by: 'created_at',
+                sort_order: 'desc'
+            });
+
+            if (activeTab === 'buyer') {
+                url = `http://localhost:8000/api/orders/client/${authUser.uuid}?${params}`;
+            } else {
+                url = `http://localhost:8000/api/orders/owner/${authUser.uuid}?${params}`;
+            }
+            
+            const headers = {
+                'Content-Type': 'application/json'
+            };
+            
+            if (token) {
+                headers['Authorization'] = `Bearer ${token}`;
+            }
+            
+            const response = await fetch(url, { headers });
+            
+            if (!response.ok) {
+                console.warn('Failed to fetch all orders for counts');
+                return;
+            }
+
+            const data = await response.json();
+            
+            if (data.status === 'success') {
+                const allOrders = data.data || [];
+                const counts = allOrders.reduce((acc, order) => {
+                    acc[order.status] = (acc[order.status] || 0) + 1;
+                    return acc;
+                }, {});
+                
+                // Add total count
+                counts.all = allOrders.length;
+                
+                setAllOrdersCounts(counts);
+                console.log('✅ Cached all orders counts:', counts);
+            }
+        } catch (err) {
+            console.warn('Error fetching all orders counts:', err);
+        }
+    };
+
+    /**
      * Fetch orders from API based on current filters
      */
     const fetchOrders = async (reset = false) => {
         try {
             if (reset) {
                 setLoading(true);
-                setOrders([]); // Clear orders immediately when resetting
+                setError(null);
                 setHasMore(true);
             } else {
                 setIsLoadingMore(true);
             }
-            setError(null);
             
             const currentPage = reset ? 1 : Math.floor(orders.length / itemsPerPage) + 1;
             
@@ -198,10 +291,21 @@ const Orders = () => {
             if (data.status === 'success') {
                 const newOrders = data.data || [];
                 
+                // Cache counts when we have all orders (statusFilter === 'all' and reset === true)
+                if (reset && statusFilter === 'all') {
+                    const counts = newOrders.reduce((acc, order) => {
+                        acc[order.status] = (acc[order.status] || 0) + 1;
+                        return acc;
+                    }, {});
+                    counts.all = newOrders.length;
+                    setAllOrdersCounts(counts);
+                    console.log('✅ Cached order counts from all orders fetch:', counts);
+                }
+                
                 if (reset) {
                     // Apply custom sorting for 'all' filter
                     const sortedOrders = statusFilter === 'all' ? sortOrdersByStatus([...newOrders]) : newOrders;
-                    setOrders(sortedOrders);
+                    setOrders(sortedOrders); // Only clear and set new orders after successful fetch
                 } else {
                     // Append new orders for infinite scroll
                     const combinedOrders = [...orders, ...newOrders];
@@ -226,6 +330,9 @@ const Orders = () => {
         } finally {
             setLoading(false);
             setIsLoadingMore(false);
+            if (reset) {
+                setHasInitialLoad(true); // Mark that we've completed at least one load attempt
+            }
         }
     };
 
@@ -250,7 +357,7 @@ const Orders = () => {
     };
 
     /**
-     * Update order in place without full reload
+     * Update order in place without full reload and sync filter if in detailed view
      */
     const updateOrderInPlace = (orderId, updates) => {
         setOrders(prevOrders => 
@@ -260,6 +367,20 @@ const Orders = () => {
                     : order
             )
         );
+
+        // If we're viewing this order in detail and status changed, sync the filter
+        if (selectedOrderId === orderId && updates.status && updates.status !== statusFilter && statusFilter !== 'all') {
+            console.log('🔄 Auto-syncing filter due to status update:', updates.status);
+            setStatusFilter(updates.status);
+        }
+    };
+
+    /**
+     * Refresh orders data (useful after file uploads, status changes, etc.)
+     */
+    const refreshOrders = async () => {
+        console.log('🔄 Refreshing orders data...');
+        await fetchOrders(true);
     };
 
     /**
@@ -287,6 +408,12 @@ const Orders = () => {
             await ApiService.updateOrderStatus(orderId, newStatus);
             
             console.log('✅ Order status updated successfully');
+            
+            // Refresh the orders to ensure data consistency
+            setTimeout(() => {
+                refreshOrders();
+            }, 500); // Small delay to allow for backend processing
+            
         } catch (err) {
             console.error('❌ Error updating order status:', err);
             
@@ -370,6 +497,11 @@ const Orders = () => {
                 
                 alert('Delivery files uploaded successfully!');
                 
+                // Refresh the orders to get updated data from backend
+                setTimeout(() => {
+                    refreshOrders();
+                }, 500); // Small delay to allow for backend processing
+                
             } catch (error) {
                 console.error('Error uploading delivery:', error);
                 
@@ -439,6 +571,11 @@ const Orders = () => {
                 
                 // In a real app, you would also send the revision reason to the seller
                 alert('Revision request sent to seller.');
+                
+                // Refresh the orders to ensure data consistency
+                setTimeout(() => {
+                    refreshOrders();
+                }, 500); // Small delay to allow for backend processing
                 
             } catch (error) {
                 console.error('Error requesting revision:', error);
@@ -541,22 +678,49 @@ const Orders = () => {
         </div>
     );
     /**
-     * Filter buttons data
+     * Filter buttons data with dynamic counts
      */
-    const statusFilters = [
-        { key: 'all', label: 'All', count: totalOrders },
-        { key: 'pending', label: 'Pending', count: 0 },
-        { key: 'in_progress', label: 'In Progress', count: 0 },
-        { key: 'delivered', label: 'Delivered', count: 0 },
-        { key: 'revision_requested', label: 'Needs Revision', count: 0 },
-        { key: 'completed', label: 'Completed', count: 0 },
-        { key: 'cancelled', label: 'Cancelled', count: 0 }
-    ];
+    const statusFilters = React.useMemo(() => {
+        // If we're on 'all' filter, use current orders for counts
+        if (statusFilter === 'all') {
+            const counts = orders.reduce((acc, order) => {
+                acc[order.status] = (acc[order.status] || 0) + 1;
+                return acc;
+            }, {});
+
+            return [
+                { key: 'all', label: 'All', count: orders.length },
+                { key: 'pending', label: 'Pending', count: counts.pending || 0 },
+                { key: 'in_progress', label: 'In Progress', count: counts.in_progress || 0 },
+                { key: 'delivered', label: 'Delivered', count: counts.delivered || 0 },
+                { key: 'revision_requested', label: 'Needs Revision', count: counts.revision_requested || 0 },
+                { key: 'completed', label: 'Completed', count: counts.completed || 0 },
+                { key: 'cancelled', label: 'Cancelled', count: counts.cancelled || 0 }
+            ];
+        } 
+        
+        // If we're on a specific filter, use cached counts if available, otherwise use current orders
+        const useCachedCounts = Object.keys(allOrdersCounts).length > 0;
+        const baseCounts = useCachedCounts ? allOrdersCounts : {};
+        
+        // For the current filter, use the actual current orders count
+        const currentFilterCount = orders.length;
+        
+        return [
+            { key: 'all', label: 'All', count: baseCounts.all || 0 },
+            { key: 'pending', label: 'Pending', count: statusFilter === 'pending' ? currentFilterCount : (baseCounts.pending || 0) },
+            { key: 'in_progress', label: 'In Progress', count: statusFilter === 'in_progress' ? currentFilterCount : (baseCounts.in_progress || 0) },
+            { key: 'delivered', label: 'Delivered', count: statusFilter === 'delivered' ? currentFilterCount : (baseCounts.delivered || 0) },
+            { key: 'revision_requested', label: 'Needs Revision', count: statusFilter === 'revision_requested' ? currentFilterCount : (baseCounts.revision_requested || 0) },
+            { key: 'completed', label: 'Completed', count: statusFilter === 'completed' ? currentFilterCount : (baseCounts.completed || 0) },
+            { key: 'cancelled', label: 'Cancelled', count: statusFilter === 'cancelled' ? currentFilterCount : (baseCounts.cancelled || 0) }
+        ];
+    }, [orders, statusFilter, allOrdersCounts]);
 
     
     if (authLoading) {
         return (
-            <div className="min-h-screen bg-gray-50" style={{ fontFamily: 'Inter, "Noto Sans", sans-serif' }}>
+            <div className="sticky-footer-page bg-gray-50" style={{ fontFamily: 'Inter, "Noto Sans", sans-serif' }}>
                 <div className="flex-1 flex items-center justify-center py-32">
                     <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-500"></div>
                 </div>
@@ -573,7 +737,7 @@ const Orders = () => {
     }
 
     return (
-        <div className="min-h-screen bg-gray-50" style={{ fontFamily: 'Inter, "Noto Sans", sans-serif' }}>
+        <div className="sticky-footer-page bg-gray-50" style={{ fontFamily: 'Inter, "Noto Sans", sans-serif' }}>
             {navBarComponent}
             
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pt-32">
@@ -635,7 +799,7 @@ const Orders = () => {
                                     setStatusFilter(filter.key);
                                     setSelectedOrderId(null);
                                 }}
-                                className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                                className={`px-4 py-2 rounded-full text-sm font-medium transition-colors relative ${
                                     statusFilter === filter.key
                                         ? 'bg-blue-600 text-white'
                                         : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-200'
@@ -643,7 +807,11 @@ const Orders = () => {
                             >
                                 {filter.label}
                                 {filter.count > 0 && (
-                                    <span className="ml-2 px-2 py-1 text-xs bg-gray-200 text-gray-700 rounded-full">
+                                    <span className={`ml-2 px-2 py-1 text-xs rounded-full ${
+                                        statusFilter === filter.key
+                                            ? 'bg-blue-500 text-white'
+                                            : 'bg-gray-200 text-gray-700'
+                                    }`}>
                                         {filter.count}
                                     </span>
                                 )}
@@ -682,6 +850,13 @@ const Orders = () => {
                                 ))}
                             </div>
                         )
+                    ) : !hasInitialLoad ? (
+                        // Show loading skeleton if we haven't completed initial load yet
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {Array.from({ length: 6 }).map((_, index) => (
+                                <OrderOverviewSkeleton key={index} />
+                            ))}
+                        </div>
                     ) : orders.length === 0 ? (
                         <div className="text-center py-12">
                             <div className="text-gray-400 text-6xl mb-4">
@@ -723,6 +898,7 @@ const Orders = () => {
                                                 onDeliveryUpload={handleDeliveryUpload}
                                                 onMessage={handleMessage}
                                                 onRevisionRequest={handleRevisionRequest}
+                                                onRefresh={refreshOrders} // Add refresh callback
                                                 getStatusColor={getStatusColor}
                                                 getStatusIcon={getStatusIcon}
                                                 // Loading states for each action

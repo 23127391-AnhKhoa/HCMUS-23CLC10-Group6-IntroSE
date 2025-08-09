@@ -271,7 +271,7 @@ const DashBoardSeller = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="sticky-footer-page bg-gray-50">
         <NavBarSeller />
         <div className="flex items-center justify-center min-h-screen">
           <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
@@ -282,7 +282,7 @@ const DashBoardSeller = () => {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="sticky-footer-page bg-gray-50">
         <NavBarSeller />
         <div className="flex items-center justify-center min-h-screen">
           <div className="text-center">
@@ -295,7 +295,7 @@ const DashBoardSeller = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="sticky-footer-page bg-gray-50">
       <NavBarSeller />
       
       {/* Toast Notification */}

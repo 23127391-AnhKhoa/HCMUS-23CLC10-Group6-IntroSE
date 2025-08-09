@@ -476,7 +476,7 @@ const EarningsPage = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="sticky-footer-page bg-gray-50">
         <NavBarSeller />
         <div className="pt-16">
           <div className="flex items-center justify-center h-96">
@@ -489,7 +489,7 @@ const EarningsPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="sticky-footer-page bg-gray-50">
       <NavBarSeller />
       
       <div className="pt-16">

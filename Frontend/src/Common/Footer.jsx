@@ -10,9 +10,9 @@ import {
 
 const Footer = () => {
   return (
-    <footer className="bg-gradient-to-r from-blue-900 to-slate-900 text-gray-300">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+    <footer className="w-full bg-gradient-to-r from-blue-900 to-slate-900 text-gray-300 mt-auto">
+      <div className="w-full mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-6xl mx-auto">
           {/* Cột 1: Logo và mô tả */}
           <div className="flex flex-col items-start">
             <div className="flex items-center mb-4">
@@ -73,8 +73,8 @@ const Footer = () => {
 
       {/* Bottom Section */}
       <div className="border-t border-slate-700 bg-slate-900">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="text-center">
+        <div className="w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <div className="text-center max-w-6xl mx-auto">
             <p className="text-gray-400 text-sm">
               &copy; {new Date().getFullYear()} Freeland. Developed by <span className="text-blue-400">Team 06</span>
             </p>
