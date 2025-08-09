@@ -22,10 +22,21 @@ class ApiService {
   }
 
   // Helper method to handle API responses
-  static async handleApiResponse(response) {
+  static async handleApiResponse(response, shouldLogoutOn403 = true) {
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
       const errorMessage = errorData.message || `HTTP ${response.status}: ${response.statusText}`;
+      
+      // Handle 403 errors (invalid/expired tokens)
+      if (response.status === 403 && shouldLogoutOn403) {
+        console.warn('🔐 Received 403 error, token might be invalid/expired');
+        // Clear localStorage to force re-authentication
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        // Reload the page to reset the app state
+        window.location.reload();
+      }
+      
       throw new Error(errorMessage);
     }
     

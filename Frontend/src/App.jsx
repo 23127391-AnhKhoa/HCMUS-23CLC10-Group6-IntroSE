@@ -35,6 +35,8 @@ import NotificationPage from './pages/NotificationPage';
 import ReportGigPage from './pages/ReportGigPage'; 
 
 function App() {
+  console.log('🔥 App.jsx is loading...');
+  
   return (
     <AuthProvider>
       <Router>

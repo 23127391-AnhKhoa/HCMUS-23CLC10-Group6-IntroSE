@@ -69,6 +69,7 @@ const SearchPage = () => {
     useEffect(() => {
         const queryFromUrl = searchParams.get('q');
         const categoryFromUrl = searchParams.get('category');
+        const subcategoryFromUrl = searchParams.get('subcategory');
         const pageFromUrl = searchParams.get('page');
         const sortFromUrl = searchParams.get('sort');
         const minPriceFromUrl = searchParams.get('minPrice');
@@ -77,7 +78,8 @@ const SearchPage = () => {
         
         console.log('[SearchPage] URL parameters changed:', { 
             query: queryFromUrl, 
-            category: categoryFromUrl, 
+            category: categoryFromUrl,
+            subcategory: subcategoryFromUrl,
             page: pageFromUrl,
             sort: sortFromUrl,
             minPrice: minPriceFromUrl,
@@ -94,6 +96,10 @@ const SearchPage = () => {
             setSelectedCategory(categoryFromUrl);
             // If category comes from URL and no search query, it's from navbar
             setCategoryFromNavbar(!queryFromUrl);
+        }
+        
+        if (subcategoryFromUrl !== null) {
+            setSelectedSubcategory(subcategoryFromUrl);
         }
         
         if (pageFromUrl !== null) {
@@ -152,6 +158,7 @@ const SearchPage = () => {
         // Remove empty parameters
         if (!newSearchParams.get('q')) newSearchParams.delete('q');
         if (!newSearchParams.get('category')) newSearchParams.delete('category');
+        if (!newSearchParams.get('subcategory')) newSearchParams.delete('subcategory');
         if (!newSearchParams.get('page') || newSearchParams.get('page') === '1') newSearchParams.delete('page');
         if (!newSearchParams.get('sort') || newSearchParams.get('sort') === 'relevance_desc') newSearchParams.delete('sort');
         if (!newSearchParams.get('minPrice')) newSearchParams.delete('minPrice');
@@ -265,11 +272,16 @@ const SearchPage = () => {
                 params.append('search', query.trim());
             }
 
-            // Use the categoryId parameter instead of the state to ensure proper filtering
-            if (categoryId) {
-                params.append('filter_by_category_id', categoryId);
-            } else if (selectedSubcategory) {
+            // Priority: Use subcategory if selected, otherwise use category
+            // Since gigs only have one category field, and subcategories are more specific
+            if (selectedSubcategory) {
                 params.append('filter_by_category_id', selectedSubcategory);
+                console.log('[SearchPage] 🎯 Filtering by SUBCATEGORY:', selectedSubcategory);
+            } else if (categoryId) {
+                params.append('filter_by_category_id', categoryId);
+                console.log('[SearchPage] 🎯 Filtering by CATEGORY:', categoryId);
+            } else {
+                console.log('[SearchPage] 🎯 No category filtering applied');
             }
 
             const searchUrl = `http://localhost:8000/api/gigs?${params}`;
@@ -402,55 +414,19 @@ const SearchPage = () => {
         });
     };
 
-    // Handle filter changes
-    useEffect(() => {
-        // Skip the initial load to avoid double search
-        if (isInitialLoad) return;
-        
-        // Reset pagination when filters change
-        setCurrentPage(1);
-        setTotalPages(1);
-        
-        // Update URL with new filter values
-        updateUrlParams({
-            q: searchQuery,
-            category: selectedCategory,
-            page: undefined, // Reset to page 1
-            sort: sort !== 'relevance_desc' ? sort : undefined,
-            minPrice: priceRange.min,
-            maxPrice: priceRange.max,
-            rating: ratingFilter
-        });
-    }, [selectedCategory, selectedSubcategory, sort, ratingFilter, isInitialLoad]);
+    // Handle filter changes - REMOVED: Conflicting useEffect that was causing double updates
+    // Now relying only on manual updateUrlParams calls in onChange handlers for immediate updates
 
-    // Handle category change - reset subcategory when parent category changes
+    // Handle category change - reset subcategory when parent category changes  
     useEffect(() => {
-        setSelectedSubcategory('');
-    }, [selectedCategory]);
+        // Only reset subcategory if we're not on initial load and category actually changed
+        if (!isInitialLoad && selectedCategory) {
+            console.log('[SearchPage] Category changed, clearing subcategory');
+            setSelectedSubcategory('');
+        }
+    }, [selectedCategory, isInitialLoad]);
 
-    // Handle price range changes with debounce
-    useEffect(() => {
-        const timer = setTimeout(() => {
-            if (isInitialLoad) return;
-            
-            // Reset pagination when price filter changes
-            setCurrentPage(1);
-            setTotalPages(1);
-            
-            // Update URL with new price range
-            updateUrlParams({
-                q: searchQuery,
-                category: selectedCategory,
-                page: undefined, // Reset to page 1
-                sort: sort !== 'relevance_desc' ? sort : undefined,
-                minPrice: priceRange.min,
-                maxPrice: priceRange.max,
-                rating: ratingFilter
-            });
-        }, 500); // 500ms debounce
 
-        return () => clearTimeout(timer);
-    }, [priceRange, isInitialLoad]);
 
     const renderGigCards = () => {
         if (loading) {
@@ -696,11 +672,13 @@ const SearchPage = () => {
                                             value={selectedCategory}
                                             onChange={(e) => {
                                                 setSelectedCategory(e.target.value);
+                                                setSelectedSubcategory(''); // Clear subcategory when category changes
                                                 setCategoryFromNavbar(false);
                                                 // Update URL immediately for category changes
                                                 updateUrlParams({
                                                     q: searchQuery,
                                                     category: e.target.value || undefined,
+                                                    subcategory: undefined, // Clear subcategory in URL
                                                     page: undefined,
                                                     sort: sort !== 'relevance_desc' ? sort : undefined,
                                                     minPrice: priceRange.min,
@@ -730,7 +708,8 @@ const SearchPage = () => {
                                                 // Update URL immediately for subcategory changes
                                                 updateUrlParams({
                                                     q: searchQuery,
-                                                    category: e.target.value || selectedCategory || undefined,
+                                                    category: selectedCategory, // Keep the parent category
+                                                    subcategory: e.target.value || undefined, // Set the subcategory
                                                     page: undefined,
                                                     sort: sort !== 'relevance_desc' ? sort : undefined,
                                                     minPrice: priceRange.min,

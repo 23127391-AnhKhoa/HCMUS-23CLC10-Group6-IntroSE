@@ -48,7 +48,7 @@ import StarRating from '../components/Reviews/StarRating';
 const ServCard = ({ gig, isPreview = false }) => {
     // Navigation hook for programmatic routing
     const navigate = useNavigate();
-    const { token, authUser } = useAuth();
+    const { token, authUser, logout } = useAuth();
     
     // State to track favorite status of the gig
     const [isFavorited, setIsFavorited] = useState(false);
@@ -91,6 +91,12 @@ const ServCard = ({ gig, isPreview = false }) => {
                 },
             });
 
+            if (response.status === 403) {
+                console.warn('🔐 Token is invalid/expired, logging out...');
+                logout();
+                return;
+            }
+
             if (response.ok) {
                 const data = await response.json();
                 if (data.status === 'success') {
@@ -126,6 +132,12 @@ const ServCard = ({ gig, isPreview = false }) => {
                 },
                 body: JSON.stringify({ gig_id: gigData.id }),
             });
+
+            if (response.status === 403) {
+                console.warn('🔐 Token is invalid/expired during favorite toggle, logging out...');
+                logout();
+                return;
+            }
 
             if (response.ok) {
                 const data = await response.json();
