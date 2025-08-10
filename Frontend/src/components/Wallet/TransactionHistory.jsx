@@ -59,11 +59,11 @@ const TransactionHistory = ({ token, refreshTrigger }) => {
       title: 'Type',
       dataIndex: 'type',
       key: 'type',
-      width: 130,
+      width: 180,
       render: (type) => (
         <Tag 
-          icon={type === 'deposit' ? <ArrowDownOutlined /> : <ArrowUpOutlined />}
-          color={type === 'deposit' ? 'green' : 'blue'}
+          icon={type === 'deposit' || type === 'received_payment' ? <ArrowDownOutlined /> : <ArrowUpOutlined />}
+          color={type === 'deposit' || type === 'received_payment' ? 'green' : 'blue'}
         >
           {type.toUpperCase()}
         </Tag>
@@ -75,7 +75,7 @@ const TransactionHistory = ({ token, refreshTrigger }) => {
       key: 'amount',
       width: 120,
       render: (amount, record) => (
-        <span className={record.type === 'deposit' ? 'text-green-600 font-semibold' : 'text-blue-600 font-semibold'}>
+        <span className={record.type === 'deposit' || record.type === 'received_payment' ? 'text-green-600 font-semibold' : 'text-blue-600 font-semibold'}>
           {record.type === 'deposit' ? '+' : '-'}${parseFloat(amount).toFixed(2)}
         </span>
       ),
