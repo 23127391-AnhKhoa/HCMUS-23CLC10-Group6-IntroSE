@@ -23,6 +23,8 @@ import OrderCard from '../components/OrderCard/OrderCard';
 import OrderOverviewCard from '../components/OrderOverviewCard/OrderOverviewCard';
 import { useAuth } from '../contexts/AuthContext';
 import ApiService from '../services/apiService';
+import AlertModal from '../components/AlertModal';
+import InputModal from '../components/InputModal';
 
 /**
  * Orders component for managing user orders
@@ -41,6 +43,19 @@ const Orders = () => {
     const [statusFilter, setStatusFilter] = useState('all');
     const [selectedOrderId, setSelectedOrderId] = useState(null);
     const [hasInitialLoad, setHasInitialLoad] = useState(false); // Track if we've completed initial load
+    // Alert modal state
+    const [alertState, setAlertState] = useState({
+        open: false,
+        title: '',
+        message: '',
+        type: 'info'
+    });
+    const showAlert = (title, message, type = 'info') => setAlertState({ open: true, title, message, type });
+    const closeAlert = () => setAlertState(prev => ({ ...prev, open: false }));
+
+    // Input modals state
+    const [deliveryModal, setDeliveryModal] = useState({ open: false, order: null });
+    const [revisionModal, setRevisionModal] = useState({ open: false, order: null });
 
     // Separate loading states for different actions
     const [actionLoadings, setActionLoadings] = useState({
@@ -402,28 +417,28 @@ const Orders = () => {
             // Set loading state for this specific order
             setActionLoading('statusUpdate', orderId, true);
             
-            // Optimistic update - update UI immediately
-            updateOrderInPlace(orderId, { status: newStatus });
-            
             await ApiService.updateOrderStatus(orderId, newStatus);
             
             console.log('✅ Order status updated successfully');
             
-            // Refresh the orders to ensure data consistency
-            setTimeout(() => {
-                refreshOrders();
-            }, 500); // Small delay to allow for backend processing
+            // If the user is on a specific status filter and the order moved to a different status,
+            // switch the filter to the new status so the order doesn't "disappear" on refresh.
+            // If the user is on 'all', keep it as 'all'.
+            const shouldSwitchFilter = statusFilter !== 'all' && statusFilter !== newStatus;
+            if (shouldSwitchFilter) {
+                setStatusFilter(newStatus);
+                // Changing statusFilter triggers fetchOrders via useEffect, so no manual refresh needed
+            } else {
+                // Otherwise, refresh to ensure data consistency
+                setTimeout(() => {
+                    refreshOrders();
+                }, 500); // Small delay to allow for backend processing
+            }
             
         } catch (err) {
             console.error('❌ Error updating order status:', err);
             
-            // Revert optimistic update on error
-            const originalOrder = orders.find(order => order.id === orderId);
-            if (originalOrder) {
-                updateOrderInPlace(orderId, { status: originalOrder.status });
-            }
-            
-            alert(`Error updating order status: ${err.message}`);
+            showAlert('Error updating order status', `${err.message}`, 'error');
         } finally {
             setActionLoading('statusUpdate', orderId, false);
         }
@@ -453,7 +468,7 @@ const Orders = () => {
             console.log('Orders data updated after file download');
         } catch (error) {
             console.error('Error during file download:', error);
-            alert(`Error downloading file: ${error.message}`);
+            showAlert('Error downloading file', `${error.message}`, 'error');
         } finally {
             setActionLoading('fileDownload', orderId, false);
         }
@@ -465,7 +480,15 @@ const Orders = () => {
     const handleDeliveryUpload = async (order) => {
         console.log('📤 Uploading delivery for order:', order.id);
         
-        // Create file input element
+        // Ask for an optional delivery message via modal, then pick files
+        setDeliveryModal({ open: true, order });
+    };
+
+    // After user enters delivery message in modal, proceed to file picking and upload
+    const handleDeliverySubmit = async (deliveryMessage) => {
+        const order = deliveryModal.order;
+        setDeliveryModal({ open: false, order: null });
+
         const fileInput = document.createElement('input');
         fileInput.type = 'file';
         fileInput.multiple = true;
@@ -479,28 +502,18 @@ const Orders = () => {
                 // Set loading state for this specific order
                 setActionLoading('deliveryUpload', order.id, true);
                 
-                // Add delivery message
-                const deliveryMessage = prompt('Add a message for the delivery (optional):');
-                
                 // Convert FileList to Array
                 const fileArray = Array.from(files);
                 
-                // Upload files using ApiService
+                // Upload files using ApiService (no automatic status change)
                 await ApiService.uploadDeliveryFiles(order.id, fileArray, deliveryMessage || '');
+
+                showAlert('Delivery uploaded', 'Delivery files uploaded successfully!', 'success');
                 
-                // Update order status optimistically
-                updateOrderInPlace(order.id, { 
-                    status: 'delivered',
-                    delivery_message: deliveryMessage || '',
-                    delivery_files: fileArray.map(file => ({ name: file.name }))
-                });
-                
-                alert('Delivery files uploaded successfully!');
-                
-                // Refresh the orders to get updated data from backend
+                // After successful upload, just refresh to see attached files (do not change status automatically)
                 setTimeout(() => {
                     refreshOrders();
-                }, 500); // Small delay to allow for backend processing
+                }, 500);
                 
             } catch (error) {
                 console.error('Error uploading delivery:', error);
@@ -518,8 +531,8 @@ const Orders = () => {
                     errorMessage = error.message;
                 }
                 
-                alert(errorMessage);
-            } finally {
+                showAlert('Upload failed', errorMessage, 'error');
+        } finally {
                 setActionLoading('deliveryUpload', order.id, false);
             }
         };
@@ -545,7 +558,7 @@ const Orders = () => {
             }
         } catch (error) {
             console.error('Error creating conversation:', error);
-            alert(`Error creating conversation: ${error.message}`);
+            showAlert('Chat error', `${error.message}`, 'error');
             // Fallback to general inbox
             navigate(`/inbox?order=${order.id}`);
         }
@@ -557,34 +570,41 @@ const Orders = () => {
     const handleRevisionRequest = async (order) => {
         console.log('🔄 Requesting revision for order:', order.id);
         
-        const revisionReason = prompt('Please specify what needs to be revised:');
-        if (revisionReason && revisionReason.trim()) {
+        setRevisionModal({ open: true, order });
+    };
+
+    const handleRevisionSubmit = async (revisionReasonRaw) => {
+        const order = revisionModal.order;
+        setRevisionModal({ open: false, order: null });
+
+        const revisionReason = (revisionReasonRaw || '').trim();
+        if (revisionReason) {
             try {
                 // Set loading state for this specific order
                 setActionLoading('revisionRequest', order.id, true);
-                
-                // Optimistic update
-                updateOrderInPlace(order.id, { status: 'revision_requested' });
                 
                 // Update status to revision_requested
                 await ApiService.updateOrderStatus(order.id, 'revision_requested');
                 
                 // In a real app, you would also send the revision reason to the seller
-                alert('Revision request sent to seller.');
+                showAlert('Revision requested', 'Revision request sent to seller.', 'success');
                 
-                // Refresh the orders to ensure data consistency
-                setTimeout(() => {
-                    refreshOrders();
-                }, 500); // Small delay to allow for backend processing
+                // Keep the order visible by switching filter if necessary
+                const newStatus = 'revision_requested';
+                const shouldSwitchFilter = statusFilter !== 'all' && statusFilter !== newStatus;
+                if (shouldSwitchFilter) {
+                    setStatusFilter(newStatus);
+                } else {
+                    setTimeout(() => {
+                        refreshOrders();
+                    }, 500);
+                }
                 
             } catch (error) {
                 console.error('Error requesting revision:', error);
                 
-                // Revert optimistic update on error
-                updateOrderInPlace(order.id, { status: order.status });
-                
-                alert(`Error requesting revision: ${error.message}`);
-            } finally {
+                showAlert('Revision request failed', `${error.message}`, 'error');
+        } finally {
                 setActionLoading('revisionRequest', order.id, false);
             }
         }
@@ -987,6 +1007,37 @@ const Orders = () => {
                     </div>
                 )}
             </div>
+
+            {/* Alerts */}
+            <AlertModal
+                isOpen={alertState.open}
+                title={alertState.title}
+                message={alertState.message}
+                type={alertState.type}
+                onClose={closeAlert}
+            />
+
+            {/* Input modals */}
+            <InputModal
+                isOpen={deliveryModal.open}
+                title="Add delivery message (optional)"
+                placeholder="Type a short note about your delivery..."
+                defaultValue=""
+                confirmText="Continue"
+                onClose={() => setDeliveryModal({ open: false, order: null })}
+                onSubmit={handleDeliverySubmit}
+            />
+
+            <InputModal
+                isOpen={revisionModal.open}
+                title="Request a revision"
+                message="Please specify what needs to be revised."
+                placeholder="Describe the changes you want..."
+                defaultValue=""
+                confirmText="Send Request"
+                onClose={() => setRevisionModal({ open: false, order: null })}
+                onSubmit={handleRevisionSubmit}
+            />
 
             <Footer />
 

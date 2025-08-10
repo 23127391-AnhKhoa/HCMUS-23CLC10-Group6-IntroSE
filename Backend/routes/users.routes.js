@@ -66,6 +66,16 @@ router.get('/:sellerId/earnings/recent-orders', authenticateToken, EarningsContr
  * @param {number} [months=12] - Number of months to include
  */
 router.get('/:sellerId/earnings/monthly', authenticateToken, EarningsController.getMonthlyEarnings);
+
+/**
+ * @route GET /api/users/:sellerId/earnings/daily
+ * @desc Get daily earnings breakdown for charts
+ * @access Private (Seller only)
+ * @param {string} sellerId - Seller UUID
+ * @param {number} [days=30] - Number of days to include
+ */
+router.get('/:sellerId/earnings/daily', authenticateToken, EarningsController.getDailyEarnings);
+
 // ========== Fetch user info endpoints ==========
 
 // GET /api/users/:id - Lấy user theo ID
