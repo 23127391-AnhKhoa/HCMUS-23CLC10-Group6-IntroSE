@@ -8,58 +8,51 @@ import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, AreaChart,
 
 const EarningsPage = () => {
   const { authUser, token } = useAuth();
-  const [earnings, setEarnings] = useState(() => {
-    // Try to load from localStorage first
-    const savedEarnings = localStorage.getItem('seller-earnings');
-    return savedEarnings ? JSON.parse(savedEarnings) : {
-      totalEarnings: 0,
-      thisMonth: 0,
-      lastMonth: 0,
-      thisWeek: 0,
-      availableForWithdraw: 0,
-      pending: 0
-    };
-  });
-  const [recentTransactions, setRecentTransactions] = useState(() => {
-    const savedTransactions = localStorage.getItem('seller-transactions');
-    return savedTransactions ? JSON.parse(savedTransactions) : [];
-  });
-  const [monthlyEarnings, setMonthlyEarnings] = useState(() => {
-    const savedMonthly = localStorage.getItem('seller-monthly-earnings');
-    return savedMonthly ? JSON.parse(savedMonthly) : [];
-  });
-  const [dailyEarnings, setDailyEarnings] = useState(() => {
-    const savedDaily = localStorage.getItem('seller-daily-earnings');
-    return savedDaily ? JSON.parse(savedDaily) : [];
-  });
+  const emptyEarnings = { totalEarnings: 0, thisMonth: 0, lastMonth: 0, thisWeek: 0, availableForWithdraw: 0, pending: 0 };
+  const [earnings, setEarnings] = useState(emptyEarnings);
+  const [recentTransactions, setRecentTransactions] = useState([]);
+  const [monthlyEarnings, setMonthlyEarnings] = useState([]);
+  const [dailyEarnings, setDailyEarnings] = useState([]);
   const [loading, setLoading] = useState(false); // Changed to false to show cached data immediately
   const [selectedPeriod, setSelectedPeriod] = useState('all');
   const [chartType, setChartType] = useState('area'); // 'area' or 'line'
   const [timeframe, setTimeframe] = useState('month'); // 'day' or 'month'
 
   useEffect(() => {
-    if (authUser?.uuid) {
-      // Check if we have cached data, if not, show loading
-      const hasData = localStorage.getItem('seller-earnings') && 
-                     localStorage.getItem('seller-transactions') && 
-                     localStorage.getItem('seller-monthly-earnings') &&
-                     localStorage.getItem('seller-daily-earnings');
-      
-      if (!hasData) {
-        setLoading(true);
-      }
-      
+    const sellerId = authUser?.uuid;
+    if (sellerId) {
+      const k = (b) => `${b}:${sellerId}`;
+      // Try to hydrate from per-user cache
+      const cachedEarnings = localStorage.getItem(k('seller-earnings'));
+      const cachedTx = localStorage.getItem(k('seller-transactions'));
+      const cachedMonthly = localStorage.getItem(k('seller-monthly-earnings'));
+      const cachedDaily = localStorage.getItem(k('seller-daily-earnings'));
+
+      if (cachedEarnings) setEarnings(JSON.parse(cachedEarnings)); else setEarnings(emptyEarnings);
+      if (cachedTx) setRecentTransactions(JSON.parse(cachedTx)); else setRecentTransactions([]);
+      if (cachedMonthly) setMonthlyEarnings(JSON.parse(cachedMonthly)); else setMonthlyEarnings([]);
+      if (cachedDaily) setDailyEarnings(JSON.parse(cachedDaily)); else setDailyEarnings([]);
+
+      const hasData = cachedEarnings && cachedTx && cachedMonthly && cachedDaily;
+      if (!hasData) setLoading(true);
       fetchEarningsData();
+    } else {
+      // No user -> reset state
+      setEarnings(emptyEarnings);
+      setRecentTransactions([]);
+      setMonthlyEarnings([]);
+      setDailyEarnings([]);
     }
   }, [selectedPeriod, authUser?.uuid]);
 
   // Clean up localStorage when user changes
   useEffect(() => {
     if (!authUser) {
-      localStorage.removeItem('seller-earnings');
-      localStorage.removeItem('seller-transactions');
-      localStorage.removeItem('seller-monthly-earnings');
-      localStorage.removeItem('seller-daily-earnings');
+      // Optional: do not clear other users' caches; just reset in-memory state
+      setEarnings(emptyEarnings);
+      setRecentTransactions([]);
+      setMonthlyEarnings([]);
+      setDailyEarnings([]);
     }
   }, [authUser]);
 
@@ -133,12 +126,12 @@ const EarningsPage = () => {
         availableForWithdraw: earningsData.availableBalance || 0,
         pending: pendingOrdersTotal
       };
-      localStorage.setItem('seller-earnings', JSON.stringify(finalEarningsData));
+  localStorage.setItem(`seller-earnings:${sellerId}`, JSON.stringify(finalEarningsData));
 
       // Use monthly breakdown from API
       if (earningsData.monthlyBreakdown) {
         setMonthlyEarnings(earningsData.monthlyBreakdown);
-        localStorage.setItem('seller-monthly-earnings', JSON.stringify(earningsData.monthlyBreakdown));
+  localStorage.setItem(`seller-monthly-earnings:${sellerId}`, JSON.stringify(earningsData.monthlyBreakdown));
       }
 
       // Generate daily earnings data for the last 30 days
@@ -152,8 +145,11 @@ const EarningsPage = () => {
             },
           });
 
+          console.log(`[DEBUG] Daily earnings API response for user ${sellerId}:`, dailyResponse.status);
+
           if (dailyResponse.ok) {
             const dailyResult = await dailyResponse.json();
+            console.log(`[DEBUG] Daily earnings data for user ${sellerId}:`, dailyResult.data?.length, 'records');
             if (dailyResult.data && dailyResult.data.length > 0) {
               // Normalize API data to ensure unique date keys and consistent fields
               const normalized = dailyResult.data.map((item, idx, arr) => {
@@ -206,75 +202,82 @@ const EarningsPage = () => {
               });
 
               setDailyEarnings(normalized);
-              localStorage.setItem('seller-daily-earnings', JSON.stringify(normalized));
+              localStorage.setItem(`seller-daily-earnings:${sellerId}`, JSON.stringify(normalized));
               return;
             }
           }
 
-          // Fallback: Generate daily data from transactions
-          const last30Days = [];
-          const today = new Date();
+          // Fallback: Try to calculate daily data from completed orders for this specific user
+          console.log(`[DEBUG] Daily API failed, attempting fallback for user ${sellerId}`);
           
-          for (let i = 29; i >= 0; i--) {
-            const date = new Date(today);
-            date.setDate(today.getDate() - i);
-            // Use local date string instead of UTC
-            const year = date.getFullYear();
-            const month = String(date.getMonth() + 1).padStart(2, '0');
-            const day = String(date.getDate()).padStart(2, '0');
-            const dateString = `${year}-${month}-${day}`;
+          try {
+            // Fetch completed orders specifically for this user to calculate daily earnings
+            const completedOrdersResponse = await fetch(`http://localhost:8000/api/orders/owner/${sellerId}?status=completed&limit=100`, {
+              headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json',
+              },
+            });
+
+            let userDailyData = [];
             
-            last30Days.push({
-              date: dateString,
-              day: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-              earnings: 0,
-              index: 29 - i, // Add index for better positioning
-              timestamp: date.getTime() // Add unique timestamp
-            });
-          }
-
-          // If we have recent transactions, calculate daily earnings from them
-          if (recentTransactions.length > 0) {
-            recentTransactions.forEach(transaction => {
-              // Parse transaction date in user's timezone
-              const transactionDate = new Date(transaction.created_at);
-              const year = transactionDate.getFullYear();
-              const month = String(transactionDate.getMonth() + 1).padStart(2, '0');
-              const day = String(transactionDate.getDate()).padStart(2, '0');
-              const localDateString = `${year}-${month}-${day}`;
+            if (completedOrdersResponse.ok) {
+              const completedOrdersData = await completedOrdersResponse.json();
+              const completedOrders = completedOrdersData.data || [];
+              console.log(`[DEBUG] Found ${completedOrders.length} completed orders for user ${sellerId}`);
               
-              const dayData = last30Days.find(day => day.date === localDateString);
-              if (dayData) {
-                const amount = parseFloat(transaction.amount) || 0;
-                // Prevent unrealistic spikes in data
-                if (amount > 0 && amount < 10000) { // Cap at $10k per transaction
-                  dayData.earnings += amount;
-                }
+              // Calculate daily earnings from user's completed orders
+              const dailyMap = {};
+              
+              completedOrders.forEach(order => {
+                const completedDate = new Date(order.completed_at || order.created_at);
+                const year = completedDate.getFullYear();
+                const month = String(completedDate.getMonth() + 1).padStart(2, '0');
+                const day = String(completedDate.getDate()).padStart(2, '0');
+                const dateKey = `${year}-${month}-${day}`;
+                
+                const earnings = parseFloat(order.price_at_purchase) || 0;
+                dailyMap[dateKey] = (dailyMap[dateKey] || 0) + earnings;
+              });
+
+              // Generate last 30 days with actual user earnings
+              const last30Days = [];
+              const today = new Date();
+              
+              for (let i = 29; i >= 0; i--) {
+                const date = new Date(today);
+                date.setDate(today.getDate() - i);
+                const year = date.getFullYear();
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const day = String(date.getDate()).padStart(2, '0');
+                const dateString = `${year}-${month}-${day}`;
+                
+                last30Days.push({
+                  date: dateString,
+                  day: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+                  earnings: dailyMap[dateString] || 0,
+                  uniqueKey: `${dateString}-${i}`
+                });
               }
-            });
-          } else {
-            // Generate sample data for demonstration
-            last30Days.forEach((day, index) => {
-              if (Math.random() > 0.7) { // 30% chance of earnings on any given day
-                day.earnings = Math.random() * 200 + 50; // Random earnings between $50-$250
-              }
-            });
-            // Generated sample daily data
+
+              userDailyData = last30Days.sort((a, b) => new Date(a.date) - new Date(b.date));
+              console.log(`[DEBUG] Generated ${userDailyData.length} daily records for user ${sellerId}, total: $${userDailyData.reduce((sum, d) => sum + d.earnings, 0)}`);
+              
+            } else {
+              // If even completed orders fail, show empty data but don't cache it
+              console.log(`[DEBUG] Unable to fetch completed orders for user ${sellerId}, using empty daily data`);
+              userDailyData = [];
+            }
+
+            setDailyEarnings(userDailyData);
+            if (userDailyData.length > 0) {
+              localStorage.setItem(`seller-daily-earnings:${sellerId}`, JSON.stringify(userDailyData));
+            }
+            
+          } catch (fallbackError) {
+            console.error(`[DEBUG] Fallback daily calculation failed for user ${sellerId}:`, fallbackError);
+            setDailyEarnings([]);
           }
-
-          // Sort the array to ensure proper chronological order
-          last30Days.sort((a, b) => a.timestamp - b.timestamp);
-
-          // Clean data structure for chart (remove helper fields)
-          const cleanData = last30Days.map(({ date, day, earnings }, index) => ({ 
-            date, 
-            day, 
-            earnings: Number(earnings) || 0,
-            uniqueKey: `${date}-${index}` // Add unique key for each data point
-          }));
-
-          setDailyEarnings(cleanData);
-          localStorage.setItem('seller-daily-earnings', JSON.stringify(cleanData));
           // Daily earnings data generated
         } catch (error) {
           // Error generating daily earnings
@@ -284,7 +287,7 @@ const EarningsPage = () => {
       await generateDailyEarnings();
 
       // Fetch transactions with type received_payment
-  // Fetching received_payment transactions
+      console.log(`[DEBUG] Fetching transactions for user ${sellerId}`);
       const transactionsResponse = await fetch(`http://localhost:8000/api/transactions/user/${sellerId}?transaction_type=received_payment&limit=10`, {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -296,7 +299,7 @@ const EarningsPage = () => {
 
       if (transactionsResponse.ok) {
         const transactionsData = await transactionsResponse.json();
-  // Transactions data received
+        console.log(`[DEBUG] Transactions received for user ${sellerId}:`, transactionsData.data?.length, 'transactions');
         
         const transactions = (transactionsData.data || []).map(transaction => ({
           transaction_type: transaction.transaction_type,
@@ -308,7 +311,7 @@ const EarningsPage = () => {
         }));
         
         setRecentTransactions(transactions);
-        localStorage.setItem('seller-transactions', JSON.stringify(transactions));
+  localStorage.setItem(`seller-transactions:${sellerId}`, JSON.stringify(transactions));
   // Set transactions from transactions API
       } else {
   // Transactions API failed, trying alternative endpoint
@@ -337,7 +340,7 @@ const EarningsPage = () => {
           }));
           
           setRecentTransactions(transactions);
-          localStorage.setItem('seller-transactions', JSON.stringify(transactions));
+          localStorage.setItem(`seller-transactions:${sellerId}`, JSON.stringify(transactions));
           // Set transactions from alternative API
         } else {
           // Both transactions APIs failed, falling back to completed orders
@@ -364,7 +367,7 @@ const EarningsPage = () => {
             }));
             
             setRecentTransactions(transactions);
-            localStorage.setItem('seller-transactions', JSON.stringify(transactions));
+            localStorage.setItem(`seller-transactions:${sellerId}`, JSON.stringify(transactions));
             // Set transactions from completed orders fallback
           } else {
             // All transaction endpoints failed
@@ -379,6 +382,30 @@ const EarningsPage = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Clear per-user cached earnings and transactions, reset state, then refetch
+  const clearCacheForCurrentUser = async () => {
+    const sellerId = authUser?.uuid;
+    if (!sellerId) return;
+
+    const keys = [
+      `seller-earnings:${sellerId}`,
+      `seller-transactions:${sellerId}`,
+      `seller-monthly-earnings:${sellerId}`,
+      `seller-daily-earnings:${sellerId}`
+    ];
+
+    keys.forEach((k) => localStorage.removeItem(k));
+
+    // Reset in-memory state so UI reflects cleared cache immediately
+    setEarnings(emptyEarnings);
+    setRecentTransactions([]);
+    setMonthlyEarnings([]);
+    setDailyEarnings([]);
+
+    // Fetch fresh data from server
+    await fetchEarningsData();
   };
 
   const calculateEarnings = (orders) => {
@@ -402,7 +429,8 @@ const EarningsPage = () => {
     const monthlyData = {};
     
     orders.forEach(order => {
-      if (order.seller_id === authUser?.id) {
+      const currentUserId = authUser?.uuid || authUser?.id;
+      if (order.seller_id === currentUserId) {
         const orderDate = new Date(order.created_at);
         const orderMonth = orderDate.getMonth();
         const orderYear = orderDate.getFullYear();
@@ -516,9 +544,22 @@ const EarningsPage = () => {
       <div className="pt-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           {/* Header */}
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold text-gray-900">Earnings Dashboard</h1>
-            <p className="text-gray-600 mt-2">Track your income and financial performance</p>
+          <div className="mb-8 flex items-start justify-between gap-4">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">Earnings Dashboard</h1>
+              <p className="text-gray-600 mt-2">Track your income and financial performance</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={clearCacheForCurrentUser}
+                disabled={loading}
+                className="px-3 py-2 text-sm rounded-md border border-gray-300 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                title="Clear stored earnings data for this account and reload"
+              >
+                Clear Cache
+              </button>
+            </div>
           </div>
 
           {/* Stats Cards */}
@@ -602,14 +643,26 @@ const EarningsPage = () => {
                       const chartData = timeframe === 'month' ? monthlyEarnings : dailyEarnings;
                       const dataKey = timeframe === 'month' ? 'month' : 'date';
                       
-                      // Debug the data structure
+                      // Debug the chart data to ensure it's user-specific
                       if (timeframe === 'day') {
-                        // Daily chart data debug removed
+                        console.log(`[DEBUG] Daily chart data for user ${authUser?.uuid}:`, {
+                          dataLength: chartData.length,
+                          totalEarnings: chartData.reduce((sum, item) => sum + (item.earnings || 0), 0),
+                          nonZeroDays: chartData.filter(item => item.earnings > 0).length,
+                          sampleData: chartData.filter(item => item.earnings > 0).slice(0, 3)
+                        });
                         
-                        // Check for data integrity issues
+                        // Check for data integrity issues in daily data
                         chartData.forEach((item, index) => {
                           if (!item || typeof item.day === 'undefined' || typeof item.earnings === 'undefined') {
-                            // Invalid data at index
+                            console.warn(`[DEBUG] Invalid daily data at index ${index}:`, item);
+                          }
+                        });
+                      } else {
+                        // Monthly data validation
+                        chartData.forEach((item, index) => {
+                          if (!item || typeof item.month === 'undefined' || typeof item.earnings === 'undefined') {
+                            console.warn(`[DEBUG] Invalid monthly data at index ${index}:`, item);
                           }
                         });
                       }
@@ -779,12 +832,19 @@ const EarningsPage = () => {
                       </div>
                     ) : (
                       <div className="space-y-2">
-                        {dailyEarnings.filter(day => day.earnings > 0).slice(-5).reverse().map((day, index) => (
-                          <div key={index} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                            <span className="font-medium text-gray-900">{day.day}</span>
-                            <span className="font-semibold text-green-600">${day.earnings.toFixed(2)}</span>
+                        {dailyEarnings.filter(day => day.earnings > 0).length > 0 ? (
+                          dailyEarnings.filter(day => day.earnings > 0).slice(-5).reverse().map((day, index) => (
+                            <div key={index} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                              <span className="font-medium text-gray-900">{day.day}</span>
+                              <span className="font-semibold text-green-600">${day.earnings.toFixed(2)}</span>
+                            </div>
+                          ))
+                        ) : (
+                          <div className="text-center py-6 bg-gray-50 rounded-lg">
+                            <p className="text-gray-500 text-sm">No daily earnings in the last 30 days</p>
+                            <p className="text-xs text-gray-400 mt-1">Complete orders to see daily activity</p>
                           </div>
-                        ))}
+                        )}
                       </div>
                     )}
                   </div>
