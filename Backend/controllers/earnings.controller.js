@@ -385,7 +385,37 @@ const getDailyEarnings = async (req, res) => {
 
     console.log('📅 Date range:', { startDate, endDate });
 
-    // Get completed orders for this seller using a direct Supabase query
+    // First get all gigs owned by this seller
+    const { data: sellerGigs, error: gigsError } = await require('../config/supabaseClient')
+      .from('Gigs')
+      .select('id')
+      .eq('owner_id', sellerId);
+
+    if (gigsError) {
+      throw new Error('Failed to fetch seller gigs: ' + gigsError.message);
+    }
+
+    if (!sellerGigs || sellerGigs.length === 0) {
+      console.log('💡 [DEBUG] No gigs found for seller', sellerId);
+      return res.status(200).json({
+        status: 'success',
+        data: [],
+        meta: {
+          sellerId,
+          days: parseInt(days),
+          dateRange: {
+            start: startDate.toISOString(),
+            end: endDate.toISOString()
+          },
+          message: 'No gigs found for this seller'
+        }
+      });
+    }
+
+    const gigIds = sellerGigs.map(gig => gig.id);
+    console.log('🎯 [DEBUG] Found', gigIds.length, 'gigs for seller', sellerId);
+
+    // Now get completed orders for these specific gigs
     const { data: orders, error } = await require('../config/supabaseClient')
       .from('Orders')
       .select(`
@@ -400,16 +430,43 @@ const getDailyEarnings = async (req, res) => {
       .eq('status', 'completed')
       .gte('completed_at', startDate.toISOString())
       .lte('completed_at', endDate.toISOString())
-      .eq('Gigs.owner_id', sellerId);
+      .in('gig_id', gigIds);
 
     if (error) {
       throw new Error('Failed to fetch orders: ' + error.message);
     }
 
     console.log('📦 Found orders:', orders?.length || 0);
+    if (orders && orders.length > 0) {
+      console.log('🔍 [DEBUG] Sample order for seller', sellerId, ':', {
+        orderId: orders[0].id,
+        gigId: orders[0].gig_id,
+        gigOwnerId: orders[0].Gigs?.owner_id,
+        price: orders[0].price_at_purchase,
+        completedAt: orders[0].completed_at
+      });
+    }
+    
+    // If no orders found for this user, return empty array instead of 30 days of zeros
+    if (!orders || orders.length === 0) {
+      console.log('💡 [DEBUG] No orders found for user, returning empty daily data');
+      return res.status(200).json({
+        status: 'success',
+        data: [], // Return empty array instead of 30 days of zeros
+        meta: {
+          sellerId,
+          days: parseInt(days),
+          dateRange: {
+            start: startDate.toISOString(),
+            end: endDate.toISOString()
+          },
+          message: 'No completed orders found in the specified period'
+        }
+      });
+    }
 
-    // Generate daily earnings data
-    const dailyData = generateDailyEarningsData(orders || [], parseInt(days));
+    // Generate daily earnings data only if we have orders
+    const dailyData = generateDailyEarningsData(orders, parseInt(days));
 
     res.status(200).json({
       status: 'success',
@@ -441,37 +498,54 @@ const getDailyEarnings = async (req, res) => {
  * @returns {Array} Array of daily earnings data
  */
 const generateDailyEarningsData = (orders, daysCount = 30) => {
+  // If no orders provided, return empty array instead of generating fake zero data
+  if (!orders || orders.length === 0) {
+    console.log('💡 [DEBUG] No orders provided to generateDailyEarningsData, returning empty array');
+    return [];
+  }
+
   const dailyData = [];
   const now = new Date();
 
+  // Only generate data for days that actually have earnings
+  const dailyMap = {};
+  
+  // First, map all orders to their dates
+  orders.forEach(order => {
+    if (order.status === 'completed') {
+      const orderDate = new Date(order.completed_at || order.created_at);
+      const dateKey = orderDate.toISOString().split('T')[0];
+      
+      if (!dailyMap[dateKey]) {
+        dailyMap[dateKey] = {
+          earnings: 0,
+          orders: 0,
+          day: orderDate.toLocaleDateString('en-US', { weekday: 'short' })
+        };
+      }
+      
+      dailyMap[dateKey].earnings += parseFloat(order.price_at_purchase) || 0;
+      dailyMap[dateKey].orders += 1;
+    }
+  });
+
+  // Generate the last 30 days, but only include days with actual earnings
   for (let i = daysCount - 1; i >= 0; i--) {
     const dayDate = new Date(now.getTime() - (i * 24 * 60 * 60 * 1000));
-    const nextDayDate = new Date(dayDate.getTime() + (24 * 60 * 60 * 1000));
+    const dateKey = dayDate.toISOString().split('T')[0];
     
-    // Set to start and end of day
-    const dayStart = new Date(dayDate.getFullYear(), dayDate.getMonth(), dayDate.getDate(), 0, 0, 0);
-    const dayEnd = new Date(dayDate.getFullYear(), dayDate.getMonth(), dayDate.getDate(), 23, 59, 59);
-
-    // Filter orders for this day
-    const dayOrders = orders.filter(order => {
-      const orderDate = new Date(order.completed_at || order.created_at);
-      return orderDate >= dayStart && orderDate <= dayEnd && 
-             order.status === 'completed';
-    });
-
-    // Calculate earnings for this day
-    const dayEarnings = dayOrders.reduce((sum, order) => 
-      sum + (parseFloat(order.price_at_purchase) || 0), 0
-    );
-
-    dailyData.push({
-      date: dayDate.toISOString().split('T')[0], // YYYY-MM-DD format
-      earnings: Math.round(dayEarnings * 100) / 100,
-      orders: dayOrders.length,
-      day: dayDate.toLocaleDateString('en-US', { weekday: 'short' })
-    });
+    // Only include this day if it has earnings
+    if (dailyMap[dateKey]) {
+      dailyData.push({
+        date: dateKey,
+        earnings: Math.round(dailyMap[dateKey].earnings * 100) / 100,
+        orders: dailyMap[dateKey].orders,
+        day: dailyMap[dateKey].day
+      });
+    }
   }
 
+  console.log(`💡 [DEBUG] Generated ${dailyData.length} non-zero daily earnings records out of ${daysCount} possible days`);
   return dailyData;
 }
 
