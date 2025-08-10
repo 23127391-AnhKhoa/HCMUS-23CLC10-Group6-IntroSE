@@ -349,4 +349,133 @@ function generateMonthlyBreakdown(orders, monthsCount) {
   return monthlyData;
 }
 
+/**
+ * Get daily earnings breakdown for charts
+ * 
+ * @route GET /api/users/:sellerId/earnings/daily
+ * @param {Object} req - Express request object
+ * @param {Object} req.params - Route parameters
+ * @param {string} req.params.sellerId - Seller UUID
+ * @param {Object} req.query - Query parameters
+ * @param {number} [req.query.days=30] - Number of days to include
+ * @param {Object} res - Express response object
+ * @returns {Object} JSON response with daily earnings data
+ */
+const getDailyEarnings = async (req, res) => {
+  try {
+    const { sellerId } = req.params;
+    const { days = 30 } = req.query;
+    
+    console.log('📊 [Earnings Controller] getDailyEarnings called');
+    console.log('👤 Seller ID:', sellerId);
+    console.log('📅 Days:', days);
+
+    // Validate that authenticated user matches the seller ID (security check)
+    if (req.user.uuid !== sellerId) {
+      return res.status(403).json({
+        status: 'error',
+        message: 'Access denied: You can only view your own earnings'
+      });
+    }
+
+    // Calculate date range for the specified number of days
+    const now = new Date();
+    const startDate = new Date(now.getTime() - (parseInt(days) * 24 * 60 * 60 * 1000));
+    const endDate = new Date();
+
+    console.log('📅 Date range:', { startDate, endDate });
+
+    // Get completed orders for this seller using a direct Supabase query
+    const { data: orders, error } = await require('../config/supabaseClient')
+      .from('Orders')
+      .select(`
+        *,
+        Gigs!Orders_gig_id_fkey (
+          id,
+          title,
+          owner_id,
+          price
+        )
+      `)
+      .eq('status', 'completed')
+      .gte('completed_at', startDate.toISOString())
+      .lte('completed_at', endDate.toISOString())
+      .eq('Gigs.owner_id', sellerId);
+
+    if (error) {
+      throw new Error('Failed to fetch orders: ' + error.message);
+    }
+
+    console.log('📦 Found orders:', orders?.length || 0);
+
+    // Generate daily earnings data
+    const dailyData = generateDailyEarningsData(orders || [], parseInt(days));
+
+    res.status(200).json({
+      status: 'success',
+      data: dailyData,
+      meta: {
+        sellerId,
+        days: parseInt(days),
+        dateRange: {
+          start: startDate.toISOString(),
+          end: endDate.toISOString()
+        }
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ [Earnings Controller] getDailyEarnings error:', error);
+    res.status(500).json({
+      status: 'error',
+      message: 'Failed to fetch daily earnings data',
+      error: error.message
+    });
+  }
+};
+
+/**
+ * Generate daily earnings data for charts
+ * @param {Array} orders - Array of completed orders
+ * @param {number} daysCount - Number of days to generate data for
+ * @returns {Array} Array of daily earnings data
+ */
+const generateDailyEarningsData = (orders, daysCount = 30) => {
+  const dailyData = [];
+  const now = new Date();
+
+  for (let i = daysCount - 1; i >= 0; i--) {
+    const dayDate = new Date(now.getTime() - (i * 24 * 60 * 60 * 1000));
+    const nextDayDate = new Date(dayDate.getTime() + (24 * 60 * 60 * 1000));
+    
+    // Set to start and end of day
+    const dayStart = new Date(dayDate.getFullYear(), dayDate.getMonth(), dayDate.getDate(), 0, 0, 0);
+    const dayEnd = new Date(dayDate.getFullYear(), dayDate.getMonth(), dayDate.getDate(), 23, 59, 59);
+
+    // Filter orders for this day
+    const dayOrders = orders.filter(order => {
+      const orderDate = new Date(order.completed_at || order.created_at);
+      return orderDate >= dayStart && orderDate <= dayEnd && 
+             order.status === 'completed';
+    });
+
+    // Calculate earnings for this day
+    const dayEarnings = dayOrders.reduce((sum, order) => 
+      sum + (parseFloat(order.price_at_purchase) || 0), 0
+    );
+
+    dailyData.push({
+      date: dayDate.toISOString().split('T')[0], // YYYY-MM-DD format
+      earnings: Math.round(dayEarnings * 100) / 100,
+      orders: dayOrders.length,
+      day: dayDate.toLocaleDateString('en-US', { weekday: 'short' })
+    });
+  }
+
+  return dailyData;
+}
+
+// Add the new method to the EarningsController object
+EarningsController.getDailyEarnings = getDailyEarnings;
+
 module.exports = EarningsController;

@@ -70,7 +70,7 @@ const EarningsPage = () => {
       // Get seller ID from auth context
       const sellerId = authUser?.uuid;
       if (!sellerId || !token) {
-        console.error('No seller ID or token found');
+  // No seller ID or token found
         setLoading(false);
         return;
       }
@@ -112,7 +112,7 @@ const EarningsPage = () => {
           return total + (parseFloat(order.price_at_purchase) || 0);
         }, 0);
         
-        console.log(`💰 Pending orders total: $${pendingOrdersTotal} from ${pendingOrders.length} orders`);
+  // Pending orders total calculated
       }
       
       setEarnings({
@@ -155,8 +155,58 @@ const EarningsPage = () => {
           if (dailyResponse.ok) {
             const dailyResult = await dailyResponse.json();
             if (dailyResult.data && dailyResult.data.length > 0) {
-              setDailyEarnings(dailyResult.data);
-              localStorage.setItem('seller-daily-earnings', JSON.stringify(dailyResult.data));
+              // Normalize API data to ensure unique date keys and consistent fields
+              const normalized = dailyResult.data.map((item, idx, arr) => {
+                let dateStr = item.date;
+                // Some APIs might send the date in `day` or a label field
+                if (!dateStr && typeof item.day === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(item.day)) {
+                  dateStr = item.day;
+                }
+                // If we only have weekday names (Mon, Tue, ...), synthesize dates across the range
+                if (!dateStr && typeof item.day === 'string' && /^[A-Za-z]{3,}$/.test(item.day)) {
+                  const base = new Date();
+                  base.setHours(0, 0, 0, 0);
+                  // Spread items over the last N days, preserving order
+                  base.setDate(base.getDate() - (arr.length - 1 - idx));
+                  const y = base.getFullYear();
+                  const m = String(base.getMonth() + 1).padStart(2, '0');
+                  const d = String(base.getDate()).padStart(2, '0');
+                  dateStr = `${y}-${m}-${d}`;
+                }
+                // Fallback unique key if date is still missing
+                if (!dateStr) {
+                  // Attempt to use created_at if present
+                  if (item.created_at) {
+                    const dt = new Date(item.created_at);
+                    if (!isNaN(dt)) {
+                      const y = dt.getFullYear();
+                      const m = String(dt.getMonth() + 1).padStart(2, '0');
+                      const d = String(dt.getDate()).padStart(2, '0');
+                      dateStr = `${y}-${m}-${d}`;
+                    }
+                  }
+                }
+
+                // Final guard to ensure a unique, stable key
+                if (!dateStr) {
+                  dateStr = `idx-${idx}`;
+                }
+
+                const dayLabel = item.day || (() => {
+                  const dt = new Date(dateStr);
+                  return isNaN(dt) ? String(dateStr) : dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                })();
+
+                return {
+                  date: dateStr,
+                  day: dayLabel,
+                  earnings: Number(item.earnings ?? item.amount ?? 0),
+                  uniqueKey: `${dateStr}-${idx}`
+                };
+              });
+
+              setDailyEarnings(normalized);
+              localStorage.setItem('seller-daily-earnings', JSON.stringify(normalized));
               return;
             }
           }
@@ -177,7 +227,9 @@ const EarningsPage = () => {
             last30Days.push({
               date: dateString,
               day: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-              earnings: 0
+              earnings: 0,
+              index: 29 - i, // Add index for better positioning
+              timestamp: date.getTime() // Add unique timestamp
             });
           }
 
@@ -193,7 +245,11 @@ const EarningsPage = () => {
               
               const dayData = last30Days.find(day => day.date === localDateString);
               if (dayData) {
-                dayData.earnings += parseFloat(transaction.amount) || 0;
+                const amount = parseFloat(transaction.amount) || 0;
+                // Prevent unrealistic spikes in data
+                if (amount > 0 && amount < 10000) { // Cap at $10k per transaction
+                  dayData.earnings += amount;
+                }
               }
             });
           } else {
@@ -203,19 +259,32 @@ const EarningsPage = () => {
                 day.earnings = Math.random() * 200 + 50; // Random earnings between $50-$250
               }
             });
+            // Generated sample daily data
           }
 
-          setDailyEarnings(last30Days);
-          localStorage.setItem('seller-daily-earnings', JSON.stringify(last30Days));
+          // Sort the array to ensure proper chronological order
+          last30Days.sort((a, b) => a.timestamp - b.timestamp);
+
+          // Clean data structure for chart (remove helper fields)
+          const cleanData = last30Days.map(({ date, day, earnings }, index) => ({ 
+            date, 
+            day, 
+            earnings: Number(earnings) || 0,
+            uniqueKey: `${date}-${index}` // Add unique key for each data point
+          }));
+
+          setDailyEarnings(cleanData);
+          localStorage.setItem('seller-daily-earnings', JSON.stringify(cleanData));
+          // Daily earnings data generated
         } catch (error) {
-          console.error('Error generating daily earnings:', error);
+          // Error generating daily earnings
         }
       };
 
       await generateDailyEarnings();
 
       // Fetch transactions with type received_payment
-      console.log('🔍 Fetching received_payment transactions...');
+  // Fetching received_payment transactions
       const transactionsResponse = await fetch(`http://localhost:8000/api/transactions/user/${sellerId}?transaction_type=received_payment&limit=10`, {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -223,11 +292,11 @@ const EarningsPage = () => {
         },
       });
 
-      console.log('💳 Transactions API status:', transactionsResponse.status);
+  // Transactions API status
 
       if (transactionsResponse.ok) {
         const transactionsData = await transactionsResponse.json();
-        console.log('✅ Transactions data:', transactionsData);
+  // Transactions data received
         
         const transactions = (transactionsData.data || []).map(transaction => ({
           transaction_type: transaction.transaction_type,
@@ -240,9 +309,9 @@ const EarningsPage = () => {
         
         setRecentTransactions(transactions);
         localStorage.setItem('seller-transactions', JSON.stringify(transactions));
-        console.log('� Set transactions from transactions API:', transactions.length, 'items');
+  // Set transactions from transactions API
       } else {
-        console.log('❌ Transactions API failed, trying alternative endpoint...');
+  // Transactions API failed, trying alternative endpoint
         
         // Try alternative endpoint structure
         const altTransactionsResponse = await fetch(`http://localhost:8000/api/users/${sellerId}/transactions?transaction_type=received_payment&limit=10`, {
@@ -252,11 +321,11 @@ const EarningsPage = () => {
           },
         });
 
-        console.log('🔄 Alternative transactions API status:', altTransactionsResponse.status);
+  // Alternative transactions API status
 
         if (altTransactionsResponse.ok) {
           const altTransactionsData = await altTransactionsResponse.json();
-          console.log('✅ Alternative transactions data:', altTransactionsData);
+          // Alternative transactions data received
           
           const transactions = (altTransactionsData.data || []).map(transaction => ({
             transaction_type: transaction.transaction_type,
@@ -269,9 +338,9 @@ const EarningsPage = () => {
           
           setRecentTransactions(transactions);
           localStorage.setItem('seller-transactions', JSON.stringify(transactions));
-          console.log('💰 Set transactions from alternative API:', transactions.length, 'items');
+          // Set transactions from alternative API
         } else {
-          console.log('❌ Both transactions APIs failed, falling back to completed orders...');
+          // Both transactions APIs failed, falling back to completed orders
           
           // Fallback to completed orders as transactions
           const completedOrdersResponse = await fetch(`http://localhost:8000/api/orders/owner/${sellerId}?status=completed&limit=10`, {
@@ -283,7 +352,7 @@ const EarningsPage = () => {
 
           if (completedOrdersResponse.ok) {
             const completedOrdersData = await completedOrdersResponse.json();
-            console.log('📦 Using completed orders as fallback:', completedOrdersData);
+            // Using completed orders as fallback
             
             const transactions = (completedOrdersData.data || []).map(order => ({
               transaction_type: 'received_payment',
@@ -296,69 +365,17 @@ const EarningsPage = () => {
             
             setRecentTransactions(transactions);
             localStorage.setItem('seller-transactions', JSON.stringify(transactions));
-            console.log('💰 Set transactions from completed orders fallback:', transactions.length, 'items');
+            // Set transactions from completed orders fallback
           } else {
-            console.log('💥 All transaction endpoints failed');
+            // All transaction endpoints failed
           }
         }
       }
 
-      console.log('� Completed orders API status:', completedOrdersResponse.status);
-
-      if (completedOrdersResponse.ok) {
-        const completedOrdersData = await completedOrdersResponse.json();
-        console.log('✅ Completed orders data:', completedOrdersData);
-        
-        const transactions = (completedOrdersData.data || []).map(order => ({
-          transaction_type: 'received_payment',
-          amount: order.price_at_purchase,
-          created_at: order.completed_at || order.created_at,
-          description: order.gig_title || 'Order payment',
-          order_id: order.id
-        }));
-        
-        setRecentTransactions(transactions);
-        localStorage.setItem('seller-transactions', JSON.stringify(transactions));
-        console.log('💰 Set transactions from completed orders:', transactions.length, 'items');
-      } else {
-        console.log('❌ Completed orders API failed, trying all orders...');
-        
-        // Last fallback: get all orders and filter completed ones
-        const allOrdersResponse = await fetch(`http://localhost:8000/api/orders/owner/${sellerId}?limit=50`, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-        });
-
-        if (allOrdersResponse.ok) {
-          const allOrdersData = await allOrdersResponse.json();
-          console.log('📋 All orders data:', allOrdersData);
-          
-          const completedOrders = (allOrdersData.data || [])
-            .filter(order => order.status === 'completed')
-            .slice(0, 10); // Take first 10 completed orders
-          
-          const transactions = completedOrders.map(order => ({
-            transaction_type: 'received_payment',
-            amount: order.price_at_purchase,
-            created_at: order.completed_at || order.created_at,
-            description: order.gig_title || 'Order payment',
-            order_id: order.id
-          }));
-          
-          setRecentTransactions(transactions);
-          localStorage.setItem('seller-transactions', JSON.stringify(transactions));
-          console.log('💰 Set transactions from all orders filter:', transactions.length, 'items');
-        } else {
-          console.log('💥 All API endpoints failed');
-        }
-      }
-
     } catch (error) {
-      console.error('Error fetching earnings data:', error);
+  // Error fetching earnings data
       // Keep existing data from localStorage if API fails
-      console.log('Using cached data from localStorage due to API error');
+  // Using cached data from localStorage due to API error
     } finally {
       setLoading(false);
     }
@@ -392,7 +409,7 @@ const EarningsPage = () => {
         const price = parseFloat(order.price_at_purchase) || 0;
 
         // Monthly data for chart
-        const monthKey = `${orderYear}-${orderMonth}`;
+        const monthKey = `${orderYear}-${String(orderMonth + 1).padStart(2, '0')}`;
         monthlyData[monthKey] = (monthlyData[monthKey] || 0) + price;
 
         // Total earnings (all completed orders)
@@ -427,13 +444,16 @@ const EarningsPage = () => {
     const monthlyArray = Object.entries(monthlyData)
       .map(([key, value]) => {
         const [year, month] = key.split('-');
+        const dateObj = new Date(parseInt(year), parseInt(month) - 1);
         return {
-          month: new Date(year, month).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
-          earnings: value
+          month: dateObj.toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
+          earnings: value,
+          sortKey: key // Keep original key for proper sorting
         };
       })
-      .sort((a, b) => new Date(a.month) - new Date(b.month))
-      .slice(-12); // Last 12 months
+      .sort((a, b) => a.sortKey.localeCompare(b.sortKey))
+      .slice(-12) // Last 12 months
+      .map(({ month, earnings }) => ({ month, earnings })); // Remove sortKey from final data
 
     setEarnings({
       totalEarnings,
@@ -445,6 +465,7 @@ const EarningsPage = () => {
     });
 
     setMonthlyEarnings(monthlyArray);
+  // Generated monthly earnings data
   };
 
   const statsCards = [
@@ -520,308 +541,255 @@ const EarningsPage = () => {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Earnings Chart */}
             <div className="lg:col-span-2 bg-white rounded-lg shadow-sm p-6 border border-gray-200">
+              {/* Header */}
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-xl font-semibold text-gray-900">Earnings Overview</h2>
-                <div className="flex items-center space-x-4">
-                  <div className="flex items-center space-x-2">
-                    <label className="text-sm font-medium text-gray-700">Timeframe:</label>
-                    <select 
-                      value={timeframe}
-                      onChange={(e) => setTimeframe(e.target.value)}
-                      className="border border-gray-300 rounded-md px-2 py-1 text-sm"
-                    >
-                      <option value="day">Daily (Last 30 days)</option>
-                      <option value="month">Monthly</option>
-                    </select>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <label className="text-sm font-medium text-gray-700">Chart:</label>
-                    <select 
-                      value={chartType}
-                      onChange={(e) => setChartType(e.target.value)}
-                      className="border border-gray-300 rounded-md px-2 py-1 text-sm"
-                    >
-                      <option value="area">Area Chart</option>
-                      <option value="line">Line Chart</option>
-                      <option value="bar">Bar Chart</option>
-                    </select>
-                  </div>
-                  {timeframe === 'month' && (
-                    <div className="flex items-center space-x-2">
-                      <label className="text-sm font-medium text-gray-700">Period:</label>
-                      <select 
-                        value={selectedPeriod}
-                        onChange={(e) => setSelectedPeriod(e.target.value)}
-                        className="border border-gray-300 rounded-md px-2 py-1 text-sm"
-                      >
-                        <option value="all">All Time</option>
-                        <option value="year">This Year</option>
-                        <option value="month">This Month</option>
-                      </select>
-                    </div>
-                  )}
+                <div className="flex items-center space-x-3">
+                  <select 
+                    value={timeframe}
+                    onChange={(e) => setTimeframe(e.target.value)}
+                    className="bg-white border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="day">Last 30 Days</option>
+                    <option value="month">Monthly View</option>
+                  </select>
+                  <select 
+                    value={chartType}
+                    onChange={(e) => setChartType(e.target.value)}
+                    className="bg-white border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="area">Area Chart</option>
+                    <option value="line">Line Chart</option>
+                    <option value="bar">Bar Chart</option>
+                  </select>
                 </div>
               </div>
-              
-              {(timeframe === 'month' ? monthlyEarnings : dailyEarnings).length > 0 ? (
-                <div className="space-y-6">
-                  {/* Summary Stats */}
-                  <div className="grid grid-cols-3 gap-4 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg">
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-blue-600">
-                        {timeframe === 'month' ? monthlyEarnings.length : dailyEarnings.filter(d => d.earnings > 0).length}
-                      </div>
-                      <div className="text-xs text-gray-600">
-                        {timeframe === 'month' ? 'Active Months' : 'Active Days'}
-                      </div>
-                    </div>
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-green-600">
-                        ${timeframe === 'month' 
-                          ? Math.max(...monthlyEarnings.map(m => m.earnings)).toFixed(0)
-                          : Math.max(...dailyEarnings.map(d => d.earnings)).toFixed(0)
-                        }
-                      </div>
-                      <div className="text-xs text-gray-600">
-                        {timeframe === 'month' ? 'Best Month' : 'Best Day'}
-                      </div>
-                    </div>
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-purple-600">
-                        ${timeframe === 'month' 
-                          ? (monthlyEarnings.reduce((sum, m) => sum + m.earnings, 0) / monthlyEarnings.length).toFixed(0)
-                          : (dailyEarnings.reduce((sum, d) => sum + d.earnings, 0) / dailyEarnings.filter(d => d.earnings > 0).length || 0).toFixed(0)
-                        }
-                      </div>
-                      <div className="text-xs text-gray-600">Average</div>
-                    </div>
-                  </div>
 
-                  {/* Chart */}
-                  <div style={{ width: '100%', height: 300 }}>
-                    <ResponsiveContainer>
-                      {chartType === 'area' ? (
-                        <AreaChart 
-                          data={timeframe === 'month' ? monthlyEarnings : dailyEarnings} 
-                          margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
-                        >
-                          <defs>
-                            <linearGradient id="colorEarnings" x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="5%" stopColor="#10b981" stopOpacity={0.8}/>
-                              <stop offset="95%" stopColor="#10b981" stopOpacity={0.1}/>
-                            </linearGradient>
-                          </defs>
-                          <XAxis 
-                            dataKey={timeframe === 'month' ? 'month' : 'day'}
-                            axisLine={false} 
-                            tickLine={false}
-                            tick={{ fontSize: 12, fill: '#6b7280' }}
-                            interval={timeframe === 'day' ? 4 : 'preserveStartEnd'} // Show every 5th day for daily view
-                          />
-                          <YAxis 
-                            axisLine={false} 
-                            tickLine={false}
-                            tick={{ fontSize: 12, fill: '#6b7280' }}
-                            tickFormatter={(value) => `$${value}`}
-                          />
-                          <Tooltip 
-                            formatter={(value) => [`$${value.toFixed(2)}`, 'Earnings']}
-                            labelFormatter={(label) => `${timeframe === 'month' ? 'Month' : 'Day'}: ${label}`}
-                            contentStyle={{
-                              backgroundColor: '#f9fafb',
-                              border: '1px solid #e5e7eb',
-                              borderRadius: '8px',
-                              fontSize: '14px'
-                            }}
-                          />
-                          <Area 
-                            type="monotone" 
-                            dataKey="earnings" 
-                            stroke="#10b981" 
-                            fill="url(#colorEarnings)" 
-                            strokeWidth={3}
-                            dot={timeframe === 'day' ? false : { fill: '#10b981', strokeWidth: 2, r: 4 }}
-                            activeDot={{ r: 6, stroke: '#10b981', strokeWidth: 2 }}
-                          />
-                        </AreaChart>
-                      ) : chartType === 'line' ? (
-                        <LineChart 
-                          data={timeframe === 'month' ? monthlyEarnings : dailyEarnings} 
-                          margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
-                        >
-                          <XAxis 
-                            dataKey={timeframe === 'month' ? 'month' : 'day'}
-                            axisLine={false} 
-                            tickLine={false}
-                            tick={{ fontSize: 12, fill: '#6b7280' }}
-                            interval={timeframe === 'day' ? 4 : 'preserveStartEnd'}
-                          />
-                          <YAxis 
-                            axisLine={false} 
-                            tickLine={false}
-                            tick={{ fontSize: 12, fill: '#6b7280' }}
-                            tickFormatter={(value) => `$${value}`}
-                          />
-                          <Tooltip 
-                            formatter={(value) => [`$${value.toFixed(2)}`, 'Earnings']}
-                            labelFormatter={(label) => `${timeframe === 'month' ? 'Month' : 'Day'}: ${label}`}
-                            contentStyle={{
-                              backgroundColor: '#f9fafb',
-                              border: '1px solid #e5e7eb',
-                              borderRadius: '8px',
-                              fontSize: '14px'
-                            }}
-                          />
-                          <Line 
-                            type="monotone" 
-                            dataKey="earnings" 
-                            stroke="#3b82f6" 
-                            strokeWidth={3}
-                            dot={timeframe === 'day' ? false : { fill: '#3b82f6', strokeWidth: 2, r: 4 }}
-                            activeDot={{ r: 6, stroke: '#3b82f6', strokeWidth: 2 }}
-                          />
-                        </LineChart>
-                      ) : (
-                        <BarChart 
-                          data={timeframe === 'month' ? monthlyEarnings : dailyEarnings} 
-                          margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
-                        >
-                          <XAxis 
-                            dataKey={timeframe === 'month' ? 'month' : 'day'}
-                            axisLine={false} 
-                            tickLine={false}
-                            tick={{ fontSize: 12, fill: '#6b7280' }}
-                            interval={timeframe === 'day' ? 4 : 'preserveStartEnd'}
-                          />
-                          <YAxis 
-                            axisLine={false} 
-                            tickLine={false}
-                            tick={{ fontSize: 12, fill: '#6b7280' }}
-                            tickFormatter={(value) => `$${value}`}
-                          />
-                          <Tooltip 
-                            formatter={(value) => [`$${value.toFixed(2)}`, 'Earnings']}
-                            labelFormatter={(label) => `${timeframe === 'month' ? 'Month' : 'Day'}: ${label}`}
-                            contentStyle={{
-                              backgroundColor: '#f9fafb',
-                              border: '1px solid #e5e7eb',
-                              borderRadius: '8px',
-                              fontSize: '14px'
-                            }}
-                          />
-                          <Bar 
-                            dataKey="earnings" 
-                            fill="#8b5cf6"
-                            radius={[4, 4, 0, 0]}
-                          />
-                        </BarChart>
-                      )}
-                    </ResponsiveContainer>
-                  </div>
-
-                  {/* Breakdown Table */}
-                  <div className="mt-6">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                      {timeframe === 'month' ? 'Monthly Breakdown' : 'Daily Breakdown (Last 30 Days)'}
-                    </h3>
-                    <div className="overflow-x-auto max-h-80">
-                      <table className="w-full text-sm">
-                        <thead className="sticky top-0 bg-white">
-                          <tr className="border-b border-gray-200">
-                            <th className="text-left py-2 px-3 font-medium text-gray-600">
-                              {timeframe === 'month' ? 'Month' : 'Date'}
-                            </th>
-                            <th className="text-right py-2 px-3 font-medium text-gray-600">Earnings</th>
-                            <th className="text-right py-2 px-3 font-medium text-gray-600">Growth</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {timeframe === 'month' ? (
-                            monthlyEarnings.map((month, index) => {
-                              const prevMonth = monthlyEarnings[index - 1];
-                              const growth = prevMonth ? ((month.earnings - prevMonth.earnings) / prevMonth.earnings) * 100 : 0;
-                              const isCurrentMonth = new Date().toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) === month.month;
-                              
-                              return (
-                                <tr key={index} className={`border-b border-gray-100 hover:bg-gray-50 ${isCurrentMonth ? 'bg-blue-50' : ''}`}>
-                                  <td className="py-3 px-3">
-                                    <div className="flex items-center space-x-2">
-                                      <span className={`font-medium ${isCurrentMonth ? 'text-blue-700' : 'text-gray-900'}`}>
-                                        {month.month}
-                                      </span>
-                                      {isCurrentMonth && (
-                                        <span className="px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded-full">
-                                          Current
-                                        </span>
-                                      )}
-                                    </div>
-                                  </td>
-                                  <td className="py-3 px-3 text-right font-semibold text-gray-900">
-                                    ${month.earnings.toFixed(2)}
-                                  </td>
-                                  <td className="py-3 px-3 text-right">
-                                    {index > 0 ? (
-                                      <span className={`font-medium ${growth >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                        {growth >= 0 ? '+' : ''}{growth.toFixed(1)}%
-                                      </span>
-                                    ) : (
-                                      <span className="text-gray-400">-</span>
-                                    )}
-                                  </td>
-                                </tr>
-                              );
-                            })
-                          ) : (
-                            dailyEarnings.slice().reverse().map((day, index) => {
-                              const prevDay = dailyEarnings[dailyEarnings.length - index];
-                              const growth = prevDay && prevDay.earnings > 0 ? ((day.earnings - prevDay.earnings) / prevDay.earnings) * 100 : 0;
-                              // Use local date comparison for "Today" highlight
-                              const today = new Date();
-                              const todayString = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-                              const isToday = day.date === todayString;
-                              
-                              return (
-                                <tr key={index} className={`border-b border-gray-100 hover:bg-gray-50 ${isToday ? 'bg-blue-50' : day.earnings === 0 ? 'bg-gray-25' : ''}`}>
-                                  <td className="py-2 px-3">
-                                    <div className="flex items-center space-x-2">
-                                      <span className={`font-medium ${isToday ? 'text-blue-700' : day.earnings > 0 ? 'text-gray-900' : 'text-gray-500'}`}>
-                                        {day.day}
-                                      </span>
-                                      {isToday && (
-                                        <span className="px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded-full">
-                                          Today
-                                        </span>
-                                      )}
-                                    </div>
-                                  </td>
-                                  <td className={`py-2 px-3 text-right font-semibold ${day.earnings > 0 ? 'text-gray-900' : 'text-gray-400'}`}>
-                                    ${day.earnings.toFixed(2)}
-                                  </td>
-                                  <td className="py-2 px-3 text-right">
-                                    {day.earnings > 0 && prevDay && prevDay.earnings > 0 ? (
-                                      <span className={`font-medium ${growth >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                        {growth >= 0 ? '+' : ''}{growth.toFixed(1)}%
-                                      </span>
-                                    ) : (
-                                      <span className="text-gray-400">-</span>
-                                    )}
-                                  </td>
-                                </tr>
-                              );
-                            })
-                          )}
-                        </tbody>
-                      </table>
+              {/* Chart Container */}
+              <div className="space-y-4">
+                {/* Quick Stats */}
+                <div className="grid grid-cols-3 gap-4 p-4 bg-gray-50 rounded-lg">
+                  <div className="text-center">
+                    <div className="text-lg font-semibold text-gray-900">
+                      ${timeframe === 'month' 
+                        ? monthlyEarnings.reduce((sum, m) => sum + m.earnings, 0).toFixed(0)
+                        : dailyEarnings.reduce((sum, d) => sum + d.earnings, 0).toFixed(0)
+                      }
                     </div>
+                    <div className="text-xs text-gray-500">Total</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-lg font-semibold text-gray-900">
+                      ${timeframe === 'month' 
+                        ? (monthlyEarnings.length > 0 ? Math.max(...monthlyEarnings.map(m => m.earnings)) : 0).toFixed(0)
+                        : (dailyEarnings.length > 0 ? Math.max(...dailyEarnings.map(d => d.earnings)) : 0).toFixed(0)
+                      }
+                    </div>
+                    <div className="text-xs text-gray-500">Peak</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-lg font-semibold text-gray-900">
+                      {timeframe === 'month' ? monthlyEarnings.length : dailyEarnings.filter(d => d.earnings > 0).length}
+                    </div>
+                    <div className="text-xs text-gray-500">Active</div>
                   </div>
                 </div>
-              ) : (
-                <div className="text-center py-12">
-                  <TrendingUp className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <p className="text-gray-500">No earnings data available yet</p>
-                  <p className="text-sm text-gray-400">Complete some orders to see your earnings here</p>
+
+                {/* Chart */}
+                <div className="h-80 w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    {(() => {
+                      const chartData = timeframe === 'month' ? monthlyEarnings : dailyEarnings;
+                      const dataKey = timeframe === 'month' ? 'month' : 'date';
+                      
+                      // Debug the data structure
+                      if (timeframe === 'day') {
+                        // Daily chart data debug removed
+                        
+                        // Check for data integrity issues
+                        chartData.forEach((item, index) => {
+                          if (!item || typeof item.day === 'undefined' || typeof item.earnings === 'undefined') {
+                            // Invalid data at index
+                          }
+                        });
+                      }
+                      
+                      if (chartType === 'area') {
+                        return (
+                          <AreaChart data={chartData}>
+                            <defs>
+                              <linearGradient id="areaGradient" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
+                                <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.05}/>
+                              </linearGradient>
+                            </defs>
+                            <XAxis 
+                              dataKey={dataKey}
+                              axisLine={false}
+                              tickLine={false}
+                              tick={{ fontSize: 8, fill: '#6b7280' }}
+                              interval={0}
+                              angle={timeframe === 'day' ? -45 : 0}
+                              textAnchor={timeframe === 'day' ? 'end' : 'middle'}
+                              height={timeframe === 'day' ? 90 : 60}
+                              allowDuplicatedCategory={true}
+                              tickFormatter={(val) => {
+                                if (timeframe !== 'day') return val;
+                                const dt = new Date(val);
+                                return isNaN(dt) ? String(val) : dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                              }}
+                            />
+                            <YAxis 
+                              axisLine={false}
+                              tickLine={false}
+                              tick={{ fontSize: 11, fill: '#6b7280' }}
+                              tickFormatter={(value) => `$${value}`}
+                            />
+                            <Tooltip 
+                              formatter={(value) => [`$${Number(value).toFixed(2)}`, 'Earnings']}
+                              labelStyle={{ color: '#374151' }}
+                              contentStyle={{
+                                backgroundColor: 'white',
+                                border: '1px solid #d1d5db',
+                                borderRadius: '6px',
+                                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                              }}
+                            />
+                            <Area 
+                              type="monotone" 
+                              dataKey="earnings" 
+                              stroke="#3b82f6" 
+                              strokeWidth={2}
+                              fill="url(#areaGradient)" 
+                              dot={false}
+                              activeDot={{ r: 4, stroke: '#3b82f6', strokeWidth: 2, fill: 'white' }}
+                            />
+                          </AreaChart>
+                        );
+                      }
+                      
+                      if (chartType === 'line') {
+                        return (
+                          <LineChart data={chartData}>
+                            <XAxis 
+                              dataKey={dataKey}
+                              axisLine={false}
+                              tickLine={false}
+                              tick={{ fontSize: 8, fill: '#6b7280' }}
+                              interval={0}
+                              angle={timeframe === 'day' ? -45 : 0}
+                              textAnchor={timeframe === 'day' ? 'end' : 'middle'}
+                              height={timeframe === 'day' ? 90 : 60}
+                              allowDuplicatedCategory={true}
+                              tickFormatter={(val) => {
+                                if (timeframe !== 'day') return val;
+                                const dt = new Date(val);
+                                return isNaN(dt) ? String(val) : dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                              }}
+                            />
+                            <YAxis 
+                              axisLine={false}
+                              tickLine={false}
+                              tick={{ fontSize: 11, fill: '#6b7280' }}
+                              tickFormatter={(value) => `$${value}`}
+                            />
+                            <Tooltip 
+                              formatter={(value) => [`$${Number(value).toFixed(2)}`, 'Earnings']}
+                              labelStyle={{ color: '#374151' }}
+                              contentStyle={{
+                                backgroundColor: 'white',
+                                border: '1px solid #d1d5db',
+                                borderRadius: '6px',
+                                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                              }}
+                            />
+                            <Line 
+                              type="monotone" 
+                              dataKey="earnings" 
+                              stroke="#10b981" 
+                              strokeWidth={2}
+                              dot={false}
+                              activeDot={{ r: 4, stroke: '#10b981', strokeWidth: 2, fill: 'white' }}
+                            />
+                          </LineChart>
+                        );
+                      }
+                      
+                      if (chartType === 'bar') {
+                        return (
+                          <BarChart data={chartData}>
+                            <XAxis 
+                              dataKey={dataKey}
+                              axisLine={false}
+                              tickLine={false}
+                              tick={{ fontSize: 8, fill: '#6b7280' }}
+                              interval={0}
+                              angle={timeframe === 'day' ? -45 : 0}
+                              textAnchor={timeframe === 'day' ? 'end' : 'middle'}
+                              height={timeframe === 'day' ? 90 : 60}
+                              allowDuplicatedCategory={true}
+                              tickFormatter={(val) => {
+                                if (timeframe !== 'day') return val;
+                                const dt = new Date(val);
+                                return isNaN(dt) ? String(val) : dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                              }}
+                            />
+                            <YAxis 
+                              axisLine={false}
+                              tickLine={false}
+                              tick={{ fontSize: 11, fill: '#6b7280' }}
+                              tickFormatter={(value) => `$${value}`}
+                            />
+                            <Tooltip 
+                              formatter={(value) => [`$${Number(value).toFixed(2)}`, 'Earnings']}
+                              labelStyle={{ color: '#374151' }}
+                              contentStyle={{
+                                backgroundColor: 'white',
+                                border: '1px solid #d1d5db',
+                                borderRadius: '6px',
+                                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                              }}
+                            />
+                            <Bar 
+                              dataKey="earnings" 
+                              fill="#8b5cf6"
+                              radius={[2, 2, 0, 0]}
+                            />
+                          </BarChart>
+                        );
+                      }
+                      
+                      return null;
+                    })()}
+                  </ResponsiveContainer>
                 </div>
-              )}
+
+                {/* Simple Data Summary */}
+                <div className="mt-6">
+                  <h3 className="text-lg font-medium text-gray-900 mb-3">Recent Activity</h3>
+                  <div className="max-h-60 overflow-y-auto">
+                    {timeframe === 'month' ? (
+                      <div className="space-y-2">
+                        {monthlyEarnings.slice(-5).reverse().map((month, index) => (
+                          <div key={index} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                            <span className="font-medium text-gray-900">{month.month}</span>
+                            <span className="font-semibold text-green-600">${month.earnings.toFixed(2)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        {dailyEarnings.filter(day => day.earnings > 0).slice(-5).reverse().map((day, index) => (
+                          <div key={index} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                            <span className="font-medium text-gray-900">{day.day}</span>
+                            <span className="font-semibold text-green-600">${day.earnings.toFixed(2)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
             </div>
 
             {/* Recent Payments */}
