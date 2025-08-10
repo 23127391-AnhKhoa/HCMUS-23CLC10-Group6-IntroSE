@@ -403,7 +403,11 @@ const BalanceCard = ({ balance, earningsData }) => (
 const TransactionCard = ({ transaction, index }) => {
   const getStatusColor = (type) => {
     switch (type) {
+      case 'deposit': return 'text-green-600 bg-green-100';
+      case 'withdraw': 
       case 'admin_withdraw': return 'text-red-600 bg-red-100';
+      case 'payment': return 'text-blue-600 bg-blue-100';
+      case 'received_payment': return 'text-purple-600 bg-purple-100';
       case 'profit': return 'text-emerald-600 bg-emerald-100';
       default: return 'text-gray-600 bg-gray-100';
     }
@@ -411,7 +415,11 @@ const TransactionCard = ({ transaction, index }) => {
 
   const getIcon = (type) => {
     switch (type) {
+      case 'deposit': return <FiArrowDown className="rotate-180" />;
+      case 'withdraw': 
       case 'admin_withdraw': return <FiArrowDown />;
+      case 'payment': return <FiDollarSign />;
+      case 'received_payment': return <FiCheck />;
       case 'profit': return <FiDollarSign className="text-emerald-600" />;
       default: return <FiClock />;
     }
@@ -421,11 +429,13 @@ const TransactionCard = ({ transaction, index }) => {
     switch (type) {
       case 'admin_withdraw': return 'Admin Withdrawal';
       case 'profit': return 'Daily Profit';
+      case 'payment': return 'Payment';
+      case 'received_payment': return 'Received Payment';
       default: return type.replace('_', ' ');
     }
   };
 
-  const isIncome = transaction.type === 'profit';
+  const isIncome = transaction.type === 'profit' || transaction.type === 'deposit';
   const isWithdraw = transaction.type === 'admin_withdraw';
 
   return (
@@ -483,24 +493,21 @@ const WithdrawModal = ({ visible, onClose, currentBalance, onWithdrawSuccess }) 
     try {
       setLoading(true);
       
-      // Create admin withdrawal transaction
-      const response = await fetch('/api/transactions/withdraw', {
+      // Use regular withdraw API - it will create a transaction record
+      // The admin balance will be recalculated on next refresh
+      const response = await fetch('/api/admin/withdraw', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({
-          amount: amount,
-          type: 'admin_withdraw',
-          description: 'Admin withdrawal from website profits'
-        })
+        body: JSON.stringify({ amount })
       });
 
       const data = await response.json();
 
-      if (!response.ok) {
-        throw new Error(data.message || 'Failed to process admin withdrawal');
+      if (!response.ok || data.status !== 'success') {
+        throw new Error(data.message || 'Failed to withdraw');
       }
 
       message.success(`Successfully withdrew $${amount.toFixed(2)} from admin earnings`);
@@ -509,7 +516,7 @@ const WithdrawModal = ({ visible, onClose, currentBalance, onWithdrawSuccess }) 
       onWithdrawSuccess();
       
     } catch (error) {
-      console.error('Error processing admin withdrawal:', error);
+      console.error('Error withdrawing:', error);
       message.error(error.message || 'Something went wrong. Please try again.');
     } finally {
       setLoading(false);
@@ -714,7 +721,7 @@ const AdminEarnings = () => {
               <div className="bg-red-50 p-4 rounded-lg border border-red-200">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-red-600 font-medium">Total Admin Withdrawn</p>
+                    <p className="text-sm text-red-600 font-medium">Total Withdrawn</p>
                     <p className="text-xl font-bold text-red-700">
                       ${transactions
                         .filter(t => t.type === 'admin_withdraw')
@@ -731,7 +738,7 @@ const AdminEarnings = () => {
               <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-blue-600 font-medium">Net Available Profit</p>
+                    <p className="text-sm text-blue-600 font-medium">Net Profit</p>
                     <p className="text-xl font-bold text-blue-700">
                       ${(
                         transactions.filter(t => t.type === 'profit').reduce((sum, t) => sum + parseFloat(t.amount), 0) -

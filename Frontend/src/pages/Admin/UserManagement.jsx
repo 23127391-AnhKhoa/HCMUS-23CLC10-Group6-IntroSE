@@ -493,7 +493,19 @@ const UserRow = ({ user, onDelete, onUpdateRole, onReactivate }) => { // Thêm p
       <td className="py-4 px-6 text-gray-600">{new Date(user.created_at).toLocaleDateString()}</td>
       <td className="py-4 px-6">
         <div className="flex items-center space-x-4 text-gray-500">
-          <FiEye onClick={() => alert(JSON.stringify(user, null, 2))} className="cursor-pointer hover:text-blue-500 transition-smooth" size={20} />
+          <FiEye 
+            onClick={() => {
+              const sellerId = user.uuid;
+              if (sellerId) {
+                window.open(`/admin/seller/${sellerId}`, '_blank');
+              } else {
+                alert('User ID not found');
+              }
+            }} 
+            className="cursor-pointer hover:text-blue-500 transition-smooth" 
+            size={20}
+            title="View Seller"
+          />
           
           {/* --- LOGIC HIỂN THỊ NÚT ĐỘNG --- */}
           {isUserActive ? (
@@ -558,7 +570,7 @@ const Pagination = ({ currentPage, totalPages, onPageChange }) => {
 
 // --- Main Component (Thay đổi nhiều nhất) ---
 const UserManagement = () => {
-  const { authUser } = useAuth(); // Thêm authUser ở đây
+  
   const [users, setUsers] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -740,16 +752,7 @@ const UserManagement = () => {
        
 
       </main>
-      <div className="fixed bottom-10 right-10">
-            <img 
-              src={authUser?.avt_url || "https://i.pravatar.cc/150?u=bottom-admin"} 
-              alt="Admin" 
-              className="w-16 h-16 rounded-full cursor-pointer shadow-lg border-4 border-white hover-scale object-cover"
-              onError={(e) => {
-                e.target.src = "https://i.pravatar.cc/150?u=bottom-admin";
-              }}
-            />
-      </div>
+      
     </div>
   );
 };

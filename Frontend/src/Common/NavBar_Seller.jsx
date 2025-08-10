@@ -1,8 +1,8 @@
 // src/components/SellerNavbar.jsx
 import React, { useState, useEffect } from 'react';
 import { Link, NavLink, useNavigate  } from 'react-router-dom';
-import { Avatar, Badge, Dropdown, Menu, message } from 'antd';
-import { BellOutlined, UserOutlined } from '@ant-design/icons';
+import { Avatar, Badge, Dropdown, Menu, message, Tooltip } from 'antd';
+import { BellOutlined, UserOutlined, MessageOutlined } from '@ant-design/icons';
 import { useAuth } from '../contexts/AuthContext';
 import NotificationBell from '../components/NotificationBell/NotificationBell';
 
@@ -122,6 +122,15 @@ const SellerNavbar = () => {
             >
               {loading ? 'Switching...' : 'Switch to Buying'}
             </button>
+            
+            {/* Message Icon */}
+            <Tooltip title="Inbox">
+              <Badge count={5} size="small">
+                <Link to="/inbox">
+                  <MessageOutlined className="text-xl hover:text-blue-600 cursor-pointer" />
+                </Link>
+              </Badge>
+            </Tooltip>
             
             <NotificationBell />
             <div 

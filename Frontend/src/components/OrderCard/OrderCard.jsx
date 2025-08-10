@@ -14,6 +14,7 @@ import { useNavigate } from 'react-router-dom';
 import PropTypes from 'prop-types';
 import DOMPurify from 'dompurify';
 import ApiService from '../../services/apiService';
+import AlertModal from '../AlertModal';
 import DeliveryFilesModal from '../DeliveryFilesModal/DeliveryFilesModal';
 import UploadDeliveryModal from '../UploadDeliveryModal/UploadDeliveryModal';
 import OrderStatus from '../OrderStatus/OrderStatus';
@@ -79,6 +80,26 @@ const OrderCard = ({
     const [filesLoading, setFilesLoading] = useState(false);
     const [processing, setProcessing] = useState(false);
     const [showFilesModal, setShowFilesModal] = useState(false);
+    const [alertState, setAlertState] = useState({ open: false, title: '', message: '', type: 'info' });
+    const showAlert = (title, message, type = 'info') => setAlertState({ open: true, title, message, type });
+    const closeAlert = () => setAlertState(prev => ({ ...prev, open: false }));
+
+    const progressClass = () => {
+        switch (safeOrder.status) {
+            case 'completed':
+                return 'bg-green-500 w-full';
+            case 'delivered':
+                return 'bg-purple-500 w-5/6';
+            case 'in_progress':
+                return 'bg-blue-500 w-3/4';
+            case 'revision_requested':
+                return 'bg-orange-500 w-2/3';
+            case 'cancelled':
+                return 'bg-red-500 w-1/4';
+            default:
+                return 'bg-gray-400 w-1/4';
+        }
+    };
     
     // Load delivery files when order loads or status changes
     useEffect(() => {
@@ -112,13 +133,13 @@ const OrderCard = ({
             
             if (response.status === 'success') {
                 safeOnStatusUpdate(order.id, 'delivered');
-                alert('Order marked as delivered successfully!');
+                showAlert('Order delivered', 'Order marked as delivered successfully!', 'success');
             } else {
                 throw new Error(response.message || 'Failed to mark order as delivered');
             }
         } catch (error) {
             console.error('❌ [OrderCard] Error marking as delivered:', error);
-            alert('Failed to mark order as delivered: ' + error.message);
+            showAlert('Failed to mark as delivered', error.message, 'error');
         } finally {
             setProcessing(false);
         }
@@ -126,7 +147,7 @@ const OrderCard = ({
     
     // Handle delete delivery file
     const handleDeleteDeliveryFile = async (fileId, fileName) => {
-        if (!window.confirm(`Are you sure you want to delete "${fileName}"?`)) {
+    if (!window.confirm(`Are you sure you want to delete "${fileName}"?`)) {
             return;
         }
         
@@ -136,11 +157,11 @@ const OrderCard = ({
             if (response.status === 'success') {
                 // Reload delivery files
                 await loadDeliveryFiles();
-                alert('File deleted successfully!');
+        showAlert('File deleted', 'File deleted successfully!', 'success');
             }
         } catch (error) {
             console.error('Error deleting delivery file:', error);
-            alert('Failed to delete file: ' + error.message);
+        showAlert('Failed to delete file', error.message, 'error');
         } finally {
             setProcessing(false);
         }
@@ -173,11 +194,11 @@ const OrderCard = ({
                 const response = await ApiService.requestOrderRevision(order.id, { revision_note: revisionNote });
                 if (response.status === 'success') {
                     safeOnStatusUpdate(order.id, 'revision_requested');
-                    alert('Revision requested successfully!');
+                    showAlert('Revision requested', 'Revision requested successfully!', 'success');
                 }
             } catch (error) {
                 console.error('Error requesting revision:', error);
-                alert('Failed to request revision: ' + error.message);
+                showAlert('Failed to request revision', error.message, 'error');
             } finally {
                 setProcessing(false);
             }
@@ -197,11 +218,11 @@ const OrderCard = ({
             if (response.status === 'success') {
                 // Reload delivery files after upload
                 await loadDeliveryFiles();
-                alert('Delivery files uploaded successfully!');
+                showAlert('Files uploaded', 'Delivery files uploaded successfully!', 'success');
             }
         } catch (error) {
             console.error('Error uploading files:', error);
-            alert('Failed to upload files: ' + error.message);
+            showAlert('Failed to upload files', error.message, 'error');
         } finally {
             setProcessing(false);
         }
@@ -400,11 +421,11 @@ const OrderCard = ({
                                 const response = await ApiService.handleRevision(safeOrder.id, 'accept', '');
                                 if (response.status === 'success') {
                                     safeOnStatusUpdate(safeOrder.id, 'delivered');
-                                    alert('Revision request accepted and completed. Order is now delivered.');
+                                    showAlert('Revision accepted', 'Order is now delivered.', 'success');
                                 }
                             } catch (error) {
                                 console.error('Error accepting revision:', error);
-                                alert('Failed to accept revision: ' + error.message);
+                                showAlert('Failed to accept revision', error.message, 'error');
                             } finally {
                                 setProcessing(false);
                             }
@@ -422,11 +443,11 @@ const OrderCard = ({
                                 const response = await ApiService.handleRevision(safeOrder.id, 'decline', note || '');
                                 if (response.status === 'success') {
                                     safeOnStatusUpdate(safeOrder.id, 'delivered');
-                                    alert('Revision request declined. Order status changed back to delivered.');
+                                    showAlert('Revision declined', 'Order status changed back to delivered.', 'success');
                                 }
                             } catch (error) {
                                 console.error('Error declining revision:', error);
-                                alert('Failed to decline revision: ' + error.message);
+                                showAlert('Failed to decline revision', error.message, 'error');
                             } finally {
                                 setProcessing(false);
                             }
@@ -552,7 +573,7 @@ const OrderCard = ({
 
     // Handle default callback functions if not provided
     const handleDefaultMessage = (order) => {
-        alert(`Message functionality for order ${order.id} - Please implement messaging`);
+        showAlert('Message', `Message functionality for order ${order.id} - Please implement messaging`, 'info');
     };
     
     const handleDefaultDeliveryUpload = (order) => {
@@ -575,7 +596,7 @@ const OrderCard = ({
     const safeOnStatusUpdate = onStatusUpdate || ((id, status) => {
         console.log(`Status update for order ${id}: ${status}`);
         // Reload the page or update state as needed
-        window.location.reload();
+    window.location.reload();
     });
 
     return (
@@ -698,16 +719,7 @@ const OrderCard = ({
                     {/* Progress Indicator */}
                     <div className="mt-2">
                         <div className="w-full bg-gray-200 rounded-full h-2">
-                            <div 
-                                className={`h-2 rounded-full transition-all duration-300 ${
-                                    safeOrder.status === 'completed' ? 'bg-green-500 w-full' :
-                                    safeOrder.status === 'delivered' ? 'bg-purple-500 w-5/6' :
-                                    safeOrder.status === 'in_progress' ? 'bg-blue-500 w-3/4' :
-                                    safeOrder.status === 'revision_requested' ? 'bg-orange-500 w-2/3' :
-                                    safeOrder.status === 'cancelled' ? 'bg-red-500 w-1/4' :
-                                    'bg-gray-400 w-1/4'
-                                }`}
-                            ></div>
+                            <div className={`h-2 rounded-full transition-all duration-300 ${progressClass()}`}></div>
                         </div>
                         <div className="flex justify-between text-xs text-gray-500 mt-1">
                             <span>Ordered</span>
@@ -720,14 +732,6 @@ const OrderCard = ({
             )}
 
             {/* Auto Payment Timer - Hiển thị sau khi buyer download lần đầu */}
-            {/* DEBUG: Log order data */}
-            {console.log('🔍 OrderCard Debug:', {
-                orderId: safeOrder.id,
-                status: safeOrder.status,
-                userRole: userRole
-            })}
-
-
 
             {/* Order Details */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
@@ -909,6 +913,14 @@ const OrderCard = ({
                     processing={processing}
                 />
             )}
+            {/* Alerts */}
+            <AlertModal 
+                isOpen={alertState.open}
+                title={alertState.title}
+                message={alertState.message}
+                type={alertState.type}
+                onClose={closeAlert}
+            />
         </div>
     );
 };

@@ -47,6 +47,13 @@
   transition: all 0.3s ease;
 }
 
+/* Sticky footer utility class - add this to page containers that need sticky footer */
+.sticky-footer-page {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
 /* Modal animations */
 @keyframes modalFadeIn {
   from { 

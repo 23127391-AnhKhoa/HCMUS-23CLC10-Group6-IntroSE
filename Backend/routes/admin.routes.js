@@ -27,6 +27,10 @@ router.get('/transaction-history', authenticateToken, adminController.getAdminTr
 
 // POST /api/admin/log -> Thêm log vào AdminLog table
 router.post('/log', authenticateToken, adminController.createAdminLog);
+
+// POST /api/admin/withdraw -> Admin withdraw website profits
+router.post('/withdraw', authenticateToken, adminController.adminWithdraw);
+
 // Tạo một sub-router cho reports để có cấu trúc /admin/reports/...
 const reportsRouter = express.Router();
 reportsRouter.get('/gigs', adminController.getGigReports);

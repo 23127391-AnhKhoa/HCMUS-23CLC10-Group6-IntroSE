@@ -6,17 +6,34 @@ const AuthContext = createContext(null);
 
 // Tạo Provider Component
 export const AuthProvider = ({ children }) => {
+  console.log('🚀 AuthProvider is mounting...');
+  
   const [authUser, setAuthUser] = useState(null);
   const [token, setToken] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
   // Khi app load lần đầu, kiểm tra xem có thông tin đăng nhập trong localStorage không
   useEffect(() => {
+    console.log('⚡ useEffect in AuthProvider is running!');
+    
     const storedToken = localStorage.getItem('token');
     const storedUser = localStorage.getItem('user');
+    
+    console.log('🔍 AuthContext: Checking stored credentials...');
+    console.log('🔍 Token:', storedToken ? 'exists' : 'not found');
+    console.log('🔍 User:', storedUser ? 'exists' : 'not found');
+    
     if (storedToken && storedUser) {
-      setToken(storedToken);
-      setAuthUser(JSON.parse(storedUser));
+      try {
+        const userData = JSON.parse(storedUser);
+        console.log('✅ AuthContext: Restoring session for user:', userData.uuid);
+        setToken(storedToken);
+        setAuthUser(userData);
+      } catch (error) {
+        console.error('❌ Error parsing stored user data:', error);
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+      }
     }
     setIsLoading(false);
   }, []);

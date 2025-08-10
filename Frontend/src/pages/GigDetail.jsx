@@ -9,7 +9,6 @@ import ReviewSection from '../components/Reviews/ReviewSection';
 import { useAuth } from '../contexts/AuthContext';
 import { useOrderNotification } from '../hooks/useOrderNotification';
 import ReportButton from '../components/ReportButton';
-import { createSafeHtml } from '../utils/htmlSanitizer';
 import { Tooltip } from 'antd';
 
 const GigDetail = () => {
@@ -458,7 +457,7 @@ const GigDetail = () => {
                             <p className="text-gray-500 mb-6">The service you're looking for doesn't exist or has been removed.</p>
                             <button 
                                 onClick={() => navigate(-1)}
-                                className="px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-2xl hover:from-blue-600 hover:to-blue-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 font-medium"
+                                className="px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-2xl hover:from-blue-600 hover:to-blue-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
                             >
                                 Go Back
                             </button>
@@ -864,7 +863,9 @@ const GigDetail = () => {
                         </div>
                     </div>
                 </div>
-                
+            </div>
+            
+            <div className="w-full">
                 <Footer />
             </div>
 

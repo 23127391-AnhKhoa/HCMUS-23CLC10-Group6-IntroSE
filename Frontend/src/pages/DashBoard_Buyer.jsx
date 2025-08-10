@@ -129,7 +129,7 @@ const DashBoardBuyer = () => {
   };
 
   if (loading) return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="sticky-footer-page bg-gray-50">
       <NavBar />
       <div className="max-w-md mx-auto px-4 pt-32 pb-8">
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
@@ -145,7 +145,7 @@ const DashBoardBuyer = () => {
   );
 
   if (error) return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="sticky-footer-page bg-gray-50">
       <NavBar />
       <div className="max-w-md mx-auto px-4 pt-32 pb-8">
         <div className="bg-white rounded-xl shadow-sm border border-red-200 p-8 text-center">
@@ -164,7 +164,7 @@ const DashBoardBuyer = () => {
   );
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="sticky-footer-page bg-gray-50">
       <NavBar />
 
       <div className="max-w-md mx-auto px-4 pt-32 pb-8">

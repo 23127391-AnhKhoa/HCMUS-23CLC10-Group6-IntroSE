@@ -167,6 +167,28 @@ const getAdminTransactionHistory = async () => {
     }
 };
 
+const adminWithdraw = async (amount) => {
+    const parsedAmount = parseFloat(amount);
+    if (!parsedAmount || parsedAmount <= 0) {
+        throw new Error('Amount must be greater than 0');
+    }
+    // Kiểm tra availableBalance
+    const current = await AdminModel.getAdminEarnings();
+    if (parsedAmount > current.availableBalance) {
+        throw new Error('Amount exceeds available admin balance');
+    }
+    // Ghi transaction loại admin_withdraw
+    const Transaction = require('../models/transactions.model');
+    const { error: insertError } = await Transaction.create({
+        user_id: '00000000-0000-0000-0000-000000000000', // placeholder system/admin id nếu cần
+        amount: parsedAmount,
+        description: 'Admin withdrawal from website profits',
+        type: 'admin_withdraw'
+    });
+    if (insertError) throw insertError;
+    return await AdminModel.getAdminEarnings();
+};
+
 module.exports = {
     fetchAllAdminData,
     createAdminLog,

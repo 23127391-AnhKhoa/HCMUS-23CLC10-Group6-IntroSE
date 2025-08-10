@@ -161,7 +161,7 @@ const HeroSection = () => {
   }, [stats]);
 
   return (
-    <section className="relative min-h-screen flex items-center justify-center text-white overflow-hidden">
+    <section className="relative min-h-screen flex items-center justify-center text-white overflow-hidden pt-24">
       {/* Animated Background */}
       <div className="absolute inset-0 bg-gradient-to-br from-purple-900 via-blue-900 to-purple-800">
         <div className="absolute inset-0 bg-black/30"></div>
@@ -177,11 +177,7 @@ const HeroSection = () => {
         {/* Logo & Brand */}
         <div className="mb-8">
           <div className="relative inline-block">
-            <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full flex items-center justify-center shadow-lg transform hover:scale-110 transition-transform duration-300">
-              <svg className="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-              </svg>
-            </div>
+            
             <h1 className="text-6xl md:text-7xl font-bold bg-gradient-to-r from-white via-purple-200 to-blue-200 bg-clip-text text-transparent">
               FREELAND
             </h1>
