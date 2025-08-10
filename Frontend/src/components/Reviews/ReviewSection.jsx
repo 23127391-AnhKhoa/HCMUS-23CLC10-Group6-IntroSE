@@ -275,8 +275,6 @@ const ReviewSection = ({
             <ReviewItem 
               key={review.id} 
               review={review}
-              onLike={(reviewId) => console.log('Like review:', reviewId)}
-              onDislike={(reviewId) => console.log('Dislike review:', reviewId)}
             />
           ))
         ) : reviews.length > 0 ? (
