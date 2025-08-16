@@ -125,7 +125,7 @@ const SellerNavbar = () => {
             
             {/* Message Icon */}
             <Tooltip title="Inbox">
-              <Badge count={5} size="small">
+              <Badge count={0} size="small">
                 <Link to="/inbox">
                   <MessageOutlined className="text-xl hover:text-blue-600 cursor-pointer" />
                 </Link>
