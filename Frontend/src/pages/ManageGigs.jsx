@@ -187,7 +187,7 @@ const ManageGigs = () => {
         <div className="mb-6">
           <div className="border-b border-gray-200">
             <nav className="-mb-px flex space-x-8">
-              {['active', 'paused', 'denied'].map((tab) => (
+              {['active', 'paused', 'pending', 'denied'].map((tab) => (
                 <button
                   key={tab}
                   onClick={() => handleTabChange(tab)}
