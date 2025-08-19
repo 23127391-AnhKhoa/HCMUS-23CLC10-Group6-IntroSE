@@ -4,7 +4,7 @@ import OverviewCreGigs from '../components/CreateGigButton/Overview_CreGigs';
 import PricingCreGigs from '../components/CreateGigButton/Pricing_CreGigs';
 import DescriptionCreGigs from '../components/CreateGigButton/Description_CreGigs';
 import ReviewPublish from '../components/CreateGigButton/ReviewPublish';
-import NavbarLD from '../Common/Navbar_LD';
+import SellerNavbar from '../Common/NavBar_Seller';
 import LoadingOverlay from '../Common/LoadingOverlay';
 import Stepper from '../components/CreateGigButton/Stepper/Stepper';
 import GigPublishSuccess from '../components/GigPublishSuccess';
@@ -495,7 +495,7 @@ const CreateGigsPage = () => {
         />
       )}
       <div className={`min-h-screen bg-slate-100 dark:bg-slate-900 font-sans pt-16 ${isLoading ? 'filter blur-sm pointer-events-none' : ''}`}>
-        <NavbarLD />
+        <SellerNavbar />
         <div className="py-12 px-4 sm:px-6 lg:px-8">
           <div className="max-w-4xl mx-auto">
             <div className="text-center mb-8 md:mb-12">

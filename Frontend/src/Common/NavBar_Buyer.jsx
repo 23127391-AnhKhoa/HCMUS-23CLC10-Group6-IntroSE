@@ -278,7 +278,7 @@ const Navbar = () => {
 
                 {isSeller ? (
                     <button 
-                    onClick={() => navigate('/profile_seller')}
+                    onClick={() => navigate('/dashboard_seller')}
                     className="px-4 py-2 border border-blue-600 text-blue-600 rounded-md font-medium hover:bg-blue-600 hover:text-white transition-colors"
                         >
                             Switch to Selling
