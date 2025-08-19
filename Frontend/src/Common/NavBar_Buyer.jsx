@@ -257,7 +257,7 @@ const Navbar = () => {
               // Nếu đã đăng nhập
               <>
                 <Tooltip title="Inbox">
-                  <Badge count={5} size="small">
+                  <Badge count={0} size="small">
                     <Link to="/inbox">
                       <MessageOutlined className="text-xl hover:text-blue-600 cursor-pointer" />
                     </Link>
@@ -278,7 +278,7 @@ const Navbar = () => {
 
                 {isSeller ? (
                     <button 
-                    onClick={() => navigate('/profile_seller')}
+                    onClick={() => navigate('/dashboard_seller')}
                     className="px-4 py-2 border border-blue-600 text-blue-600 rounded-md font-medium hover:bg-blue-600 hover:text-white transition-colors"
                         >
                             Switch to Selling

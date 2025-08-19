@@ -153,7 +153,7 @@ class GigService {
   /**
    * Filter gigs by status
    * @param {Array} gigs - Array of gig objects
-   * @param {string} status - Status to filter by ('active', 'paused', 'denied')
+   * @param {string} status - Status to filter by ('active', 'paused', 'pending', 'denied')
    * @returns {Array} Filtered gigs array
    */
   static filterGigsByStatus(gigs, status) {
@@ -164,6 +164,8 @@ class GigService {
         return gigs.filter(gig => gig.status === 'active');
       case 'paused':
         return gigs.filter(gig => gig.status === 'paused');
+      case 'pending':
+        return gigs.filter(gig => gig.status === 'pending');
       case 'denied':
         return gigs.filter(gig => gig.status === 'denied');
       default:
