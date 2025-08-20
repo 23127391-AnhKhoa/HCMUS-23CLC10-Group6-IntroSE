@@ -18,8 +18,13 @@ const MessageInput = ({
   const handleKeyPress = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      onSendMessage();
+      handleSendMessage();
     }
+  };
+
+  const handleSendMessage = () => {
+    if (!messageInput.trim() || messagesLoading || uploading) return;
+    onSendMessage();
   };
 
   const handleFileUpload = async (event) => {
@@ -103,7 +108,7 @@ const MessageInput = ({
         </div>
         
         <button
-          onClick={onSendMessage}
+          onClick={handleSendMessage}
           disabled={!messageInput.trim() || messagesLoading || uploading}
           className="p-2 bg-blue-500 text-white rounded-full hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
         >
