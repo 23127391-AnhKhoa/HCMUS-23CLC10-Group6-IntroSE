@@ -41,18 +41,18 @@ const GigPublishSuccess = ({ gigData, onClose }) => {
           </div>
           
           <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">
-            🎉 Gig Published Successfully!
+            🎉 Gig Submitted Successfully!
           </h2>
           
           <p className="text-gray-600 dark:text-gray-400 mb-6 text-sm sm:text-base">
-            Your gig "<span className="font-semibold text-indigo-600 dark:text-indigo-400">{gigData.title}</span>" has been published and is now live on the platform.
+            Your gig "<span className="font-semibold text-indigo-600 dark:text-indigo-400">{gigData.title}</span>" has been submitted and is pending admin approval.
           </p>
           
           <div className="bg-gradient-to-r from-green-50 to-blue-50 dark:from-green-900/20 dark:to-blue-900/20 rounded-lg p-4 mb-6">
             <div className="flex items-center justify-between text-sm">
               <span className="text-gray-600 dark:text-gray-400">Status:</span>
-              <span className="bg-green-100 dark:bg-green-800 text-green-800 dark:text-green-200 px-2 py-1 rounded-full font-medium text-xs">
-                ✓ Live
+              <span className="bg-yellow-100 dark:bg-yellow-800 text-yellow-800 dark:text-yellow-200 px-2 py-1 rounded-full font-medium text-xs">
+                🔄 Pending Review
               </span>
             </div>
             <div className="flex items-center justify-between text-sm mt-2">
@@ -61,12 +61,25 @@ const GigPublishSuccess = ({ gigData, onClose }) => {
             </div>
           </div>
           
+          {/* Review Process Information */}
+          <div className="bg-yellow-50 dark:bg-yellow-900/20 rounded-lg p-4 mb-6 border border-yellow-200 dark:border-yellow-800">
+            <h3 className="text-sm font-semibold text-yellow-800 dark:text-yellow-200 mb-2">
+              📋 What happens next?
+            </h3>
+            <ul className="text-xs text-yellow-700 dark:text-yellow-300 space-y-1">
+              <li>• Our team will review your gig within 24-48 hours</li>
+              <li>• You'll receive a notification once it's approved</li>
+              <li>• Your gig will then be visible to buyers</li>
+              <li>• You can track the status in your seller dashboard</li>
+            </ul>
+          </div>
+          
           <div className="space-y-3">
             <button
               onClick={handleViewGig}
               className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-medium py-2.5 sm:py-3 px-4 rounded-lg transition-all duration-200 transform hover:scale-105 shadow-lg text-sm sm:text-base"
             >
-              🔍 View My Gig
+              � Preview My Gig
             </button>
             
             <button
