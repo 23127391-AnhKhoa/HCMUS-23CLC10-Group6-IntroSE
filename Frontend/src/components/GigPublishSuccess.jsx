@@ -20,7 +20,7 @@ const GigPublishSuccess = ({ gigData, onClose }) => {
   };
 
   const handleViewProfile = () => {
-    navigate('/profile_seller');
+    navigate('/dashboard_seller');
   };
 
   const handleExplore = () => {
