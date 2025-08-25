@@ -317,7 +317,7 @@ const Navbar = () => {
               // Nếu chưa đăng nhập
               <>
                 <Link to="/auth" className="font-medium hover:text-blue-600">Log In</Link>
-                <Link to="/signup">
+                <Link to="/auth">
                   <button className="px-4 py-2 border border-blue-600 text-blue-600 rounded-md font-medium hover:bg-blue-600 hover:text-white transition-colors">
                     Sign Up
                   </button>
