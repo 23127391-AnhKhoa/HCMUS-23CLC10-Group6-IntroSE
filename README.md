@@ -1,6 +1,6 @@
 # Freeland
 
-## Project Description
+## Project Deécription
 
 Freeland is a web application developed as a project for the "Introduction to Software Engineering" course. It is a clone of the Fiverr platform, designed to connect freelancers with clients.
 
